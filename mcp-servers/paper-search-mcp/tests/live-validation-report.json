@@ -1,0 +1,587 @@
+{
+  "validation_date": "2026-11-20",
+  "scope": "Small live probes during the refactor using isolated caches; not an exhaustive recall or availability guarantee.",
+  "secrets": "No keys, authenticated request headers or raw credential-bearing response URLs are included.",
+  "initial_four_source_searches": {
+    "arxiv": {
+      "source_reports": [
+        {
+          "source": "arxiv",
+          "status": "ok",
+          "actual_query": {
+            "search_query": "all:\"Attention\" AND all:\"Is\" AND all:\"All\" AND all:\"You\" AND all:\"Need\"",
+            "start": 0,
+            "max_results": 2,
+            "sortBy": "relevance",
+            "sortOrder": "descending"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:40:30.717352+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.235,
+        "download_bytes": 0
+      },
+      "papers": [
+        {
+          "paper_ref": "arxiv:2512.19700",
+          "title": "\"All You Need\" is Not All You Need for a Paper Title: On the Origins of a Scientific Meme",
+          "has_abstract": true,
+          "has_snippet": false,
+          "assets": 3
+        },
+        {
+          "paper_ref": "arxiv:2112.05993",
+          "title": "Object Counting: You Only Need to Look at One",
+          "has_abstract": true,
+          "has_snippet": false,
+          "assets": 3
+        }
+      ]
+    },
+    "semantic_scholar": {
+      "source_reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "ok",
+          "actual_query": {
+            "query": "Attention Is All You Need",
+            "limit": 2,
+            "offset": 0,
+            "fields": "paperId,externalIds,title,authors,year,publicationDate,abstract,venue,citationCount,referenceCount,openAccessPdf,publicationTypes,url"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:40:32.163797+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.444,
+        "download_bytes": 0
+      },
+      "papers": [
+        {
+          "paper_ref": "arxiv:1706.03762",
+          "title": "Attention is All you Need",
+          "has_abstract": true,
+          "has_snippet": false,
+          "assets": 2
+        },
+        {
+          "paper_ref": "arxiv:2010.13154",
+          "title": "Attention Is All You Need In Speech Separation",
+          "has_abstract": true,
+          "has_snippet": false,
+          "assets": 2
+        }
+      ]
+    },
+    "scholar": {
+      "source_reports": [
+        {
+          "source": "scholar",
+          "status": "ok",
+          "actual_query": {
+            "q": "Attention Is All You Need",
+            "start": 0,
+            "num": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:40:34.117034+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.951,
+        "download_bytes": 0
+      },
+      "papers": [
+        {
+          "paper_ref": "scholar:5Gohgn6QFikJ",
+          "title": "Attention is all you need",
+          "has_abstract": false,
+          "has_snippet": true,
+          "assets": 2
+        },
+        {
+          "paper_ref": "scholar:QEhbjTxy5DIJ",
+          "title": "Is Attention All You Need?",
+          "has_abstract": false,
+          "has_snippet": true,
+          "assets": 1
+        }
+      ]
+    },
+    "openalex": {
+      "source_reports": [
+        {
+          "source": "openalex",
+          "status": "ok",
+          "actual_query": {
+            "search": "Attention Is All You Need",
+            "per_page": 2,
+            "cursor": "*"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:40:36.897145+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 2.777,
+        "download_bytes": 0
+      },
+      "papers": [
+        {
+          "paper_ref": "arxiv:1706.03762",
+          "title": "Attention Is All You Need",
+          "has_abstract": true,
+          "has_snippet": false,
+          "assets": 15
+        },
+        {
+          "paper_ref": "arxiv:2010.13154",
+          "title": "Attention Is All You Need In Speech Separation",
+          "has_abstract": true,
+          "has_snippet": false,
+          "assets": 6
+        }
+      ]
+    }
+  },
+  "operation_probes": {
+    "resolve_arxiv": {
+      "results": [
+        {
+          "status": "confirmed",
+          "source_reports": [
+            {
+              "source": "arxiv",
+              "status": "ok",
+              "matched": 1,
+              "fetched_count": 1
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "items": 0,
+        "seconds": 0.791,
+        "download_bytes": 0
+      }
+    },
+    "resolve_ss": {
+      "results": [
+        {
+          "status": "ok",
+          "source_reports": [
+            {
+              "source": "arxiv",
+              "status": "ok"
+            },
+            {
+              "source": "semantic_scholar",
+              "status": "ok"
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "requests": 2,
+        "items": 0,
+        "seconds": 4.06,
+        "download_bytes": 0
+      }
+    },
+    "ss_dates": {
+      "reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "partial",
+          "actual_query": {
+            "publicationDateOrYear": "2025-01-01:2025-12-31",
+            "query": "diffusion",
+            "limit": 2,
+            "offset": 0,
+            "fields": "paperId,externalIds,title,authors,year,publicationDate,abstract,venue,citationCount,referenceCount,openAccessPdf,publicationTypes,url"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [
+            "Upstream may include year-only records; precise publication dates can be unknown."
+          ],
+          "fetched_at": "2026-11-20T01:45:41.901859+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 2,
+        "items": 2,
+        "seconds": 3.247,
+        "download_bytes": 0
+      }
+    },
+    "ss_citations": {
+      "reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "ok",
+          "actual_query": {
+            "fields": "paperId,externalIds,title,authors,year,publicationDate,abstract,venue,citationCount,referenceCount,openAccessPdf,publicationTypes,url",
+            "offset": 0,
+            "limit": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:43.380816+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.476,
+        "download_bytes": 0
+      }
+    },
+    "ss_next_page": {
+      "reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "ok",
+          "actual_query": {
+            "fields": "paperId,externalIds,title,authors,year,publicationDate,abstract,venue,citationCount,referenceCount,openAccessPdf,publicationTypes,url",
+            "offset": 2,
+            "limit": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:44.862284+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 4,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.479,
+        "download_bytes": 0
+      }
+    },
+    "ss_references": {
+      "reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "ok",
+          "actual_query": {
+            "fields": "paperId,externalIds,title,authors,year,publicationDate,abstract,venue,citationCount,referenceCount,openAccessPdf,publicationTypes,url",
+            "offset": 0,
+            "limit": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:46.574811+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.708,
+        "download_bytes": 0
+      }
+    },
+    "ss_authors": {
+      "reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "ok",
+          "actual_query": {
+            "query": "Ashish Vaswani",
+            "limit": 2,
+            "offset": 0,
+            "fields": "name,affiliations,homepage,paperCount,citationCount"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": false,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:48.089442+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.513,
+        "download_bytes": 0
+      }
+    },
+    "ss_author_papers": {
+      "reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "ok",
+          "actual_query": {
+            "fields": "paperId,externalIds,title,authors,year,publicationDate,abstract,venue,citationCount,referenceCount,openAccessPdf,publicationTypes,url",
+            "offset": 0,
+            "limit": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:49.565308+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 1.472,
+        "download_bytes": 0
+      }
+    },
+    "ss_recommendations": {
+      "reports": [
+        {
+          "source": "semantic_scholar",
+          "status": "ok",
+          "actual_query": {
+            "paper_ref": "arxiv:1706.03762"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": null,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:47:56.662543+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 0.693,
+        "download_bytes": 0
+      }
+    },
+    "oa_resolve": {
+      "results": [
+        {
+          "status": "confirmed",
+          "source_reports": [
+            {
+              "source": "openalex",
+              "status": "ok",
+              "matched": 1,
+              "fetched_count": 1
+            }
+          ]
+        }
+      ],
+      "usage": {
+        "requests": 1,
+        "items": 0,
+        "seconds": 1.02,
+        "download_bytes": 0
+      }
+    },
+    "oa_citations": {
+      "reports": [
+        {
+          "source": "openalex",
+          "status": "ok",
+          "actual_query": {
+            "filter": "cites:W2626778328",
+            "cursor": "*",
+            "per_page": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:52.905571+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 0.868,
+        "download_bytes": 0
+      }
+    },
+    "oa_references": {
+      "reports": [
+        {
+          "source": "openalex",
+          "status": "ok",
+          "actual_query": {
+            "filter": "cited_by:W2626778328",
+            "cursor": "*",
+            "per_page": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:53.703202+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 0.791,
+        "download_bytes": 0
+      }
+    },
+    "oa_institutions": {
+      "reports": [
+        {
+          "source": "openalex",
+          "status": "ok",
+          "actual_query": {
+            "search": "Massachusetts Institute of Technology",
+            "per_page": 2,
+            "cursor": "*",
+            "filter": "country_code:US"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:54.699749+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 0.995,
+        "download_bytes": 0
+      }
+    },
+    "oa_institution_papers": {
+      "reports": [
+        {
+          "source": "openalex",
+          "status": "ok",
+          "actual_query": {
+            "filter": "institutions.id:I63966007",
+            "per_page": 2,
+            "cursor": "*"
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:55.399233+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 0.694,
+        "download_bytes": 0
+      }
+    },
+    "paid_scholar_search": {
+      "reports": [
+        {
+          "source": "scholar",
+          "status": "ok",
+          "actual_query": {
+            "q": "\"Attention Is All You Need\"",
+            "start": 0,
+            "num": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:45:58.048950+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 2.647,
+        "download_bytes": 0
+      }
+    },
+    "paid_scholar_citations": {
+      "reports": [
+        {
+          "source": "scholar",
+          "status": "ok",
+          "actual_query": {
+            "cites": "2960712678066186980",
+            "start": 0,
+            "num": 2
+          },
+          "fetched_count": 2,
+          "upstream_has_more": true,
+          "limitations": [],
+          "fetched_at": "2026-11-20T01:46:00.072110+00:00",
+          "cache_state": "miss"
+        }
+      ],
+      "count": 2,
+      "usage": {
+        "requests": 1,
+        "items": 2,
+        "seconds": 2.019,
+        "download_bytes": 0
+      }
+    },
+    "pdf_download": {
+      "status": "downloaded",
+      "validation": {
+        "pages": 15
+      },
+      "usage": {
+        "requests": 1,
+        "items": 0,
+        "seconds": 1.197,
+        "download_bytes": 2215244
+      },
+      "attempts": []
+    }
+  },
+  "test_results": {
+    "offline": "77 passed; includes unit, integration, MCP protocol and stdio process E2E",
+    "live_pytest": "4 passed; each source has a bounded real search test"
+  },
+  "notes": [
+    "The first recommendation probe exposed an incorrect endpoint; this entry is the successful recheck after correction.",
+    "Budget counters shown are those observed during each probe; later counter fixes are covered by offline regression tests."
+  ]
+}

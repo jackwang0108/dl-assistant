@@ -1,0 +1,27 @@
+# 日期、排序与实际范围
+
+每次查询必须指定日期类型，不能把首次提交、修订和正式发表视为同一天。日期采用 ISO 日历日期；arXiv 边界按 API 使用的 UTC 日处理。相对日期先结合用户时区转换成明确起止日期，再调用工具。
+
+```python
+search_papers(
+    queries=[{"text": "diffusion", "sources": ["arxiv"]}],
+    filters={"date_range": {"date_type": "first_submitted",
+                             "start": "2025-01-01", "end": "2025-12-31"}},
+    sort="date_desc",
+)
+```
+
+| 来源 | 当前日期支持 | 需要注意 |
+|---|---|---|
+| arXiv | first_submitted / updated | 使用对应服务端日期字段；保留返回的 published/updated，不用 year 代替 |
+| Semantic Scholar | published | 发送 publicationDateOrYear；上游可能用年份处理无精确日期记录，返回仍可能为未知日期 |
+| Scholar | 发表年份范围 | 精确到日的范围默认拒绝；允许 report 时只作年份过滤并注明日期未完全落实 |
+| OpenAlex | published | 使用服务端发表日期过滤；它不是 arXiv 首次提交日期 |
+
+只传 start 时 arXiv 的上界是本次查询的 UTC 日期，不再加未来 30 天；只传 end 时用合理历史下界。日期颠倒、无起止边界或无效日期在执行前拒绝。
+
+`sort` 可用 relevance、date_desc、date_asc、citations_desc，具体来源支持由 get_capabilities 给出。排序失败不自动改成另一种排序并宣称等价；失败按来源报告。多来源组合没有统一相关性或引用数排序。
+
+`unsupported="error"` 是默认：条件不支持时不执行该来源。`unsupported="report"` 需要明确选择：允许取更宽候选，同时返回未生效项，后续据实际字段核查；日期未知不能填成 1 月 1 日冒充已核日期。即使某个来源声称执行了过滤，关键历史截点仍应检查论文版本和原始时间证据。
+
+精确日期筛选和有限分页是两回事：时间窗有效不代表窗内所有论文已取得。始终结合 coverage、逐来源状态和预算说明范围。

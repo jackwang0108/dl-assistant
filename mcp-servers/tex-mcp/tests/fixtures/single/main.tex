@@ -1,0 +1,81 @@
+\documentclass{article}
+\usepackage{graphicx}
+% a comment line that must vanish entirely
+\newcommand{\model}{TexFormer}
+\newcommand{\vect}[1]{\mathbf{#1}}
+\newcommand{\greet}[2][hello]{#1 #2}
+\newcommand{\needstwo}[2]{#1-#2}
+\DeclareMathOperator{\softmaxop}{softmax}
+\def\sq#1{#1^2}
+\def\weird#1x{broken #1}
+
+\title{Synthetic Fixture Paper}
+\begin{document}
+\begin{abstract}
+A 100\% synthetic abstract about \model. % trailing comment must vanish
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+We introduce \model, an architecture with $\vect{h} \in \mathbb{R}^d$,
+\greet{world} and \greet[hi]{there}.
+The operator $\softmaxop(x)$ normalizes scores, and $\sq{n}$ squares.
+
+\section{Method}\label{sec:method}
+As shown in Figure~\ref{fig:arch} and Table~\ref{tab:main}, \model{} works.
+Unknown references stay as-is: \ref{sec:nope}.
+\begin{equation}
+L = \sum_i \sq{x_i} \label{eq:loss}
+\end{equation}
+See Eq.~\eqref{eq:loss}, \autoref{fig:arch} and \cref{tab:main}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.8\textwidth]{fig1}
+\caption{Architecture of \model.}
+\label{fig:arch}
+\end{figure}
+
+\subsection{Details}\label{sec:details}
+More detail text with a subpath image below.
+
+\begin{figure}
+\centering
+\includegraphics{\iftoggle{hq}{images_hq/plot.pdf}{images/plot.pdf}}
+\caption{A toggle-wrapped plot.}
+\label{fig:plot}
+\end{figure}
+
+\begin{figure}
+\includegraphics{diagram.eps}
+\caption{An EPS diagram.}
+\label{fig:eps}
+\end{figure}
+
+\begin{table}
+\centering
+\caption{Main results.}
+\label{tab:main}
+\begin{tabular}{lcc}
+\hline
+Method & Acc & F1 \\
+\hline
+\model & 91.2 & 90.8 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Conclusion}
+Done \cite{alpha,gamma}.
+
+\appendix
+\section{Proofs}\label{app:proofs}
+Proof text.
+\subsection{Lemma}
+Lemma text.
+
+\begin{thebibliography}{9}
+\bibitem{alpha} A. Author. Alpha paper. 2020.
+\bibitem{gamma} C. Author. Gamma paper. 2022.
+\end{thebibliography}
+\end{document}
+\needstwo

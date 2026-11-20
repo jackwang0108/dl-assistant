@@ -1,0 +1,128 @@
+{
+  "date": "2026-11-20",
+  "scope": "dl-assistant self-managed W&B integration; no existing research project or cloud account modified",
+  "upstream_skill": {
+    "repository": "https://github.com/wandb/skills",
+    "commit": "10aac21c75e7bced8fb5dd760e49e7d0ff0f87dc",
+    "path": "skills/wandb-primary",
+    "original_files_unchanged": true,
+    "manifest": "upstream-manifest.json",
+    "review_scope": "Primary instructions, relevant Models SDK/log/artifact documentation, selected query helpers and research-rule conflicts; not an audit of every bundled write/Weave/Launch helper"
+  },
+  "official_mcp": {
+    "version": "0.4.3",
+    "tag_object": "33304f18eb24a0ff759f2a481b00e2aaed9f6a51",
+    "commit": "465ea99c421f741187c7b20812a1f5b02de6b792",
+    "python": "3.12.13",
+    "sdk": "0.28.1",
+    "profile": "models-only",
+    "access_mode": "read-only",
+    "installation": "passed in isolated temporary environment; no global MCP configuration changed"
+  },
+  "tests": {
+    "offline": {
+      "tracking_and_selected_official_helpers": 18,
+      "execution_record_regressions": 20,
+      "paper_experiment_regressions": 46,
+      "passed": 84,
+      "optional_client_tests_skipped_in_default_suite": 2
+    },
+    "optional_client_tests": {
+      "passed": 2,
+      "sdk": {
+        "sdk_version": "0.28.1",
+        "mode": "offline",
+        "real_local_history_verified": true,
+        "history_rows": 3,
+        "identity_verified": true,
+        "artifact_record_verified": true,
+        "remote_sync": "not_tested",
+        "record_sha256": "baabacc71c725db1da941681106d4be4ccfb393929e1709f3760540e3f4a37b4"
+      },
+      "mcp_and_official_skill_api": {
+        "tool_count": 15,
+        "tools": [
+          "query_wandb_tool",
+          "list_entities_tool",
+          "query_wandb_entity_projects",
+          "list_wandb_automations_tool",
+          "list_wandb_integrations_tool",
+          "search_wandb_docs_tool",
+          "get_run_history_tool",
+          "list_registries_tool",
+          "list_registry_collections_tool",
+          "list_artifact_versions_tool",
+          "get_artifact_details_tool",
+          "compare_artifact_versions_tool",
+          "compare_runs_tool",
+          "diagnose_run_tool",
+          "probe_project_tool"
+        ],
+        "legacy_read_via_local_http": true,
+        "stdio_discovery": true,
+        "official_skill_get_api": true,
+        "requests": [
+          {
+            "path": "/graphql",
+            "operation": ""
+          },
+          {
+            "path": "/graphql",
+            "operation": ""
+          },
+          {
+            "path": "/graphql",
+            "operation": ""
+          },
+          {
+            "path": "/graphql",
+            "operation": ""
+          },
+          {
+            "path": "/graphql",
+            "operation": ""
+          },
+          {
+            "path": "/graphql",
+            "operation": ""
+          }
+        ],
+        "external_python_network_attempts": []
+      },
+      "backend": "Controlled real local HTTP server with fixture GraphQL responses, not W&B Server",
+      "command": "DL_ASSISTANT_TEST_WANDB_CLIENTS=1 <isolated-python> -m unittest discover -s .claude/skills/wandb/scripts -p test_official_clients.py -v"
+    },
+    "skill_validation": "11 modified/new entrypoints validated",
+    "lint": "ruff passed for our integration scripts; upstream kept unchanged"
+  },
+  "server_deployment": {
+    "candidate": "wandb/local:0.86.3",
+    "digest": "sha256:3a186025fdf174c1585a1f737a44685d2523a1e97744272f683ab683f8c90bcf",
+    "available_platform": "linux/amd64",
+    "host": "macOS arm64; Linux Docker VM aarch64",
+    "compressed_image_bytes": 1467783710,
+    "registry_metadata": "retrieved through http://127.0.0.1:7890",
+    "image_pull": "interrupted after about 20 minutes with repeated layer retries; image not fully available",
+    "container_started": false,
+    "license_verified": false,
+    "sdk_write_api_mcp_readback": "not_tested_against_real_W&B_Server",
+    "restart_persistence": "not_tested",
+    "external_network_disabled_server": "not_tested",
+    "cleanup": "Task-owned image pull stopped; no containers, volumes, W&B projects or user accounts created; partial Docker layer cache retained without global pruning"
+  },
+  "limits": [
+    "Self-hosted server availability, exact license entitlements, SDK/server compatibility and production persistence remain unverified.",
+    "No live GPU training or existing research project was modified.",
+    "Read-only MCP discovery and viewer query passed on a controlled backend; real run/history/artifact APIs still require live instance validation.",
+    "No observed external Python network attempts in the controlled MCP/API test; this is not full server air-gap validation or a native SDK subprocess egress audit.",
+    "Local checks validate declarations, identity and saved-file hashes, not authorization, true remote origin, scientific comparability or research validity.",
+    "The upstream skill README declares a broader Python/dependency floor; only selected helpers and the pinned MCP/SDK paths were exercised in Python 3.12.13."
+  ],
+  "integration_files": [
+    "SKILL.md",
+    "references/deployment.md",
+    "references/experiment-records.md",
+    "references/official-adaptation.md",
+    "scripts/check_tracking.py"
+  ]
+}

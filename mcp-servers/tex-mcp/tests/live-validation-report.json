@@ -1,0 +1,28 @@
+{
+  "date": "2026-11-20",
+  "project_version": "0.2.0",
+  "command": "TEX_MCP_RUN_LIVE=1 PYTHONDONTWRITEBYTECODE=1 .venv/bin/python -m pytest tests/test_v2_live.py -q -p no:cacheprovider",
+  "result": {"passed": 2, "failed": 0, "seconds": 22.79},
+  "papers": [
+    {"arxiv_id": "1706.03762", "version": "v7", "figure_label": "fig:model-arch", "result": "passed"},
+    {"arxiv_id": "1512.03385", "version": "v1", "figure_label": "fig:block", "result": "passed"}
+  ],
+  "assertions": [
+    "Real source download resolves the requested fixed revision",
+    "Referenced figure resolves to a readable image path",
+    "Bibliography contains source citation locations",
+    "Reading the referring section across all continuation pages includes the referenced object"
+  ],
+  "other_validation": {
+    "offline_unit_integration_e2e": "51 passed, 2 opt-in live cases skipped; those 2 live cases passed separately",
+    "lint_and_format": "ruff check and format checks passed",
+    "extracted_wheel": "14 registered tools; local source import and section object attachment passed",
+    "paper_search_regression": "77 passed, 4 opt-in live tests skipped"
+  },
+  "limitations": [
+    "Partial source parser, not a complete TeX interpreter; unsupported macros and unresolved semantics remain diagnostic limitations",
+    "Source image availability does not prove exact compiled figure layout",
+    "No configured digest-pinned TeX Docker image was executed; isolated compilation tests cover command constraints and failure handling using a simulated process",
+    "PDF identity is not established automatically; PDF crop geometry and image output were tested locally"
+  ]
+}

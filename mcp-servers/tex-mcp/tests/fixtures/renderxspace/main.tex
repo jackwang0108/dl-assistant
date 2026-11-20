@@ -1,0 +1,19 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{thispackagedoesnotexist-xyz}  % breaks the paper-preamble strategy
+\newcommand{\dino}{DINO\xspace}
+\begin{document}
+\section{Results}
+\begin{table}
+\centering
+\caption{Xspace table.}
+\label{tab:xspace}
+\begin{tabular}{lc}
+\toprule
+Method & Score \\
+\midrule
+\dino & 91.2 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{document}

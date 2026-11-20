@@ -1,0 +1,100 @@
+{
+  "schema_version": 2,
+  "_notes": {
+    "purpose": "字段示意，按execution-contract.md填写实际值；不直接作为运行/验收成功记录。",
+    "shared_meta": "沿用code-idea-execution experiment-meta-template.json；不复制另一套执行/数据/推断状态。",
+    "types": "type为实际操作，paper_role为论文用途，资源/重复/产物按设计。",
+    "partial": "失败/未开始/取消/部分资料均保留；旧success和done仅历史字段，不认证数据。"
+  },
+  "run-spec.json": {
+    "schema_version": 2,
+    "batch_id": null,
+    "plan_ref": {
+      "path": "plan.json",
+      "sha256": null
+    },
+    "experiments": []
+  },
+  "run_spec_experiment_fields": [
+    "exp_id",
+    "type",
+    "design_mode",
+    "purpose",
+    "expected_replicates",
+    "source_snapshots",
+    "condition_review_ref",
+    "approval",
+    "depends_on",
+    "design_record"
+  ],
+  "cpe_meta_extensions": {
+    "batch_id": null,
+    "condition_review_ref": null,
+    "source_snapshots": [],
+    "replicates": [],
+    "paper_self_checks": {
+      "acceptance": null,
+      "pre_run": null,
+      "handoff": null
+    }
+  },
+  "results.json (single)": {
+    "schema_version": 2,
+    "batch_id": null,
+    "exp_id": null,
+    "status": "not_started",
+    "data_validity": "unassessed",
+    "inference_status": "pending",
+    "replicate_ids": [],
+    "n_replicates": 0,
+    "metrics": {},
+    "summary_checks": [],
+    "observations": [],
+    "limitations": []
+  },
+  "experiments-actual.json": {
+    "schema_version": 2,
+    "batch_id": null,
+    "plan_ref": null,
+    "run_spec_ref": null,
+    "experiments_actual": [],
+    "deviations": []
+  },
+  "results.json (package)": {
+    "schema_version": 2,
+    "batch_id": null,
+    "plan_ref": null,
+    "run_spec_ref": null,
+    "experiments": []
+  },
+  "pkg-meta.json": {
+    "schema_version": 2,
+    "batch_id": null,
+    "plan_ref": null,
+    "run_spec_ref": null,
+    "experiments": [],
+    "artifact_manifest": [],
+    "resources": []
+  },
+  "actual_record_fields": [
+    "exp_id",
+    "status",
+    "data_validity",
+    "inference_status",
+    "reason",
+    "meta_ref",
+    "results_ref"
+  ],
+  "artifact_manifest_fields": [
+    "exp_id",
+    "artifact_path",
+    "path",
+    "sha256",
+    "format",
+    "disposition",
+    "availability",
+    "purpose",
+    "required_for_interpretation",
+    "missing_effect"
+  ]
+}

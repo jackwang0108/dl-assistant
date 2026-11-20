@@ -1,0 +1,62 @@
+{
+  "schema_version": 2,
+  "version": null,
+  "snapshot_date": null,
+  "parent_version": null,
+  "paper_claim": {
+    "id": "P1",
+    "statement": "",
+    "status": "active",
+    "verdict": "pending",
+    "verdict_source": "",
+    "supported_by": [],
+    "lineage": {
+      "derived_from": null
+    },
+    "notes": ""
+  },
+  "claims": [
+    {
+      "id": "C1",
+      "statement": "",
+      "type": "hypothesis",
+      "status": "active",
+      "verdict": "pending",
+      "verdict_source": "",
+      "is_innovation": false,
+      "novelty_assessment": {
+        "status": "unverified",
+        "checked_sources": [],
+        "differences": [],
+        "scope": null
+      },
+      "method_tag": "",
+      "evidence_strength": "none",
+      "evidence": [],
+      "evidence_quality": {
+        "comparable": null,
+        "data_validity": "unassessed",
+        "issues": []
+      },
+      "inference_limits": [],
+      "lineage": {
+        "derived_from": null,
+        "emerged_from": null,
+        "superseded_by": null
+      },
+      "notes": ""
+    }
+  ],
+  "_notes": {
+    "purpose": "当前研究问题下的候选总假设与可检查子命题。文献先验不等于本项目结果；工程任务或开放问题不强行改成方向性命题。 明确探索可paper_claim=null、claims=[]，问题/目标留spec，不编造方向性命题。",
+    "identity": "ID一旦分配不改义，命题变化新建ID（含P编号）并留关系；每版本保留完整历史及当前范围。同命题重试不清空旧反证，已supported也核查条件是否改变。",
+    "verdict": "pending/supported/contradicted/insufficient_evidence/not_identifiable/invalid_data；plausible可读旧数据，新记录说明支持范围或不足原因。支持不是证明，未显著不证明无效应。",
+    "status": "active/refuted/superseded由iterate与用户的研究讨论决定，execution及验收不改。一次实现失败或无法识别解释不能自动refuted。 因资源或优先级停止追踪写notes及研究决定，不自动refuted。",
+    "innovation": "is_innovation为兼容字段，默认false表示未确认，不表示已否定；不能由supported自动设true。已有工作差异、科学证据和研究价值各自说明，创新性由文献与研究讨论核实，验收不改该字段。",
+    "novelty_assessment": "status=unverified/distinct/covered/not_applicable；distinct仅指已查范围的明确差异，不自动重要或可发表。checked_sources用标题+arXiv/DOI/URL+版本/位置，scope含检索时间与限制。",
+    "evidence": "条目含exp_id、path、role(supports/contradicts/mixed/limits)、实际读数或逻辑依据、条件及不确定性；value可null。不足或坏数据同样有记录；evidence_quality分别写可比性、数据有效性与问题。",
+    "authority": "独立核查写报告和建议，主agent核对后串行更新证据字段并引用review；总假设的综合及下一步由iterate与用户讨论。",
+    "method_tag": "可选的已定位实现标记，不证明方法有效、创新或可发布；没有tag也以commit+diff+配置+结果路径追踪。",
+    "legacy": "旧supported/is_innovation=true、success/failure不可直接作为新格式创新/结果判断。历史原文件保留，实际使用时核对来源和语义，不凭字段自动认证。"
+  }
+}

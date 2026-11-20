@@ -1,0 +1,70 @@
+{
+  "_notes": [
+    "结构示例，不是JSON Schema或检查器。按实际数值检查填写metrics；无数值回归时不强建本文件。",
+    "空数组是待填写的实际对象集合；null为未知。论文值、上游来源值和此次实测值分开记录。",
+    "每项检查独立绑定代码、环境、配置、数据协议、权重与输出。单权重评测不得直接作为多次训练均值的复现。"
+  ],
+  "schema_version": 2,
+  "release_id": null,
+  "status": "unassessed",
+  "metrics": [],
+  "metric_record_shape": {
+    "check_id": null,
+    "purpose": null,
+    "capability": null,
+    "paper_location": null,
+    "metric": null,
+    "unit": null,
+    "direction": null,
+    "paper_reported": {
+      "value": null,
+      "statistic": null,
+      "n_replicates": null,
+      "source_ref": null
+    },
+    "reference": {
+      "value": null,
+      "statistic": null,
+      "replicate_ids": [],
+      "checkpoint_selection": null,
+      "source_ref": null,
+      "json_pointer": null
+    },
+    "comparison": {
+      "matched_conditions": [],
+      "known_differences": [],
+      "rule": null,
+      "absolute_tolerance": null,
+      "relative_tolerance": null,
+      "basis_refs": []
+    },
+    "inputs": {
+      "code_commit": null,
+      "files": [],
+      "environment_refs": [],
+      "config_refs": [],
+      "data_protocol_refs": [],
+      "checkpoint_refs": []
+    },
+    "input_ref_shape": {
+      "path_or_uri": null,
+      "version": null,
+      "sha256": null
+    },
+    "execution": {
+      "working_directory": null,
+      "command": null,
+      "hardware": null,
+      "output_refs": []
+    },
+    "observed": {
+      "value": null,
+      "statistic": null,
+      "replicate_ids": []
+    },
+    "status": "not_run",
+    "limitations": [],
+    "invalidated_by": [],
+    "recheck_refs": []
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 2,
+  "version": null,
+  "experiments": [],
+  "_notes": {
+    "row": "每个计划实验一行：experiment_id、type、design_mode、research_question_ids、hypothesis_ids、claim_cids、meta_path、status、status_reason、data_validity、inference_status、updated_at。meta_path可为null或exp-XXX/meta.json",
+    "timing": "登记即记行，不等跑完；元信息和台账状态一致。failed/blocked/cancelled以及未执行均保留，不用keep率判断研究价值",
+    "values": "status/type/design_mode/data_validity/inference_status枚举与meta模板一致；主数字可作摘要但含来源，不代替逐样本记录",
+    "attempts": "每实验多次尝试在meta.attempts逐项保留，attempt使用独立输出；改变科学设计新实验ID或明确的新设计版本，不覆盖原始结果",
+    "scope": "全部计划和临时尝试均登记，准备任务可没有claim但须关联问题或明确purpose。没有实验目录的计划行需status=not_started并说明，开工前补meta和产物声明",
+    "legacy": "旧verdict_local=keep/discard只读为历史处置；旧状态未知或字段缺失保留未知，不推导证伪/成功"
+  }
+}

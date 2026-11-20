@@ -1,0 +1,171 @@
+{
+  "date": "2026-11-20",
+  "project_version": "2.0.0",
+  "selection": {
+    "structured_sources": "Use matching-version TeX (tex-mcp), article HTML or JATS directly where available. HTML/PDF equivalence is not certified automatically.",
+    "pdf_default": "Native text positions and original page rendering; no model import/download.",
+    "pdf_structure": "Explicit selected-page local Docling; OCR/formula recognition disabled by default.",
+    "reason": "Docling supplied figure/caption, formula-region, heading and page/bbox records in the tested samples. This is a workflow choice, not a comprehensive accuracy ranking.",
+    "external_inference_apis_used": false
+  },
+  "environment": {
+    "architecture": "macOS arm64",
+    "docling": "2.151.1",
+    "marker_pdf": "2.2.0",
+    "docling_device": "AUTO; actual accelerator not instrumented",
+    "marker_device": "CPU explicitly selected",
+    "proxy": "http://127.0.0.1:7890",
+    "runtime_benchmark_caveat": "Versions, models, devices, network, source pages and process lifetime affect all measurements; these are small sample observations, not general throughput claims."
+  },
+  "conversion_comparison": {
+    "docling": {
+      "results": [
+        {
+          "paper": "1706.03762v7",
+          "elapsed_seconds": 245.553,
+          "status": "ConversionStatus.SUCCESS",
+          "blocks": 8,
+          "labels": [
+            "picture",
+            "section_header",
+            "text",
+            "caption"
+          ]
+        },
+        {
+          "paper": "1512.03385v1",
+          "elapsed_seconds": 0.318,
+          "status": "ConversionStatus.SUCCESS",
+          "blocks": 21,
+          "labels": [
+            "formula",
+            "section_header",
+            "text",
+            "footnote"
+          ]
+        },
+        {
+          "paper": "1706.03762v7",
+          "elapsed_seconds": 0.242,
+          "status": "ConversionStatus.SUCCESS",
+          "blocks": 8,
+          "labels": [
+            "picture",
+            "section_header",
+            "text",
+            "caption"
+          ]
+        }
+      ],
+      "total_seconds": 246.22452887706459
+    },
+    "marker_initial_markdown_run": {
+      "model_init_seconds": 1.1687205005437136,
+      "results": [
+        {
+          "paper": "1706.03762v7",
+          "elapsed_seconds": 135.962
+        },
+        {
+          "paper": "1512.03385v1",
+          "elapsed_seconds": 0.145
+        },
+        {
+          "paper": "1706.03762v7",
+          "elapsed_seconds": 0.058
+        }
+      ],
+      "total_seconds": 137.3337267935276
+    },
+    "marker_correct_json_renderer_rerun_seconds": [
+      0.931,
+      0.056
+    ],
+    "notes": [
+      "First runs included lazy model preparation/downloads after imports. They do not separately measure download versus model load.",
+      "Warm runs reused the same converter in the same process; new MCP parser workers additionally pay initialization cost.",
+      "The initial Marker output_format config did not select JSONRenderer; the JSON rerun used the explicit renderer. It confirmed Caption/Text/SectionHeader/PageFooter records but no Figure record on the tested Attention page.",
+      "MinerU was not benchmarked anew; its high quality and first-use cost were user-reported. No speed or accuracy superiority over MinerU is claimed."
+    ]
+  },
+  "v2_local_latency_seconds": {
+    "html_local_open_seconds": 0.187,
+    "html_first_read_seconds": 0.0028,
+    "pdf_local_open_seconds": 0.0076,
+    "pdf_first_read_seconds": 0.0127,
+    "pdf_render_seconds": 0.0952
+  },
+  "observed_new_worker_without_model_download_seconds": 8.779,
+  "advanced_modes": {
+    "scan_ocr": {
+      "first_observed_seconds": 19.03,
+      "expected_text_recovered": true,
+      "sample": "synthetic scanned page, no text layer"
+    },
+    "formula_recognition": {
+      "initial_observed_seconds_including_model_preparation": 238.774,
+      "prepared_model_refined_crop_worker_seconds": 67.265,
+      "sample": "ResNet 1512.03385v1 page 3",
+      "issue": "Default formula crop expansion introduced unrelated content into the recognized LaTeX.",
+      "change": "Set expansion_factor=0 and disable code recognition in the formula pass; the observed unrelated matrix tail disappeared.",
+      "remaining_limit": "Every recognized formula remains unverified and requires checking its original crop; no claim of exact source recovery."
+    }
+  },
+  "tests": {
+    "offline_unit_integration_e2e": {
+      "passed": 53,
+      "opt_in_live_skipped": 6
+    },
+    "live_network_and_prepared_models": {
+      "unique_cases_passed": 6,
+      "failed": 0,
+      "runs": [
+        {
+          "cases": 5,
+          "seconds": 92.31,
+          "scope": "Fixed arXiv HTML/PDF, Attention figure/caption/cache/crop, ResNet formula region, scanned OCR, recognized formulas with original crop verification"
+        },
+        {
+          "cases": 1,
+          "seconds": 8.84,
+          "scope": "Actual Docling table detection; known row/column counts and six boundary cells checked"
+        },
+        {
+          "cases": 1,
+          "seconds": 12.48,
+          "scope": "Rechecked fixed arXiv HTML/PDF with explicit retrieval and readability of its actual referenced image assets"
+        }
+      ],
+      "network_proxy": "http://127.0.0.1:7890",
+      "model_execution": "Local prepared models; normal parse disallows network and paid inference APIs"
+    },
+    "protocol": "All 17 tool schemas and full workflows; real stdio subprocess; parse_id/profile/cache and selected-page mismatch exercised.",
+    "package": "Extracted wheel loaded independently; all 17 tools registered; open/read/render passed.",
+    "lint_and_format": "ruff check and format checks passed",
+    "related_regressions": {
+      "tex_mcp": "51 passed, 2 opt-in live tests skipped",
+      "paper_search_mcp": "77 passed, 4 opt-in live tests skipped"
+    },
+    "offline_latest_seconds": 8.31,
+    "last_input_guard": "Oversized PDF geometry rejected before structure worker rasterization; covered by offline regression."
+  },
+  "sources": {
+    "real_papers": [
+      "1706.03762v7",
+      "1512.03385v1",
+      "2404.14219v1"
+    ],
+    "fixed_html_tested": "https://arxiv.org/html/2404.14219v1",
+    "official_arxiv_coverage": "https://info.arxiv.org/about/accessible_HTML.html",
+    "official_pmc_full_text": "https://pmc.ncbi.nlm.nih.gov/tools/openftlist/",
+    "jats": "Synthetic JATS fixtures tested; no claim that arbitrary PMC/publisher version matching was independently verified."
+  },
+  "limitations": [
+    "PDF figure/reference relations are not guaranteed complete; source HTML/JATS links are handled directly.",
+    "Model reading order, formulas, table cells and source conversions require verification for important claims.",
+    "Offline parser workers deny Python network connections and disable remote inference; model preparation is a separate explicit opt-in.",
+    "Proxy mode delegates name resolution and destination network policy to the configured trusted proxy; direct mode pins checked public IPs.",
+    "Prepared test environments/model cache reside under /private/tmp; this is not a promise of preinstalled models on other machines.",
+    "Model cache identity tracks revision/configuration hashes and weight file metadata; it does not cryptographically reread every model weight on every call."
+  ]
+}

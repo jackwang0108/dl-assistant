@@ -1,0 +1,52 @@
+{
+  "schema_version": 2,
+  "_notes": {
+    "purpose": "plan-vN.json与同名md共同描述真实批准设计；空示例未批准，不直接开跑。",
+    "compatibility": "保留旧CPE字段；扩充设计和状态语义需与消费者核对。不支持纯分析或部分结果时不能伪填训练/成功。",
+    "expected_signal": "各种结果如何解释及依据，不是预计增益或保证阳性；探索可写尚无方向预测并给analysis_plan。",
+    "approval": "用户已批准范围与未决分开，实质变化保存新版。",
+    "execution_type": "实际操作training/evaluation/diagnostic/ablation/analysis/probe/theory；type可记论文用途，不能据main/comparison推断训练或多seed。",
+    "replicates": "expected_replicates按设计列{id,seed}，seed可null；没有随机重复可声明main一次操作，不凑固定seed。"
+  },
+  "plan_version": 1,
+  "paper_repo": null,
+  "generated_at": null,
+  "storytelling_ref": "_draft/blueprint.md",
+  "research_assessment_ref": null,
+  "config_frozen": null,
+  "approval": {
+    "status": "pending",
+    "record_ref": null
+  },
+  "experiments": [
+    {
+      "exp_id": "exp-XXX",
+      "paper_claim": null,
+      "claim_cids": [],
+      "priority": "must",
+      "type": "analysis",
+      "design_mode": "exploration",
+      "decides_config": false,
+      "depends_on": [],
+      "config": null,
+      "condition_review_ref": null,
+      "purpose": null,
+      "expected_signal": null,
+      "analysis_plan": null,
+      "interpretation_plan": null,
+      "fairness": {
+        "comparison_basis": null,
+        "known_differences": []
+      },
+      "uncertainty_plan": null,
+      "required_artifacts": [],
+      "expected_cost": null,
+      "stop_conditions": [],
+      "output_to_paper": null,
+      "execution_type": "analysis",
+      "expected_replicates": [],
+      "resource_requirements": null,
+      "adjustment_bounds": null
+    }
+  ]
+}

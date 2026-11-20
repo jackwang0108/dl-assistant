@@ -1,0 +1,69 @@
+{
+  "date": "2026-11-20",
+  "project_version": "2.0.0",
+  "api_version": 2,
+  "tools": 25,
+  "tests": {
+    "offline_unit_integration_e2e": {
+      "passed": 53,
+      "opt_in_live_skipped": 1
+    },
+    "live_overleaf": {
+      "passed": 1,
+      "seconds": 20.28,
+      "result": {
+        "dedicated_project_name": "overleaf-mcp-v2-test-9210eedb539c",
+        "deleted": true,
+        "project_id": "6affdd484f78e5f8a58a3694",
+        "missing_root_classification": "failed",
+        "version_snapshot_verified": true,
+        "compile_classification": "clean",
+        "pdf_pages": 3,
+        "render_verified": true,
+        "old_download_preserves_latest": true,
+        "source_binding": "compiled_revision_not_certified"
+      }
+    },
+    "protocol": "All 25 tools registered with side-effect annotations; in-process protocol workflows and a real stdio subprocess talking to a real local HTTP server passed.",
+    "package": "Built wheel and sdist; extracted wheel independently registered 25 tools and completed compile/download/render with controlled HTTP.",
+    "lint_and_format": "ruff check and format checks passed"
+  },
+  "live_scope": [
+    "Validated supplied web session; credential values were not returned or copied into repository files.",
+    "Created one uniquely named dedicated project for the final pytest workflow.",
+    "A nonexistent root document produced a recorded failed request; ordinary compilation then succeeded.",
+    "Downloaded and validated PDF, rendered original page, read log/file tree/comments/history/labels, and validated a historical ZIP.",
+    "Compiled another version and confirmed downloading the older PDF did not rewind latest.",
+    "Deleted the dedicated test project in finally cleanup; final account check found zero remaining dedicated v2 test projects."
+  ],
+  "regressions": [
+    "Server failure/statistical errors cannot be overridden by a log regex miss.",
+    "Missing log/download failures remain visible.",
+    "Cookies/CSRF never travel to configured CDN origins; unrelated output origins are rejected.",
+    "Invalid local or remote PDF, modified cached artifact, unsafe filename, symlink escape and unsafe ZIP are detected.",
+    "SQLite state survives restart; artifact updates, compile reservation, pinning and explicit cleanup are transactional.",
+    "Expired interrupted requests become unknown rather than being silently retried.",
+    "Local non-default Git branches are accepted with an explicit remote branch; remote URL passwords or token-like usernames are rejected.",
+    "Stable result snapshots and whole-JSON budgets include oversized record continuation."
+  ],
+  "auth": {
+    "storage": "Private local instance-bound file outside the repository, mode 0600",
+    "source_docs_tests_secret_scan": "No supplied credential values found",
+    "proxy": "http://127.0.0.1:7890",
+    "git_token_required_for_this_test": false
+  },
+  "limitations": [
+    "Web API observation does not certify atomic compilation of a requested Git commit. source_binding remains explicit and unverified.",
+    "This adapter does not expose an authoritative remote running/idle query; status reports local evidence and unknown outcomes.",
+    "Real Git clone/push was not tested; local Git binding and source-diff behavior were tested with real temporary repositories.",
+    "Live comment reads used a new project without preexisting collaborator comments; rich anchors/context were tested with controlled responses.",
+    "Overleaf web endpoints are not a stable public API; current request formats were checked against live responses and upstream source.",
+    "PDF visual comparison locates image changes, not scientific or editorial correctness."
+  ],
+  "upstream_references": [
+    "https://docs.overleaf.com/integrations-and-add-ons/git-integration-and-github-synchronization/git-integration/git-integration-authentication-tokens",
+    "https://docs.overleaf.com/integrations-and-add-ons/git-integration-and-github-synchronization/git-integration/advanced-git-operations",
+    "https://docs.overleaf.com/integrations-and-add-ons/git-integration-and-github-synchronization/git-integration",
+    "https://github.com/overleaf/overleaf/blob/main/services/web/app/src/Features/Compile/CompileController.mjs"
+  ]
+}

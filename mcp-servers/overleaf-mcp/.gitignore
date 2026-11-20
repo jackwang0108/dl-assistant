@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+
+# Virtualenv
+.venv/
+
+# Secrets / env
+.env
+credentials.json
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+
+# Local compile output (default location is the system tmp dir; keep this
+# just in case someone points OVERLEAF_TMP_DIR here)
+output/

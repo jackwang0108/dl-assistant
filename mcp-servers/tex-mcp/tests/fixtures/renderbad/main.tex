@@ -1,0 +1,22 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{thispackagedoesnotexist-xyz}  % breaks the paper-preamble strategy
+\newcommand{\ours}{Ours}
+\newcommand{\Re}{\mathbb{R}}  % clashes with amssymb in the minimal preamble
+\title{Renderbad Fixture}
+\begin{document}
+\section{Results}
+\begin{table}
+\centering
+\caption{Scores on the benchmark.}
+\label{tab:scores}
+\begin{tabular}{lc}
+\toprule
+Method & Score \\
+\midrule
+\ours & 91.2 \\
+Baseline & 88.0 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{document}

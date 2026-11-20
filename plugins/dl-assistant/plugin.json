@@ -1,0 +1,6 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "dl-assistant",
+  "version": "0.1.0",
+  "description": "深度学习科研工作流：论文调研、实验设计与执行、写作、审稿与汇报。"
+}

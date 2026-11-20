@@ -1,0 +1,16 @@
+{
+  "_notes": {
+    "是什么": "图表索引：每项登记实际来源、可编辑源/脚本、输出、版本、所回答问题及状态；与对应设计记录和实际文件核对，不作为独立事实来源。",
+    "id": "稳定资产ID，不随正文图号重排而改名。",
+    "class": "schematic表示真实方法或明确标注的概念，dataviz表示真实数据；混合资产逐部分注明。",
+    "subtype": "示意图：concept（概念）| flow（流程/pipeline）| architecture（模型架构）| principle（原理阐述）| comparison（机制对比）。数据可视化：figure | table。",
+    "production": "实际可编辑源或生成方式，如svg/html/tikz/matplotlib；不强制用户PPT终稿。",
+    "spec": "图表设计记录的实际路径，包含问题、来源、方法/数据版本、编码、处理、尺寸和核查。",
+    "status": "intent/designed/draft/final据实际完成状态记录；agent可产终稿，final需内容与显示检查，不能预填。",
+    "label": "LaTeX label：fig:<id> 或 tab:<id>。占位与正文 \\ref 都用它，禁止手写裸编号。",
+    "section": "归属节（paper-state.json 里 sections 的 key）。",
+    "data_ref": "数据来源实际文件、实验/分析版本；示意内容注明方法版本，不能用空指针代表已核实。",
+    "version": "该资产的改动版本号，整数递增；详细设计大改、数据重填都 +1。"
+  },
+  "visuals": []
+}

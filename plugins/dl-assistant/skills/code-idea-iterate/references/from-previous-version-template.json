@@ -1,0 +1,55 @@
+{
+  "schema_version": 2,
+  "version": null,
+  "from_previous": null,
+  "research_assessment": null,
+  "self_checks": [],
+  "round_record": {
+    "prior_beliefs": [],
+    "observations": [],
+    "judgment_changes": [],
+    "unknowns": []
+  },
+  "current_problem": null,
+  "research_question_ids": [],
+  "hypothesis_ids": [],
+  "next_evidence": {
+    "unknown": null,
+    "design_mode": null,
+    "why_informative": null,
+    "limitations": [],
+    "approved_budget": null,
+    "condition_review_ref": null,
+    "target_validation_trigger": null
+  },
+  "value_change": {
+    "previous_scope": null,
+    "current_scope": null,
+    "retained": [],
+    "lost": []
+  },
+  "claim_changes": {
+    "added": [],
+    "refuted": [],
+    "superseded": [],
+    "no_longer_pursued": []
+  },
+  "decision": {
+    "action": "continue_evidence",
+    "rationale": null,
+    "user_response": null,
+    "approval_status": "pending"
+  },
+  "git": {
+    "implementation_parent_commit": null,
+    "new_branch": null
+  },
+  "_notes": {
+    "purpose": "仅在批准下一轮实验后保存；研究决定可先独立记录，不必新建实验版本。",
+    "round_record": "认识变化逐项关联实际证据/条件；原因未知可保留，不把解释写成事实。",
+    "claim_changes": "命题改义分配新ID（包括P）；superseded含from/to/理由；no_longer_pursued只是资源决定，不能推导refuted。全部旧证据保留。",
+    "decision": "action=continue_evidence/revise_hypothesis/redefine_problem；写作/暂停/停止保存在决定记录，不虚建实验轮次。用户授权与科学判断分开。",
+    "git": "研究上一轮与实际代码起点分开；不依赖阳性tag，不强制从最新HEAD开始。",
+    "next_evidence": "条件记录绑定新问题/假设；说明关键条件、目标与本轮差异、解释范围及何时需目标条件证据。不能沿用全局reduced认证，也不强制扩大本来就是小规模的研究。"
+  }
+}

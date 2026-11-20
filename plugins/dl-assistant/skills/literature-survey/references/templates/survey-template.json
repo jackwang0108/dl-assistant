@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "_notes": [
+    "这是待填写模板，不是已完成调研；未知用 null，尚无记录用空数组。",
+    "purpose 和 familiarity 记录用户已确认用途与背景。axis 表示分类维度，不意味着只能单标签。",
+    "taxonomy 保留类别名称数组；papers[].category 为便于旧调用保留的主类别，可为 null，categories 数组记录全部类别，均与 taxonomy 对齐。",
+    "papers 包含实际纳入范围的论文；pending_papers 单列未决纳排和身份记录，不把原始未筛结果都冒充已纳入。排除项与完整观测可追查 pool.json。",
+    "每篇包含 pool_id、title、arxiv/doi/url、authors、版本与来源、category/categories、role、approach、reading_level、evidence_locations、限制及比较资料。role 为奠基/里程碑/近期前沿/其他或 null，重要性需附理由。",
+    "reading_level 为 metadata/abstract/partial_text/detailed；来源位置含版本和章节/页码。未知版本明确标记。",
+    "引用、投票等数值保留来源和观测时间；不能用最大值、热度或引用数直接推断质量。",
+    "comparisons 每项包含研究问题、参与论文标识、方法/假设/数据/评测/成本/限制、证据位置、可比性和未知项；不同设置指标不可直接排名。",
+    "gaps 每项保留 id、label、category、desc、sources；增加 source_type（author_statement/synthesis/hypothesis）、evidence_locations、current_status（unverified/partly_addressed/addressed）、checked_at、search_scope 和未决问题。sources 使用实际 arXiv ID/DOI/URL，不限 arXiv。",
+    "gaps 为待验证问题，不是已确认创新点；作者未来工作不证明当下仍未解决。分类和问题判断均说明核查范围。",
+    "coverage 引用实际请求和 coverage-review.md，分别记录 planned、executed、partial、failed、not_run、停止依据与剩余任务。最新命中日期不代表完整覆盖。",
+    "旧文件缺失字段按未知处理，不将旧 gaps 是客观事实的解释沿用为当前结论；保留来源，不批量改写既有调研。"
+  ],
+  "topic": null,
+  "slug": null,
+  "date": null,
+  "purpose": null,
+  "familiarity": null,
+  "axis": null,
+  "scope": null,
+  "sources": [],
+  "coverage_notes": null,
+  "coverage": {
+    "request_records": [],
+    "review_path": "coverage-review.md",
+    "stop_reasons": [],
+    "remaining": []
+  },
+  "status": "planned",
+  "taxonomy": [],
+  "papers": [],
+  "pending_papers": [],
+  "comparisons": [],
+  "gaps": []
+}

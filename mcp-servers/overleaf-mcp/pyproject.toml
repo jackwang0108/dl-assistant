@@ -1,0 +1,39 @@
+[project]
+name = "overleaf-mcp"
+version = "2.0.0"
+readme = "README.md"
+description = "MCP server for Overleaf: compile projects, read collaborator comments, fetch compile log/PDF, and render pages to images"
+requires-python = ">=3.11"
+dependencies = [
+    "fastmcp>=3.4,<4",
+    "pydantic>=2.0.0",
+    "httpx>=0.27.0",
+    "pymupdf>=1.24.0",
+    "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0.0", "ruff>=0.15.0"]
+
+[project.scripts]
+overleaf-mcp = "overleaf_mcp.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/overleaf_mcp"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["live: explicit real Overleaf tests using a dedicated test project"]
+filterwarnings = [
+    # pymupdf SWIG bindings + opentelemetry importlib_metadata — third-party noise
+    "ignore:builtin type .* has no __module__ attribute:DeprecationWarning",
+    "ignore:SelectableGroups dict interface is deprecated:DeprecationWarning",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

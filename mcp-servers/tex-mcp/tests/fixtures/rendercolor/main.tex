@@ -1,0 +1,17 @@
+\documentclass{article}
+% xcolor is NOT loaded here: the paper relied on its own class to provide it.
+% The wrapper must inject base packages BEFORE this preamble (2008.08186).
+\definecolor{myblue}{RGB}{30,100,200}
+\begin{document}
+\section{Results}
+\begin{table}
+\centering
+\caption{Color table.}
+\label{tab:color}
+\begin{tabular}{lc}
+\toprule
+\rowcolor{myblue} A & 1 \\
+\bottomrule
+\end{tabular}
+\end{table}
+\end{document}
