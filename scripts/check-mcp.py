@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -12,14 +13,14 @@ from fastmcp.client.transports import StdioTransport
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVERS = (
-    ("paper-search-mcp", "paper_search_mcp", "get_capabilities", "PAPER_SEARCH_CACHE_DIR", 15),
-    ("tex-mcp", "tex_mcp", "tex_capabilities", "TEX_MCP_CACHE_DIR", 14),
-    ("pdf-mcp", "pdf_mcp", "pdf_capabilities", "PDF_MCP_CACHE_DIR", 17),
-    ("overleaf-mcp", "overleaf_mcp", "overleaf_capabilities", "OVERLEAF_MCP_HOME", 25),
+    ("paper-search-mcp", "paper-search", "get_capabilities", "PAPER_SEARCH_CACHE_DIR", 15),
+    ("tex-mcp", "tex-mcp", "tex_capabilities", "TEX_MCP_CACHE_DIR", 14),
+    ("pdf-mcp", "pdf-mcp", "pdf_capabilities", "PDF_MCP_CACHE_DIR", 17),
+    ("overleaf-mcp", "overleaf", "overleaf_capabilities", "OVERLEAF_MCP_HOME", 25),
 )
 
 
-async def check(folder, module, capability, cache_key, expected):
+async def check(folder, name, capability, cache_key, expected):
     python = ROOT / "mcp-servers" / folder / ".venv" / "bin" / "python"
     if not python.is_file():
         raise FileNotFoundError(f"Run scripts/setup-mcp.py first for {folder}")
@@ -29,9 +30,13 @@ async def check(folder, module, capability, cache_key, expected):
             "FASTMCP_SHOW_SERVER_BANNER": "false",
             "FASTMCP_CHECK_FOR_UPDATES": "off",
         }
-        if module == "overleaf_mcp":
+        if name == "overleaf":
             env["OVERLEAF_CREDENTIALS_PATH"] = str(Path(cache) / "unused-auth.json")
-        transport = StdioTransport(command=str(python), args=["-m", module], cwd=cache, env=env)
+        config = Path(cache) / "config.json"
+        config.write_text(json.dumps({name: env}))
+        config.chmod(0o600)
+        args = [str(ROOT / "scripts/run-mcp.py"), name, "--config", str(config)]
+        transport = StdioTransport(command=str(python), args=args, cwd=cache)
         async with Client(transport, timeout=20) as client:
             tools = await client.list_tools()
             result = await client.call_tool(capability, {})

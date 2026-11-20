@@ -25,3 +25,24 @@ python3 -m unittest discover -s plugins/dl-assistant/skills/dl-assistant/scripts
 从这份独立 Git 仓库发布。检查暂存文件后提交，创建 GitHub 仓库，再设置远端并推送。公开前由维护者确认自有代码的许可证和第三方材料的分发权限。
 
 W&B 上游资料及许可证保存在 [wandb-primary](../plugins/dl-assistant/skills/wandb/upstream/wandb-primary/SKILL.md)，汇报 skill 保留 [上游 MIT 许可证](../plugins/dl-assistant/skills/research-presentation/LICENSE)。PDF MCP、TeX MCP 的许可证声明见各自 `pyproject.toml`。整体项目的许可证由维护者选定。
+
+## 本机 MCP 配置
+
+四个 MCP 共用 `~/.config/dl-assistant/mcp.json`。文件需为当前用户私有（`chmod 600`）。每个段落的内容是环境变量与字符串值的映射。比如：
+
+```json
+{
+  "shared": {
+    "HTTP_PROXY": "http://127.0.0.1:7890",
+    "HTTPS_PROXY": "http://127.0.0.1:7890"
+  },
+  "paper-search": {},
+  "tex-mcp": {},
+  "pdf-mcp": {},
+  "overleaf": {}
+}
+```
+
+在各自段落填写所需配置。Paper Search 的三个密钥变量是 `SEMANTIC_SCHOLAR_API_KEY`、`OPENALEX_API_KEY` 和 `SERPAPI_KEY`。各服务的缓存路径、PDF 的 `PDF_MCP_PROXY_URL`、Overleaf 的 `OVERLEAF_PROXY_URL` 与 `OVERLEAF_CREDENTIALS_PATH` 也放在对应段落。Overleaf 的会话凭证由其认证工具另行保存，集中配置只记录文件路径。
+
+有重名变量时，服务段覆盖 `shared`，集中配置覆盖继承的同名环境变量。密钥应放在对应服务段。文件不存在时，启动器使用进程环境和服务默认值。改配置后重启相应 MCP 进程。使用自定义路径时，可给 `scripts/run-mcp.py` 传 `--config`。

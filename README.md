@@ -20,13 +20,15 @@
    mcp-servers/paper-search-mcp/.venv/bin/python scripts/check-mcp.py
    ```
 
+四个 MCP 的密钥、代理和缓存路径可统一放在仓库外的 `~/.config/dl-assistant/mcp.json`。新生成的启动配置会自动读取这份文件。配置字段见 [本机 MCP 配置](docs/maintaining.md#本机-mcp-配置)。
+
 插件负责安装 skills。MCP 是各机器独立启动的服务，路径、凭证、代理及可选模型按机器配置。已有全局安装的同名旧 skill 时，让测试会话选用插件里的版本，避免混用。
 
 ## 可选能力
 
 | 能力 | 配置 |
 | --- | --- |
-| 论文检索 | [Paper Search](mcp-servers/paper-search-mcp/README.md) 支持 arXiv。其他来源按需使用该目录的 `.env.example` 建本地 `.env` 并配置对应密钥。 |
+| 论文检索 | [Paper Search](mcp-servers/paper-search-mcp/README.md) 支持 arXiv。其他来源按需使用该目录的 `.env.example` 建本地 `.env` 并配置对应密钥，也可以使用下文的集中配置。 |
 | TeX 源码阅读 | [TeX MCP](mcp-servers/tex-mcp/README.md) 提供本地源码与 arXiv 阅读。复杂图的隔离渲染单独配置。 |
 | PDF 与结构化全文 | [PDF MCP](mcp-servers/pdf-mcp/README.md) 默认支持原页与文字读取。需要 Docling 时，安装命令加 `--docling`，模型按 PDF MCP 文档准备。 |
 | Overleaf | [Overleaf MCP](mcp-servers/overleaf-mcp/README.md) 按需在本地终端运行 `mcp-servers/overleaf-mcp/.venv/bin/python -m overleaf_mcp.auth_setup`。需要代理时给命令传 `--proxy`。使用新机器上的有效登录会话，凭证默认存在用户目录。 |

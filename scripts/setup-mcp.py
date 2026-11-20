@@ -41,7 +41,7 @@ def main():
         install_env.update(HTTP_PROXY=args.proxy, HTTPS_PROXY=args.proxy)
     config = []
     for name in names:
-        folder, module = SERVERS[name]
+        folder, _ = SERVERS[name]
         project = ROOT / "mcp-servers" / folder
         if not args.config_only:
             command = ["uv", "sync", "--locked", "--no-dev", "--python", args.python]
@@ -55,7 +55,7 @@ def main():
             parser.error(f"Missing environment: {project / '.venv'}")
         section = f"mcp_servers.{name}"
         config.extend((f"[{section}]", f"command = {json.dumps(str(python), ensure_ascii=False)}",
-                       f"args = {json.dumps(['-m', module])}"))
+                       f"args = {json.dumps([str(ROOT / 'scripts/run-mcp.py'), name], ensure_ascii=False)}"))
         if args.proxy:
             config.append(f"[{section}.env]")
             for key in ("HTTP_PROXY", "HTTPS_PROXY"):
