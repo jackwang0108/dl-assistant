@@ -35,6 +35,8 @@ flowchart LR
 
 ### 1. 保存改动前现场，明确保留范围
 
+**长任务启动规则**。预计超过 5 分钟或中断后重跑代价高的命令，单机或 SSH 直连机器上用 `dl-assistant/scripts/run-long.sh` 在实际执行机器上通过 tmux detach 启动。通过集群调度器提交的任务走调度器。启动和恢复细节见 [共享长任务说明](../dl-assistant/references/long-run-ops.md)。
+
 核实际组件/代码commit、未提交diff、环境/config/数据/模型及现有检查的范围。保护用户改动和已有任务，按项目约定使用当前授权或隔离分支，不要求固定tag/分支、merge或push。保留能准确定位本次前后状态的记录，不能把重置整个工作区当恢复。
 
 **建立保留范围清单**：本轮研究/复现、用户指定及已约定的操作、配置、命令入口、公开接口、模型保存/加载、数据/资产兼容、相关历史实验与可重复检查分别列明，说明依据和必要程度。外部使用者/配置或用途不明就记录未知，不推断当前没跑等于可以删。范围本身需改变时按实际授权讨论。
@@ -103,6 +105,6 @@ flowchart LR
 
 交code-reading的是保留用途、实际源码/config、变更理由、操作路径观察及未覆盖项；执行仍按批准研究设计和关键代码审阅。execution接收实际commit+diff及具体检查范围，不依赖baseline-prepared或iteration_verified认证。git提交/merge/push遵循实际项目规则与已有授权，不将其作为行为已验证的条件。
 
-长任务按 [共享说明](../dl-assistant/references/long-run-ops.md) 和实际调度环境运行，核进程/日志/退出状态/输出再恢复，不重跑仍在运行的任务。分工按需要和实际授权说明任务/输入输出，不强制派子agent或固定工具类型；累计文件串行更新。
+核对长任务的进程、日志、退出状态和输出再恢复，不重跑仍在运行的任务。分工按需要和实际授权说明任务/输入输出，不强制派子agent或固定工具类型；累计文件串行更新。
 
 新版cleanup.json为schema_version=2。code-reading已按实际用途/变更/观察范围接收；后期旧消费者将在各自审查时同步；旧performance.in_band、iteration_verified、hot-path或tag只作历史定位，不自动映射新证据。历史项目原文件保留，不批量改写，不恢复旧scaling-law设施和统一性能判据。

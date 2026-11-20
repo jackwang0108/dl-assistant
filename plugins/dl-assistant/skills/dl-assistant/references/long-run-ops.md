@@ -6,7 +6,9 @@
 
 ## 核心模型：任务 detach 存活，agent 靠文件恢复
 
-预计超过 5 分钟或中断后重跑代价高的命令，应使用可独立于当前会话运行的任务管理方式，例如 tmux 或集群调度器。会话内后台工具是否能在会话关闭后继续运行，取决于宿主实现；未经确认时，不用于长任务。
+预计超过 5 分钟或中断后重跑代价高的命令，在单机或 SSH 直连机器上必须用 `dl-assistant/scripts/run-long.sh` 在实际执行机器上通过 tmux detach 启动。需要提交到集群调度器的任务使用项目的调度入口（如 Slurm 的 `sbatch`），记录作业 ID、日志、退出状态和产物。
+
+启动前检查执行机器上的命令和脚本是否可用。缺少 tmux 或项目规定的调度入口时，先解决依赖或说明阻塞。会话内后台工具、前台长等待和 shell 的 `&` 不用于启动这类任务。
 
 tmux 后台任务通常能在 SSH 或 agent 会话断开后继续运行，但节点重启、进程被终止或服务器的会话清理策略仍会中断任务。它不保证任务成功。
 
@@ -14,7 +16,7 @@ tmux 后台任务通常能在 SSH 或 agent 会话断开后继续运行，但节
 
 ## 启动：detached 跑长任务（agent 永不 attach）
 
-**首选封装脚本** `dl-assistant/scripts/run-long.sh`（模板 + mkdir + sentinel 已固化，少记少错）：
+**单机与 SSH 直连机器的启动脚本** `dl-assistant/scripts/run-long.sh`（模板 + mkdir + sentinel 已固化，少记少错）：
 
 ```bash
 bash <skills根>/dl-assistant/scripts/run-long.sh <前缀>-<task> <logdir> '<cmd>'
@@ -128,5 +130,4 @@ df -h <target_partition>     # 目标盘剩多少
 | **code-idea-execution** | `ex-<slug>-<exp>` | 几小时长训练（多 seed） | 实验目录的 train.log / EXIT_CODE、各 seed checkpoint、metrics.json + `experiments/index.json` 台账 | 从 checkpoint `--resume` 续训 |
 | **code-paper-experiment** | `cpe-<exp_id>-` | full-scale 多 seed 训练（贵、长） | 各 exp 的 `meta.json` 状态、包级 `results.json` 增量、runs/seed-* 的 log + checkpoint | 按续跑协议：已完成不重跑、中断的按重连规则恢复、恢复不了重跑该 seed 并记 deviation |
 
-> 各 skill 在自己 SKILL 里只需声明：本 skill 的 session 前缀、长任务类型、恢复时扫什么——
-> 通用机制（detach / sentinel / 三项只读状态检查 / 扫产物恢复 / Monitor / 磁盘容量检查）全看本份。
+> 各 skill 在执行步骤写明何时调用启动脚本。session 前缀、日志、退出码、恢复和磁盘检查见本文。

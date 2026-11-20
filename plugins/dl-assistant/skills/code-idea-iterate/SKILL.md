@@ -106,12 +106,14 @@ agent 提出具体推荐，用户决定研究价值、方向变化和实际投�
 
 先保存 `ideas/decisions/<唯一标识>/research-assessment.md` 和对应自查记录；如项目已约定位置则沿用。每次决定引用当前问题、数据和版本。只读讨论也保存结果，不为凑目录而生成新实验轮次。
 
-**继续实验**：用户批准具体设计/预算后，创建下一轮 `ideas/v<N>-<slug>/`，产：
+**继续实验**。拟议下一轮实验时，先起草以下材料供审阅：
 
 - `00-from-previous-version.md/.json`：认识更新、研究意义变化、版本及命题关系，见 [人读模板](references/from-previous-version-template.md) 和 [JSON模板](references/from-previous-version-template.json)。
 - `01-idea-spec.md`、`02-research-plan.md`、`claims.json`：采用共享 [spec](../dl-assistant/references/spec-template.md)、[plan](../dl-assistant/references/plan-template.md)、[编写原则](../dl-assistant/references/plan-writing-principles.md) 和 [命题格式](../dl-assistant/references/claims-template.json)。附当前判断与自查引用。
 
 仅探索时允许没有方向性命题，问题与目标留spec；不伪造总假设。沿用同一命题须检查条件，保留历次证据，不为重试清空反证，也不让supported永久免检。命题含义或范围改变分配新ID（包括P编号），旧项保留并写关系；改判保留原意见、来源、日期和理由。资源上停止追踪写notes和决定，不强填refuted。
+
+把写好的 spec 和 plan 的文件路径一起发给用户，说明相对上一轮的变化、取证设计、预算和待决事项，请用户明确确认两份当前版本。一次回复可以确认两份。记录获批版本和范围，两份均获批后才将材料纳入下一轮 `ideas/v<N>-<slug>/` 并交接 execution。
 
 建分支前检查工作区和用户改动；实现起点可以是已验证历史commit，区别研究上一轮与实现父commit。按 [版本记录](../dl-assistant/references/version-tree.md) 更新idea_tree，只追加本轮并更新next/当前进度，不改写历史结果；无新实验不虚建节点。只提交本次授权内容，不默认push或覆盖tag。
 
