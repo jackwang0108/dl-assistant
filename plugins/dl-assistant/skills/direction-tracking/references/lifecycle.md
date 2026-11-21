@@ -1,45 +1,62 @@
-# 入口与各来源处理
+# 入口与三源机制
 
-## 首次建立方向
+## 四种入口
 
-确认方向描述、包含/排除/边界案例、关键词同义词、可用参考论文及回溯开始日期，写配置和独立运行快照。关键词和引用者检索结合使用；无种子可先运行 A，不能把任意固定篇数的近期引用者称为方向全貌。
+### Setup（首次建方向）
 
-历史检索量较大时先报告候选量与预算。用户同意后分批筛选，未完成候选留待处理。取最近约 50 篇可作为初始评估批次，不代表已检查其他候选；获取范围不完整时保存剩余页或日期段。
+1. 问:方向描述 / 关键词(+ 同义词)/ 2-5 篇种子 arxiv ID。保存目录写死 `<项目>/docs/direction-tracking/`,不问用户。
+2. 建 `track-<slug>/`:`config.yaml` + 空 `seen.jsonl` + 空 `library.md` + `meta.json`(`slug`/`created`/`last_run=null`)。
+3. → 进 Bootstrap。
 
-## 常规增量与恢复
+### Bootstrap（首次跑，走 B）
 
-读取最新配置、各源进度及待处理记录，先核对中断任务。运行开始固定 UTC 截止时间，后续不能用结束时的 now 跳过执行期间的新增。
+1. 每个种子:`paper-search get_paper_citations`(传种子的稳定 arXiv 标识,机制见下「三源抓取机制·B」),拉取后**客户端按 `published` 排序截断近 N**(N 防爆,默认 ~50,用户可调;工具本身没有 recency 排序参数,别指望服务端排)。
+2. 合并 → seen 空,全是新 → 进漏斗。
+3. 通过的 → `library.md` + `runs/<日期>.md`;**所有拉过的** → `seen.jsonl`。
+4. `meta.last_run = now`。
 
-### A：arXiv 关键词
+> B 在这里不"滞后"——要的就是这份回顾性 corpus,快速建立方向全貌。
 
-```bash
-uv run <skill目录>/scripts/fetch_arxiv_keywords.py \
-  --keywords "referring expression segmentation" "referring image segmentation" \
-  --from YYYY-MM-DD --to YYYY-MM-DD --max 200
-```
+### 增量（后续常规跑，A + B）
 
-主 agent 展开关键词和同义词，脚本将短语 OR 连接。窄缩写可能造成大量不相关匹配，需结合范围检查，不能只靠关键词确认相关。
+1. **A**:arxiv 关键词查询,日期窗 `last_run → now`(往前 overlap 2 天,防 arxiv 投稿日期抖动;最终靠 seen 去重)。
+2. **B**:每个种子 `get_paper_citations`(传稳定 arXiv 标识并按覆盖和预算续取,机制见下「三源抓取机制·B」),跟 seen diff 出新引用者。
+3. A+B 合并去重 → 新 ID 进 seen → 漏斗 → `library.md` / digest。
+4. `meta.last_run = now`。
 
-按当前配置下连续完整获取的位置查询，日期包含两端。默认可往前重叠 2 天以检查延迟记录，但这只是有限补查；用户需要更可靠回顾时确认更长回补范围。当前 UTC 日未结束时作为临时观测，不将该日记为完整；下次重新查，完成进度至多到已结束且本次完整获取的日期。
+### C（事件驱动，用户给会议 proceedings）
 
-检查 `truncated`：达到上限时完整性未确认，扩大上限或拆日期段，逐段获取并去重；单日仍截断则继续扩大或向用户报告限制，不推进该段。脚本错误、截断与合法空结果分开。完整空结果可记录该请求已完成，不声称源站绝无遗漏。
+用户给 **会议 + 年份**(或 URL / 清单)→ 按 `conference-sources.md` 抓 → 合并去重 → 漏斗 → `library.md` / digest。可在增量 run 里顺手跑,或单独触发。`last_run` 不因 C 单独变(C 不参与 A 的日期窗)。
 
-### B：参考论文的引用者
+---
 
-按 `paper-search` v2 先用稳定标识核种子身份，再 get_paper_citations。get_query_results 只读本地快照，extend_query(fetch_more/retry_failed/refresh) 才调用上游。保存具体快照导出及逐来源覆盖限制；新命中不等于新发表，长期去重仍用 arXiv ID、DOI 或 URL 及版本。
+## 三源抓取机制
 
-每个种子保存获取时间、原始分页及完整性。完整重新获取引用者后与已知身份合并，可发现数据库延迟新增的旧论文；不能只按发表日期过滤引用者。工具不支持完整枚举或分页失败时明确标部分结果，不称为全量。仅有页码而服务端列表可能变化时，重启应重查前页并去重，不能假定旧页码对应固定内容。
+### A：arxiv 关键词（及时）
 
-### C：会议论文集
+- arxiv API 关键词查询:`(all:"kw1" OR all:"kw2" OR ...) AND submittedDate:[last_run TO now]`。同义词组:每组内 OR、组间再 OR。
+- 用本 skill `scripts/fetch_arxiv_keywords.py`(关键词 + submittedDate 窗 OR 查询,paper 字段形状跟 `fetch_arxiv_daily` 一致,好让 R2 复用)。**主会话从 config.yaml 把同义词组展开成扁平关键词列表传给它**(脚本本身不管同义词分组)。
+- 只走 A 能 timely 抓 day-1 新论文——这是 A 不可替代的理由。
 
-见 `conference-sources.md`。按会议、年份、主会/研讨会等分别保存范围和完整性。单独运行会议查询不推进 A 或 B 的进度。
+### B：种子引用（语义）
 
-## 配置变化
+- `paper-search get_paper_citations`,每种子一次。
+- **种子标识**：用 `get_paper_citations(paper_ref="arxiv:…")`。来源需要其他标识时，先用 `get_papers` 或 `resolve_papers` 核实别名。
+- **检查覆盖**：用 `get_query_results` 读完当前快照，必要时用 `extend_query(action="fetch_more")` 继续向来源取结果。记录失败、预算截断和未确认的来源覆盖。
+- 增量:**在预算内拉取引用者，再与 seen 比较**(不用日期窗)。滞后无所谓——B 的角色就是"事后补 A 漏的"。
+- **量爆控量**:种子多了引用者只涨不跌;diff 出的新引用者超阈值(默认 ~100)先报用户、确认 cap 再进漏斗,别整批烧 token。
 
-用户确认配置变更后增版本并保存快照。范围扩大时重新检查可能受影响的排除项，新增关键词或种子时确认历史回补范围；不能只从上次运行时间往后查。缩小范围时重评受影响收录项，保留旧判断历史。边界不清时给用户具体案例判断，不默认丢弃。
+### C：会议 proceedings（高质量）
 
-## 各源失败与运行结束
+- 见 `conference-sources.md`(11 个顶会的 host 映射 + OpenReview/ACM DL 受限类的兜底)。
+- 大多数会议论文有 arxiv 版本 → 跨源去重靠 arxiv ID 兜底;少数没有的 → 标题哈希 / DOI。
 
-记录每源成功、部分完成、失败或未运行及原因，其他来源继续处理。原始结果成功保存且候选完整登记后才推进对应来源的获取进度；筛选待办独立保留。报告明确下一次将恢复哪些任务。
+---
 
-派子 agent 前的确认按入口要求执行：常规增量一次确认整体分工；首次建库或会议量大时相关性检查后再确认正文检查范围。报告与论文库交付后由用户选择深入阅读或研究判断，不自动启动其他 skill。
+## 入口路由（每次进来先判）
+
+扫固定目录 `docs/direction-tracking/` 下有没有 `track-<slug>/`:
+
+- **没有** → Setup。
+- **有** → 续跑(读 `config` + `seen` + `last_run`)。多个夹子 / 歧义 → 问用户跟哪个。
+- **拿不准** → 追问,别猜。

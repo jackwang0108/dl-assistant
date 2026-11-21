@@ -1,14 +1,68 @@
-# 全文内容核查
+# Self-Check（audit 一致性 lens 清单——纯内容一致性）
 
-按实际任务优先核心主张、新结果和新修改，不只对结构说明逐句复述。
+`writing-paper` 的 **audit 目标（op-7-audit）一致性 lens** 清单——给 fan-out 的 fresh-eyes 子 agent 用，**不是一次性 gate，每次 audit 都跑**。这是 writing-paper 自己的质量闸——不把质量关推给 `writing-paper-review`。
 
-- 问题、原有认识、实际新增和重要性是否清楚，有没有用实验数量/模块数量替代贡献？
-- 核心主张是否有具体证据、适用条件、反证和不确定性；机制解释是否超过观察？
-- 阴性、失败、缺失与选择/排除是否如实记录；收窄后是否重新判断价值？
-- 同一实体、符号、数据划分、单位和数值定义在全文是否一致；摘要/结论是否超出正文？
-- 每条实质性引用是否支持具体句子；文献版本及相关工作差异是否核过？
-- 图表、caption、正文、附录和复现信息是否对应真实来源/版本；无图表悬空引用或未知数字？
-- 核心研究新问题是否已登记返回，而非通过组织文字继续维护原贡献？
-- 变化影响项是否处理；未解决项、未检查范围及用户决定是否保留？
+> **本清单只管内容一致性**（要判断力的）。其他检查各归各家，别在这里重复：
+> - 确定性检查（label/\ref、蓝图↔成稿、venue 合规、页数）→ op-7 主 agent 查（grep/对照就能定）。
+> - 渲染/美观检查 → `visual-aesthetic-review.md`。
+> - 逐节写后自审（write-section ③ / ingest-results ④）→ `section-self-audit.md` 一；三层 craft 润色 → 同文件 二。
 
-发现问题记录位置、依据、具体影响和行动；不能只勾选。文件可解析、编译成功、章节齐全和证据成立分别判断。
+## 自检清单（六项）
+
+### 1. claim 回扣完整性 + 事后核验（事前脊柱 + 写作期防 drift 闭环）
+
+事前脊柱（`blueprint.md` / `claims.json`）已有。本步加**写作期事后核验**——草稿措辞可能 drift 出 claim 树：
+
+- 随机采样正文每条 `\cite{}`，判引用是否支撑所在句的 claim（claim↔ref 对齐）。
+- 出两类问题：**uncited_assertions**（悬空主张：正文有 claim 但没 ref 到 C-ID）+ **claim_drifts**（措辞 drift 出 claim 树：正文说的比 claim 树多 / 偏）。
+- 每条 contribution → 有实验支撑？每个实验 → 支撑某维度（无主实验丢 appendix）？
+
+### 2. 三位一体一致性（核心）
+
+- Introduction 的 gap = Related Work taxonomy 终点 = Experiment 要证明的点？
+- 方法名全程同一个名字（intro / method / experiment / 图）？
+- contribution 列表（intro）= Method 兑现 = Experiment 证明 = Conclusion 回扣？
+- Abstract 许诺的每点正文都兑现？
+
+### 3. 引用完整性
+
+- 正文每个 `\cite{key}` 在 refs.bib 有对应？（无 undefined）
+- refs.bib 每条都被正文引用？（无 orphan）
+- 标了 `needs_human_verify` 的 bib 条目逐条人工核（尤其 core 引用）？
+- 关键 baseline / 竞争工作没漏引？
+
+### 4. 图表内容完整性
+
+- manifest 里每个图表资产都产出了？（status 无滞留 intent）
+- 每个图表正文有引用句？（无悬空图表）
+- caption 三段式（what / how / takeaway）？
+- 多图风格统一（paper palette / 标注样式一致）？
+- （渲染/美观层不在这里查——归 `visual-aesthetic-review.md`。）
+
+### 5. 附录完整性
+
+- 正文引用的附录内容附录都有？（无悬空引用）
+- 附录设置和正文一致（locked_decisions 没破）？
+- 复现必要信息（数据 / 配置）正文 + 附录齐全？
+
+### 6. 符号一致性
+
+- 全文符号与 `_draft/content/notation.md` 一致？
+- 无同名异义（同一符号两个意思）/ 异名同义（同一概念两个符号）。
+
+## 怎么跑
+
+逐项过，不过的回对应目标改（内容问题回 write-section）。**每次 audit 都跑本清单**——一致性过了才轮到润色 lens（见 `section-self-audit.md` 二）。**一致性没过不润色**——润色只改语言，内容问题必须先修。
+
+## 输出
+
+```markdown
+# 自检报告
+## 1. claim 回扣 + 事后核验  | uncited_assertions / claim_drifts | 位置 | 修法 |
+## 2. 三位一体一致性 | ... |
+## 3. 引用完整性 | ... |
+## 4. 图表内容完整性 | ... |
+## 5. 附录完整性 | ... |
+## 6. 符号一致性 | ... |
+## 结论：通过 / 需回改（列待改项）
+```

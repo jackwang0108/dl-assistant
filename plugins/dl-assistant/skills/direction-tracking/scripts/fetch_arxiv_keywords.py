@@ -20,17 +20,17 @@ Key properties:
   * A single OR-query across all keyword phrases
     (`all:"kw1" OR all:"kw2"`) so a paper matching several phrases comes back once.
   * Filters by arXiv *submittedDate* window [from, to] (UTC). For incremental
-    tracking the caller uses the source-specific completed range plus overlap as --from.
+    tracking the caller passes last_run (minus a small overlap) as --from.
   * Paginates by submittedDate until exhausted (or --max cap).
-  * Carries author-provided comment / journal_ref metadata.
+  * Carries comment / journal_ref quality signals (same as fetch_arxiv_daily).
 
 Run (zero setup, deps auto-installed by uv):
     uv run fetch_arxiv_keywords.py --keywords "referring expression segmentation" RES --from 2026-06-01 --to 2026-07-13
     uv run fetch_arxiv_keywords.py --keywords "open vocabulary detection" --from 2026-07-01
 
 Date semantics: filters by arXiv *submittedDate* (UTC). arXiv indexing can lag,
-so a paper submitted today may appear a day or two later -- callers may overlap the --from window to reduce omissions. This cannot
-guarantee complete coverage; fetching and processing progress are separate.
+so a paper submitted today may appear a day or two later -- callers should
+overlap the --from window slightly and dedup against the seen-set.
 """
 
 from __future__ import annotations
@@ -61,16 +61,12 @@ def resolve_date(date_arg: str) -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if date_arg == "yesterday":
         return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
-    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date_arg):
-        raise ValueError("Expected YYYY-MM-DD")
     datetime.strptime(date_arg, "%Y-%m-%d")  # raises ValueError if malformed
     return date_arg
 
 
 def build_query(keywords: list[str], date_from: str, date_to: str) -> str:
     """Build an arXiv query: (all:"kw1" OR all:"kw2") AND submittedDate:[from TO to]."""
-    if date_from > date_to:
-        raise ValueError("Start date must not be after end date.")
     # Keywords come from user-editable config.yaml -- strip embedded double
     # quotes so a stray `"` can't break out of the phrase and corrupt the query.
     cleaned = [k.replace('"', "").strip() for k in keywords]
@@ -165,14 +161,10 @@ def main() -> None:
         help="Safety cap on total papers fetched (default 200).",
     )
     args = parser.parse_args()
-    if args.max_results <= 0:
-        parser.error("--max must be positive")
 
     try:
         date_from = resolve_date(args.date_from)
         date_to = resolve_date(args.date_to)
-        if date_from > date_to:
-            raise ValueError("Start date must not be after end date")
     except ValueError:
         print(
             json.dumps(
@@ -193,9 +185,6 @@ def main() -> None:
         sys.exit(1)
 
     result = {
-        "date_basis": "submittedDate",
-        "timezone": "UTC",
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
         "keywords": args.keywords,
         "date_from": date_from,
         "date_to": date_to,

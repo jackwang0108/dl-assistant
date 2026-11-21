@@ -1,25 +1,52 @@
-# 接收真实结果并更新研究表述
+# 目标 5：ingest-results（消费一批 CPE 数据）
 
-按批接收完整、部分、失败或取消的实际记录，不等待所谓最终数据包。读取实际运行清单、原批准设计、结果、代码/数据/条件版本和偏差。文件缺失与执行失败分别报告，不为填模板重跑或补造结果。
+## 何时用
 
-1. **写入前自查**：来源身份与版本、实际条件及必须保留项、数据/测量有效性、可比性、选择/排除、全部相关尝试、重复和不确定性。文件校验不认证科学有效，旧 done/success 不是假设支持。
-2. 逐项记录原来相信什么、观察什么、改变什么判断，比较反证/替代解释；未知原因不编机制。按原设计区分支持、反对、不足、无法区分和无效数据；探索发现明确为事后形成。
-3. 新结果动摇核心事实/贡献/研究价值时，保存返回 iterate 的记录并与用户确定下一步；受影响主张标待重审。不能优先换指标、换优势或缩表述以继续宣称贡献成立。仅表达变化或明确补充结果可继续写作。
-4. 更新核心主张与证据对应表并执行变化影响检查，列出摘要、引言、方法、结果、结论、图表、引用及待跑任务的影响。部分批次只关闭实际完成项，保留缺失与未决。
-5. 把数值登记到 canonical-values.json：实验/指标/条件、具体数据路径和版本、可解析字段、必要分析输出、显示形式与具体出现位置。不同实验相同数值不能互相代替；均值、差值、百分比和误差分别追溯。先保存统计/计算输出，再引用其中的数字。
-6. 从真实数据生成图表并保存脚本/来源；原始读数、缺失、排除规则、n 及不确定性完整。核对表头、单位、基线、caption 和正文含义；按实际条件表述，不照原计划填预想结论。
-7. 修改对应正文和摘要数字，更新引用、数值位置、state 与来源记录；有工具时编译/渲染，不能验证时明确说明。
+一批 CPE 实验数据包到达。**按批 ingest，没有「等全部跑完」这个状态**——state 的 `experiments.batches` 里哪批 received 了，就消化哪批。同一批可以只消化一部分（比如先填主表，分析后补），剩下的留在 backlog。
 
-局部阴性不自动否定目标规模假设；局部阳性也不支持未验证规模。full/reduced 不一致时分别检查实现、数据与条件差异及真实规模依赖，原因未知可以保留。
+## 读哪些
 
-## 接收新版论文实验数据包
+- CPE **`experiments-actual.json`**（实际跑了哪些，含加/改）+ **`results.json`**（结果）+ **`pkg-meta.json`**（验收清单）——schema 见 `code-paper-experiment/references/templates/data-pkg-schema.json`，验收照它机械核对。
+- `paper-state.json` 的 `data_dependencies`（这批数据喂谁）。
+- `_draft/visuals/manifest.json` + 各数据可视化 doc（`_draft/visuals/<id>.md`）。
+- `_draft/blueprint.md`（claim 对照）+ `_draft/experiments/plan-vN.json`（expected_signal，诚实性对照）。
+- `references/sections/experiment-writing-results.md`（结果/分析怎么写 + 全节自查）。
+- `references/craft/numerical-display.md`（数据可视化工艺 + 自查）。
+- `references/craft/section-self-audit.md`（写后自审子 agent 协议）。
 
-核schema_version=2、batch_id、同一plan_ref/run_spec_ref及实际快照；actual包含全部计划项（含未开始/取消/失败），results只含真实已有结果，pkg-meta逐项对应。运行检查器退出0只是记录核对完成，可含失败状态；退出3为部分来源/记录/复算未完成，不能转成全部实验成功。
+## 子动作
 
-分别读取status、data_validity、inference_status、精确replicate/attempt身份和summary_checks，不再要求n_seeds/mean±std/success。可用复算结果与选择/统计代码一起核，不能靠有限算术检查认证科学意义。原始小型关键数据优先取得，大文件引用核实际可访问性及校验值；仅有GPU路径不称已取得。写作中的数字追溯实际results字段和来源，不填模板示例0。
+1. **数据到达验收**（主 agent）：照 data-pkg-schema.json 机械核对——本批 must 全 done（`pkg-meta.json` 验收清单）？`results.json` 每条目 `n_seeds` / `signal_verdict` / `output_to_paper` 字段齐？数字在合理范围？残缺/异常 → 找用户回 CPE 补，别拿坏数据就写。
+2. **按 CPE 实际说明对齐**：实际跑了哪些、CPE 加/改的补进实验节/appendix、删掉没跑的、结果分析按报告不按原 plan。读 `experiment-writing-results.md`。
+3. **写实验结果/分析文字**：主结果（防过度宣称）+ 消融叙述（防戏剧化）+ 分析 + 弱/负结果处理 + 三位一体（每实验回扣 claim）。
+4. **写后自审（子 agent，general-purpose 禁 Explore）**：跑 `experiment-writing-results.md` 全节自查 + 三层 craft + **诚实性**（results vs expected_signal：否定信号老实写没、claim ≤ 实验所示）+ 跨节数值（results 数字 vs blueprint claims + 已写节 digest 的 key_numbers）。不过回 ③。
+5. **数据图：对着真数据详细设计 + 产图**：遍历本批涉及的 dataviz 条目（manifest status=intent）——先详细设计（示例锚定：问用户有没有参照，没有搜同 venue 论文同类图；抉择程序定图类型 + 元素，**对着真数据**，补进 `<id>.md`）→ 当场写 `_draft/scripts/plot_<名>.py`（seaborn 默认 / matplotlib 兜底，**加载 paper palette 不自挑色**）出**快稿预览** → 用户看图拍板（并入 ⑫ 确认点）→ 正式导出 svg+pdf。读 `numerical-display.md`。**数据图绝不用生成式 AI**（造假红线）。
+6. **表：对着真数据定结构 + 填真**：此时才定表结构（几行几列 / 表头每列含义 / 每行含义 / best-2nd 标记）——不对着想象中的数据锁结构 → 落 `tables/<id>.tex`（正文 `\input`）并填真数字（一个 claim 一个 canonical 值）。例外：数据本就在手、write-section 时已落骨架的，核对结构是否随真实数据调整（CPE 加/改实验时同步改）。
+7. **图/表产出后自检**（主 agent）：跑 `numerical-display.md` 自查（数据保真 / 编码类型对 / mark 规范 / 可读）+ **引用句对齐**（图/表画的跟正文引用句说的对得上）。
+8. **占位替换 / 填真**：图——方框占位替换成真图；表——注释占位替换成 `\input{tables/<id>}`（结构 + 真数字已在 ⑥ 一次完成）。
+9. **回填 Intro / Abstract 数字**（如本批涉及）。
+10. **回填数字一致性核查**（主 agent）：abstract / intro / results 三处是同一个 canonical 值；不一致回 ⑨ 对齐。更新已写节 digest 的 key_numbers。**同步更新 `_draft/canonical-values.json`（数字白名单）**：从本批数据包 `results.json` 提取全部 canonical 数字（含表内值、均值±方差、百分比），每条记 `{value, source（哪个实验/表）, 允许出现的节}`——后续批次增量合并。它是 `check_numbers.py` 的白名单来源：正文 prose 里的小数/百分比不在白名单 = 可疑数字（`suspicious_number`），audit 与 finalize 机器核。
+11. **本地验证**：本地编译（红修红）→ 渲 PDF → 报页数 → 本地 commit。不 push；Overleaf 同步走关键节点（见 `latex-landing.md`）。
+12. **确认点：用户审**——对得上实际、数字对、图对。
 
-按具体批次/修订去重接收；已处理数据不重复导入。部分/失败可先解释和交接，未解决核心问题返回iterate，不按must或文件状态替代研究判断。
+## 产出
 
-## 已使用 W&B 的结果
+experiment/appendix 更新（.md + .tex）、`figures/` 真数据图（svg+pdf）、`tables/<id>.tex` 填真、`_draft/scripts/plot_<名>.py`、Intro/Abstract 数字回填、`_draft/canonical-values.json`（数字白名单，供 check_numbers.py 核对）。
 
-按 [共同记录](../../../wandb/references/experiment-records.md) 从台账核实际运行集合，不能只导入最高分。canonical-values 的实际数据引用保留本地快照/统计文件及校验值，并附实例/run身份、指标字段、step/选择规则和精确产物版本；MCP采样/截断/未同步与缺失影响明确。包内快照和meta的引用/校验对应，不能只给可变网页链接。
+## 状态更新
+
+`data_dependencies` 对应项标 ingested；节 status（needs-data→drafted）；digest key_numbers 更新；manifest 条目 status 更新；backlog 关单。**否定信号触发时**：标「蓝图脱节」，建议回 design-story 重审 contribution。**优势换位触发时**：本批数据揭示比原优势锚更强的卖点（或原优势锚被证伪）→ 同样标「蓝图脱节」，建议回 design-story 换优势锚/重排故事（正向触发，见 blueprint-design 蓝图更新规则）——不围着旧故事防守。
+
+## 确认点
+
+填真满意（对得上实际、数字对、图对）。
+
+## 易错点
+
+- **数据到达先验收**——must 齐全 / 数字合理 / seed 报了才写；残缺异常找用户回 CPE 补。
+- **按批消化，不空等**——没到的批不阻塞已到的批；写作继续推进其他节。
+- **写后自审是子 agent**——实验结果是 over-claim / 戏剧化 / 外推重灾区。
+- **结果照 expected_signal 判**——否定信号回 design-story 重审，不硬写。
+- **回填后核查 canonical 值一致**——abstract/intro/results 三处同一个数。
+- **按 CPE 实际说明对齐，不按原 plan**——CPE 加/改的实验要补进 section/appendix。
+- **脚本用 paper palette、导出 svg+pdf**（无 png）。

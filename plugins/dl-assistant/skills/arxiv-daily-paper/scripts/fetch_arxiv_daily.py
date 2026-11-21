@@ -15,17 +15,18 @@ Key properties:
     categories comes back once, not once per category.
   * Paginates by submittedDate until the day is exhausted (or --max cap),
     instead of silently truncating at a fixed page size.
-  * Carries author-provided `comment` and `journal_ref` metadata,
-    such as acceptance statements and code links.
+  * Carries the `comment` and `journal_ref` fields — arXiv's objective
+    quality signals ("Accepted to CVPR 2026", "Code: github.com/...") that
+    paper-search drops.
 
 Run (zero setup, deps auto-installed by uv):
     uv run fetch_arxiv_daily.py --date today --categories cs.CV cs.LG
     uv run fetch_arxiv_daily.py --date 2026-06-29 --categories cs.CV --max 400
 
 Date semantics: filters by arXiv *submittedDate* (UTC), which is the
-submission timestamp, not the public announcement day. An empty response
-is not an API error and does not establish why no records were returned.
-Never substitute a different date automatically.
+submission timestamp, not the public announcement day. arXiv announces on
+weekday schedules, so a date with no results usually means "not announced
+yet / weekend / holiday", not an error.
 """
 
 from __future__ import annotations
@@ -61,8 +62,6 @@ def resolve_date(date_arg: str) -> str:
     if date_arg == "yesterday":
         return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
     # Validate explicit date
-    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_arg):
-        raise ValueError("Expected YYYY-MM-DD")
     datetime.strptime(date_arg, "%Y-%m-%d")  # raises ValueError if malformed
     return date_arg
 
@@ -78,7 +77,7 @@ def build_query(categories: list[str], date: str) -> str:
 
 
 def paper_to_dict(result: arxiv.Result) -> dict:
-    """Normalise an arxiv.Result into a plain dict, keeping author-provided metadata."""
+    """Normalise an arxiv.Result into a plain dict, keeping quality signals."""
     arxiv_id = result.entry_id.split("/")[-1]  # e.g. 2606.28322v1
     base_id = arxiv_id.split("v")[0]  # strip version for stable key
     comment = (result.comment or "").strip().replace("\n", " ") or None
@@ -147,8 +146,6 @@ def main() -> None:
         help="Safety cap on total papers fetched (default 500).",
     )
     args = parser.parse_args()
-    if args.max_results <= 0:
-        parser.error("--max must be positive")
 
     try:
         date = resolve_date(args.date)
@@ -168,9 +165,6 @@ def main() -> None:
 
     result = {
         "date": date,
-        "date_basis": "submittedDate",
-        "timezone": "UTC",
-        "fetched_at": datetime.now(timezone.utc).isoformat(),
         "categories": args.categories,
         "total_count": len(papers),
         "truncated": len(papers) >= args.max_results,

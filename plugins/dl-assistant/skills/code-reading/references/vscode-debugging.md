@@ -1,35 +1,134 @@
-# 可选的交互调试辅助阅读
+# VSCode 交互调试（code-reading · A 模式 offered 默认 track）
 
-用户可以用VS Code或其他调试器，也可以只静态精读/看局部观察。是否动态取决于实际环境、入口、资产、范围与用户意愿，不由是否有setup报告决定。
+> A 模式（有 setup report、环境配好）默认和你的 VSCode 调试工作流融合——你在断点里用 debug console 的 REPL 看运行时真值，比看 agent 跑 standalone 脚本的 stdout 更顺手，而且是在**真实运行上下文**里看（不用自己重建 model/batch）。
+> 这是 A 的 **offered 默认交互 track，不强制**；不在 VSCode 里调（或不想调）时退回 standalone 脚本（见 `diagnostics.md`）。
 
-## 先核当前能力与分工
+## 导师制分工：agent 看不到你的 debug console
 
-按实际连接能力判断agent能否读取调试输出，不固定宣称“一定看不到”或“已经看到”。不能直接取得时，给用户必要断点/表达式与条件性预测，用户返回实际内容后再解释；没有结果不补写实测。能自主取得相关且已授权的观察时，不把全部工作推给用户，也不为了重复印证每个简单定义运行脚本。
+**关键约束**：agent 没法读你 VSCode debug console 的输出。所以融合不是「agent 接管你的调试器」，而是：
 
-## 配置真实入口或局部例子
+> **agent 备脚手架（launch.json + 断点计划 + 该敲的命令）+ 预测「你会看到什么」+ 讲解为什么；你 F5、敲命令、亲眼看、印证或打脸。**
 
-先核当前项目、实际环境/解释器或容器、代码/config/资产版本、工作目录、入口参数与已有调试配置。按实际调试器/扩展和项目版本查官方说明/源码，不直接复制一份通用launch配置假定可用。
+这恰恰是导师制最自然的形态——老师说「你在这停下，敲这个，你会看到 `[B,256,32,32]`，因为上一跳做了 stride-2」，你跑出来验证。
 
-- 真实入口：配置应对应本次需要理解的操作，明确样本/步数/模式和输出目录，避免误启长训练或覆盖结果。
-- 导入真实组件的局部入口：说明构造/输入/状态与原入口的差异，不能称完全保真。
-- 重写逻辑教学例子：明确抽取/修改与范围，不能充当项目运行证据。
+**一条防退化纪律**：agent 自己能用 standalone 脚本验证的事（要先验才能讲的），**就自己跑、自己看、自己讲**，别全推给你「你去跑了告诉我」。调试器是给你 hands-on 探索 + agent 的「你会看到」预测，不是 agent 偷懒的借口。
 
-用户选择创建配置且在授权范围时，先读已有配置，新增有区别的条目或提供最小改动，保留用户其他内容。凭据不写配置，真实解释器/路径不编造；是否进入依赖源码按当前调试需求和工具能力设定，不强制所有项目同一选项。
+## 1. launch.json：两个用途
 
-配置/观察脚本未实际运行时标未验证，不因JSON格式正确就声称用户能启动。启动前核状态和输出影响，按主文件授权规则处理。
+A 模式选定路径后，agent 直接写好 launch.json。两类用途是**正交**的，不是一个东西的两种写法：
 
-## 断点与表达式
+- **(a) 保真**——步进 repo 真实入口，在真实噪声里看真值（真 config / 真数据 / 真 model，你只是停下来看）。
+- **(b) 剥噪求明**——把核心逻辑从真实程序的 boilerplate 里剥出来单独跑、单步走、边调边讲。
 
-沿本次路径选择少量有解释价值的点，数量由实际需要决定，记录真实文件/函数/源码版本；断点在调用前后会影响可见变量和状态，应说明位置。每点关联当前讲解问题、预期可见内容、依据与尚不确定部分。
+(a) 可信但被 boilerplate / 分布式 setup / registry 间接淹着，读着易迷；(b) 一眼可读但要守保真护栏。两者互补。
 
-表达式先核是否会触发方法、属性求值、数据读取、随机操作或状态更新，不把debug console中所有操作当只读。预测用“在这些条件下预计……”表述；结果不同先核上下文，不直接宣布发现bug。
+### (a) 步进真实入口（选定路径的 train.py / test.py）
 
-## 单进程与分布式
+让你 F5 就进训练/推理主流程，逐段停下来看：
 
-单进程可能便于阅读，但不是默认等价的分布式运行。启动器、初始化、进程/设备选择、调试器附加及相关依赖按项目实际版本核实；不能承诺设置一组环境变量就能自动进入所有框架入口。
+```json
+{
+  "name": "<项目简称>: step through <entry>",
+  "type": "debugpy",
+  "request": "launch",
+  "program": "${workspaceFolder}/<entry script>.py",
+  "args": ["<config 路径>", "...其他参数..."],
+  "console": "integratedTerminal",
+  "cwd": "${workspaceFolder}",
+  "python": "<setup_report 中的 conda env python 路径>",
+  "justMyCode": false,
+  "env": { "HF_HUB_OFFLINE": "1", "no_proxy": "...", "HF_ENDPOINT": "..." }
+}
+```
 
-使用简化配置时记录改变了什么、实际执行路径以及未覆盖的跨进程同步、归约、分片/并发等行为。模型/数据/优化条件也可能不同，单进程观察不认证多进程正确性。需要相关真实证据时另行明确成本/授权与操作，不把它悄悄扩成训练实验。
+> 入口是 `torchrun`/`deepspeed` 起的分布式脚本 → 用下面第 4 节的单进程配置，那份就是步进真实分布式入口的。
 
-## 结束与继续
+### (b) 剥离核心逻辑 + 现场教学
 
-记录用户实际反馈、尚未取得的输出和下一次断点/问题。只恢复本次配置/源码/状态改动，不删除用户已有配置或结果；保留足够的实际观察依据。代码/环境变化后核断点与原笔记是否仍适用。
+**目的不是「跑个探针」**，是把目标——repo（或某个核心依赖库，如 `pycocotools` 的 mAP 计算、`timm` 某 layer 的 forward）的某个**类 / 方法 / 函数 / 指标计算**——从真实程序的噪声里**剥出来**，单独跑、单步走、一边讲。真实入口里 boilerplate、分布式 setup、registry 间接、config 拼装一大堆，读着迷；剥出核心逻辑后清晰明了。在此基础上还支持**现场教学**：对着这段核心逻辑一边单步、一边讲它每步在干嘛。
+
+**两种剥法，保真度天差地别——默认走第一种：**
+
+- **首选 · import 真方法 + 喂最小输入**：harness 只负责剥掉环境噪声，`import` repo（或依赖库）的真类/真方法，构造最小输入直接调它——**跑的还是真代码，保真不丢**。`program` 指向这个 harness，在真方法里下断点单步。
+- **退路 · 誊抄核心逻辑**：真方法没法单独隔离（和一堆状态耦合死）、或没 repo 环境（B 模式）时，才把那段逻辑誊抄进新脚本跑。**这是剥离版、非真跑**——必须标清，且对着 (a) 真实运行校一眼，别誊错了还当真相。
+
+```json
+{
+  "name": "<项目简称>: dissect <target 类/方法>",
+  "type": "debugpy",
+  "request": "launch",
+  "program": "${workspaceFolder}/docs/code-reading/diagnostics/<harness>.py",
+  "console": "integratedTerminal",
+  "cwd": "${workspaceFolder}",
+  "python": "<setup_report 中的 conda env python 路径>",
+  "justMyCode": false,
+  "env": { "HF_HUB_OFFLINE": "1", "no_proxy": "...", "HF_ENDPOINT": "..." }
+}
+```
+
+> **`justMyCode: false` 必须**——否则断点进不去 repo 和第三方库代码，框架机制、依赖库内部就看不到。教依赖库的方法时，该库得装在这个 env 里。
+
+> harness / 誊抄脚本**怎么写**见 `diagnostics.md`（首选 = 类一 import repo；退路 = 类二 通用环境独立复现）；本节管的是 launch.json + 单步 + 边调边讲这层。
+
+## 2. 断点计划（和 Stage 2 分段对齐）
+
+选定路径后，agent 沿这条路径标几个**值得断的位置**，和 Stage 2 要逐段走的段对齐：
+
+```text
+这条训练路径，建议先在这 6 处下断点，我们一段段来：
+1. train.py:42        入口参数解析 / config 加载
+2. builder.py:88      registry build model（看真 build 出哪个类）
+3. dataset.py:120     __getitem__ 返回（看真实 keys/shape）
+4. model.py:155       forward 第一个逻辑块
+5. model.py:210       backbone → neck 交界（看 shape 变化）
+6. loss.py:60         loss 计算
+停在每处时我告诉你 debug console 敲什么、会看到什么。
+```
+
+## 3. debug console REPL：停在断点敲什么
+
+停在某断点后，在 debug console 的 REPL 里逐行敲。agent 给的是「停在 X → 敲 Y → 你会看到 Z（+ 为什么）」的**预测 + 解释**：
+
+```python
+# 停在 forward 里：
+x.shape                                  # 当前 tensor 真实形状
+type(self.backbone)                      # registry 真 build 出的类
+[(n, tuple(p.shape)) for n, p in self.named_parameters()][:5]
+{k: (v.shape if hasattr(v, "shape") else type(v)) for k, v in batch.items()}
+self.bn1.running_mean[:5]                # BN 真实统计（追训练链伪对齐时）
+isinstance(self.bn1, torch.nn.SyncBatchNorm)   # 是不是同步 BN
+```
+
+要点：
+
+- **每行只看一件事**，对照 agent 的预测印证；不一致就是读出了 bug 或盲点，正是学习点。
+- 看完一段告诉 agent 关键结果（shape/类型），agent 据此讲下一跳——你是 agent 的「眼睛」。
+- 追**训练链**真值时让断点停在 `model.train()` 路径下：BN 走 batch 统计、dropout 生效，和 eval 模式行为不同。
+
+## 4. 单进程调试分布式 / DeepSpeed
+
+分布式训练脚本通常难直接 debug。设这些 env，accelerate / DeepSpeed 会自动初始化单进程 dist，**不需要 deepspeed/torchrun 启动器**就能 F5 步进真实分布式入口：
+
+```json
+{
+  "name": "debug <train_script> (single-process)",
+  "type": "debugpy",
+  "request": "launch",
+  "program": "${workspaceFolder}/train.py",
+  "console": "integratedTerminal",
+  "cwd": "${workspaceFolder}",
+  "python": "<setup_report 中的 conda env python 路径>",
+  "justMyCode": false,
+  "args": ["--local_rank=0", "...其他参数..."],
+  "env": {
+    "WORLD_SIZE": "1",
+    "RANK": "0",
+    "LOCAL_RANK": "0",
+    "MASTER_ADDR": "127.0.0.1",
+    "MASTER_PORT": "29501",
+    "CUDA_VISIBLE_DEVICES": "0"
+  }
+}
+```
+
+> 单进程只能看「单卡视角」的真值——跨卡行为（SyncBN 跨卡统计、loss 跨卡归约）单进程下看不全，那类要靠读源码 + `diagnostics.md` 的独立诊断补判。

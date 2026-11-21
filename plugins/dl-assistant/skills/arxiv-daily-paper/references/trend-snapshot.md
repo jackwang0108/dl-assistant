@@ -1,48 +1,32 @@
-# 跨日话题统计
+# trend-snapshot.json 格式（arxiv-daily-paper）
 
-统计对象是 `raw.json` 中全部抓取论文的标题与摘要，不是推荐名单。每篇至少有一个话题分类；允许多标签，但统计时每个话题内按稳定 arXiv ID 去重，并说明各话题占比之和可能超过 100%。保留逐篇分类便于复查。
+`trend-snapshot.json` 是 arxiv-daily-paper **跨日连续性**的数据源：**每次运行结束时写一个**（落当天产出目录），**下次运行做跨日对比时读历史的**。它和 raw.json / round2 卡片一样是落盘产物、不是状态中枢。
 
-## 快照示例
+`clusters` 在 Step5 digest 归簇时同步产出——digest 按话题分组，每组即一簇。
+
+## 模板
 
 ```json
 {
-  "schema_version": 2,
   "date": "2026-07-09",
-  "date_basis": "submittedDate",
-  "timezone": "UTC",
-  "fetched_at": "2026-07-10T12:00:00+00:00",
   "categories": ["cs.CV"],
-  "coverage": "all_fetched",
-  "complete": true,
-  "returned_count": 2,
-  "papers": [
-    {"id": "2607.00001", "version_id": "2607.00001v1", "topics": ["document-understanding"]},
-    {"id": "2607.00002", "version_id": "2607.00002v1", "topics": ["document-understanding"]}
+  "clusters": [
+    {"name": "文档解析 OCR-VLM", "keywords": ["document parsing", "OCR", "VLM"], "top_ids": ["2507.12345"]}
   ],
-  "topics": [
-    {
-      "key": "document-understanding",
-      "name": "文档理解",
-      "definition": "理解文档图像、布局及其中的语义内容",
-      "keywords": ["document understanding", "layout"],
-      "count": 2,
-      "share": 1.0,
-      "representative_ids": ["2607.00001"]
-    }
-  ]
+  "orgs": {"DeepSeek": 3, "Google": 2}
 }
 ```
 
-示例 ID 仅用于展示格式，不能当作实际论文引用。`complete` 表示本次查询未截断、日期已结束且已完成全部返回论文分类，不保证 API 不会延迟收录；保留获取时间。当前日期尚未结束、抓取截断或分类未完成时设为 false，另记具体原因。分母为当日返回的去重论文数，零篇时比例写 null。
+## 字段说明
 
-## 比较规则
+| 字段 | 必填 | 含义 / 来源 |
+| --- | --- | --- |
+| `date` | 是 | 当天日期（YYYY-MM-DD） |
+| `categories` | 是 | 开场定的 arXiv 类目（跨日只比同分类，靠它筛） |
+| `clusters[]` | 是 | 当天话题簇（digest 归簇时同步产出） |
+| `clusters[].name` | 是 | 簇名，**仅给人读**——跨日对比**不用它**（名字不稳定） |
+| `clusters[].keywords` | 是 | 该簇核心方向关键词（英文，从该组论文标题/摘要提炼）——**跨日话题对比的主依据** |
+| `clusters[].top_ids` | 是 | 该簇代表篇 arxiv_id（取 round2 通过的）——重叠判断辅助依据 |
+| `orgs` | 否 | 机构→篇数。arXiv 无现成 org 字段，只从 comment/摘要里能零成本解析到时才写；拿不到就**省略，不强求、不瞎编** |
 
-- 只将分类集合、日期口径、时区一致且 `complete: true` 的快照纳入同一统计。部分结果可展示，但不直接用于升降判断。
-- 同日期同范围重跑只选最新的完整快照，不将多个运行重复累加；跨分类合并时按论文 ID 去重。ID 用于去重与查原文，不用其跨日重叠识别话题。
-- 根据话题定义、关键词及研究问题对应分类，不只匹配名称。定义发生实质变化时重新统一分类或说明不可比，不能把分类变化当作趋势。
-- 每个话题同时展示篇数与当日论文占比；区间占比按该区间话题论文数除以全部论文数计算，不直接平均每日比例。
-- 最近 7 或 30 个自然日内比较，报告实际有效日期和缺失日期；只有间断记录时说“最近几次观察”，不声称连续多日。
-- 历史少时描述观察，不断言“真趋势”。比较周或月变化时列出两个可比区间及覆盖情况，没有足够历史就不报告增长。
-- 引用代表论文支持话题解释；不从论文数量推断研究质量、机构战略或长期发展方向。
-
-旧版没有覆盖标识、主要来自推荐结果的快照只作为历史推荐记录，不混入本统计。机构信息不作为必填统计项，元数据通常不足以做可靠机构归属。
+> **跨日对比只信 `keywords` + `top_ids` 的重叠**，不信簇名（今天"Agent 自进化"、昨天"LLM Agent"可能是同一簇）。`orgs` 是加分项不是核心。

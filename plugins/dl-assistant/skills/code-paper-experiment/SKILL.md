@@ -1,90 +1,246 @@
 ---
 name: code-paper-experiment
-description: 将已明确的论文补充实验计划落实为可追溯执行，按实际设计训练、评测、测量或分析，保留尝试、偏差和部分结果，复核汇总并按批交付。核心研究未决返回 code-idea-iterate，不默认全规模、多seed或参数搜索。
+description: 论文级实验执行（GPU 服务器）：吃 writing-paper 的实验计划包，落成 run-spec 后跑 full-scale + 多 seed 实验，验收落盘并产数据包交回 writing-paper。当用户要把论文实验计划真正跑出来时使用。
 ---
 
-# 执行论文补充实验并交付真实证据
+# Code Paper Experiment
 
-接收已经明确的问题和补充需求，核实际实现、资源与批准范围，取得可解释且可追查的记录。执行完成、数据有效、假设得到支持和研究有价值分别判断；文件检查不能认证科学结论。
+## 这个 skill 干啥
 
-## 位置与分工
+中期 `code-idea-execution` / `code-idea-iterate` 在 reduced 配置上快速迭代方法，数据是 reduced 级（单 seed、缩减配置，趋势信号）。论文要**论文级数据**（full config + 多 seed，能写进论文主表 / 消融的数字）。
+
+本 skill 在 **GPU 服务器的中期 repo**（iterate 收口、方法锁定的 repo）上补这个 gap：吃 `writing-paper` 的**实验计划包**，跑 full-scale 实验，产**实验数据包**交回 writing-paper ingest-results。
+
+**三段契约，各管一段**:
+
+- **plan 定「跑什么 + 为什么」**——writing-paper 产（`plan-vN.json`)。是起点不是契约：CPE 跑时可加/改，每个加/改用户确认。
+- **run-spec 定「怎么跑」**——CPE 产（`experiments/run-spec.json`)。接受 plan 后、launch 前，把每个实验落成可执行条目（脚本 / config 冻结副本 / 完整命令 / seeds / eval 协议 / 拓扑排程）。**launch 确认点用户确认的就是这份落盘的 spec**；跑中严格按它执行，要加/改实验先改 spec（用户确认）再跑。
+- **数据包是「跑出了什么」**——CPE 产（`paper-data-pkg-vN/`)。每个实验按**目录契约**落盘（configs / scripts / runs / log 全量）,**run 级验收过了才接收结果**，交 WP 前再过**包级验收**。
+
+**为什么要有 run-spec 和两道验收**:full-scale 实验一跑几天、几十上百 GPU-hours,agent 跑长了存储必乱——config 用的是哪份、命令是什么、log 在哪，全靠记忆就是不可回溯。run-spec 把「怎么跑」冻成落盘契约；目录契约写死产物在哪；验收机制保证进数据包的每个数字都能被审计（谁拿着 `experiments/<exp_id>/` 都能复述这个实验）。这是「产物即真相」在实验环节的落实。
+
+**必须有实验计划包**——没有就让用户去 `writing-paper` 产。CPE 不从零决定跑什么，但在 plan 基础上可加/改（用户确认）。
+
+**复用 execution 的实验机制**（引用、不复制，守单一真相源）：长训练托管（`long-run-ops.md`——亮线规则：预计 >5 分钟 / 断了重跑代价高的命令一律 tmux detach，拿不准就当长任务，首选 `dl-assistant/scripts/run-long.sh`，禁 `run_in_background` / 前台干等）。
+
+**不碰 claims.json**：中期 repo 有 claims.json（iterate 产的），但 CPE 只跑实验产数据，不读不写脊柱。
+
+## 在系统里的位置
 
 ```mermaid
 flowchart LR
-    WP[writing-paper] -->|版本化的补充计划与依据| CPE[code-paper-experiment]
-    CPE -->|完整/部分/失败记录、来源与限制| WP
-    CPE -->|核心研究未决或新证据动摇贡献| IT[code-idea-iterate]
-    IT -->|研究设计交execution，不在CPE继续试方法| EX[code-idea-execution]
-    CPE -->|实际可用结果和复现来源，不认证发布就绪| REL[code-paper-release]
+    WP["writing-paper<br/>本地"] --> EPLAN[("实验计划包 plan-vN")]
+    EPLAN --> CPE["code-paper-experiment<br/>GPU 服务器·中期 repo"]
+    CPE --> OUT[("实验数据包 paper-data-pkg-vN")]
+    OUT --> WP
+    CPE --> REL["code-paper-release<br/>抽干净发行版"]
+    REL --> REPO[/release repo/]
 ```
 
-全局关系见dl-assistant。核心事实、方法有效性、关键解释、重要性或目标条件收益仍未知，按 [研究与写作分工](../dl-assistant/references/research-transition.md) 返回iterate设计、execution取证；不因规模、seed、主表/消融名称或机器位置划分。已有完整设计可接收内容等价的用户计划，不强制先去另一个skill补模板。
+> `[( )]` 节点 = skill 间内部流转（计划包 / 数据包，不对外暴露）；`[/ /]` 节点 = 外部成品（release repo，用户拿走开源）。完整全局图见 `dl-assistant`。
 
-沿用execution的meta、执行状态、数据有效性、推断和声明产物语义，见 [共同记录与批次契约](references/execution-contract.md)。本skill增加论文计划、重复身份、汇总复核和交接；不维护另一套success/failure科学判据，不直接改claims或新建研究命题，但必须读相关研究背景以正确执行。
+## 边界
 
-## W&B 与论文实验来源
+**做**：吃实验计划包 → 产 run-spec（执行契约）→ 用户确认 launch → 跑 full-scale 实验（full config + 多 seed，按拓扑排程）→ run 级验收 + 增量写结果 → 可加/改实验（先改 spec、用户确认）→ 包级验收 → 产数据包交回 WP ingest-results。
 
-沿用 [W&B 共同记录](../wandb/references/experiment-records.md)，SDK 向用户内网实例记录实际运行。batch_id 对应 scope_id，exp_id/replicate_id/attempt_id 双向关联 run；失败/中断/恢复和离线同步同样登记，不把重试计为新独立重复。启动自查核身份、实际来源与上传范围，交接自查核运行/同步/有效性分开及全部尝试；共享 meta 检查会核 tracking 字段，不保证远端持久化。
+**不做**（交给相邻 skill）：
 
-论文数据包带实际结果、必要查询快照和校验值、run 全身份及 Artifact 精确版本/digest；仅网页 URL 不算已取得的证据。W&B 抽样曲线不作为完整统计输入，正式汇总沿用本skill的原始读数/重复/选择核对。同步失败优先保存和补同步，不重跑实验、不切云端。
+| 场景 | 用 |
+|---|---|
+| 产实验计划包（定要跑什么 + 为什么 + 谁先谁后）| `writing-paper`（没有计划包让用户去产）|
+| 中期迭代方法（实现 / 验 / 演化下一版）| `code-idea-execution` / `code-idea-iterate` |
+| 写 / 改论文（消费数据包）| `writing-paper` ingest-results |
+| 抽干净发行版（开源）| `code-paper-release` |
 
-## 1. 接收计划，核是否能回答问题
+## 输入
 
-定位用户指定计划/批次，记录实际文件与校验值，不默认按版本号先后串行执行。读取目的、研究问题/主张、设计类型、对照/分析与解释规则、必要条件、依赖、预算/停止规则、产物和现有批准。
+- **实验计划包**（必需）：`writing-paper` 产（`_draft/experiments/plan-vN.json`，版本化递增——v1 只装长周期必做项，写作中新增需求攒成后续批次；schema 单一真相源见 `writing-paper/references/templates/paper-experiment-plan-template.json`)。用户拿到 GPU 服务器（不管怎么传）。关键字段：
+  - **`priority`**:must 必跑（WP 数据验收第一条就是"must 都跑了？"）；排队 must 先跑，预算紧砍 should/appendix（用户确认）。
+  - **`expected_signal`**：预注册 success bar——`results.json` 逐实验对照它给判定。
+  - **`fairness`**（main/comparison 必填）：baseline 公平条件照跑，结果条目里声明怎么落实的。
+  - **`depends_on` / `decides_config`**：拓扑依赖与配置决策标记——Step 4 排程的输入。
+- **中期 repo**（GPU 服务器本地）:iterate 收口、方法锁定的 repo。CPE 在锁定的方法上跑 full-scale。
+- **收口包**（方法锁定确认）:iterate 产的，确认方法已锁定 + repo 收口版本。
 
-支持训练、纯评测、诊断、测量、分析、可视化/探针或理论检查；paper_role另记论文用途。按任务选择CPU/GPU/其他设备，不要求方法全局冻结或所有配置先扫描。计划缺科学比较/资源决定时先指出并补讨论，不悄悄改成更容易阳性的方案。
+> 解耦：计划包 / 数据包跨机器交接都找用户（不绑 scp/ssh，不管怎么传）。中期 repo 在 GPU 服务器本地，CPE 直接跑。
 
-**接收自查**：目标、设计、关键未知、条件、解释范围、已有证据复用和授权是否足够？在现有记录保存判断—依据—未知—行动影响。核心未决先回研究；有限的准备/诊断可按批准范围继续，不把未知一律当否定。
+## 复用的 execution 机制（引用、不复制）
 
-## 2. 绑定实际代码、条件与执行方式
+| 引用 | 讲什么 | 何时读 |
+|---|---|---|
+| `dl-assistant/references/long-run-ops.md` | 长训练托管（tmux detach / 状态文件三连 / 重连 / resume / 防爆盘）| 跑 full-scale 训练（贵、长）时 |
 
-**长任务启动规则**。预计超过 5 分钟或中断后重跑代价高的命令，单机或 SSH 直连机器上用 `dl-assistant/scripts/run-long.sh` 在实际执行机器上通过 tmux detach 启动。通过集群调度器提交的任务走调度器。启动和恢复细节见 [共享长任务说明](../dl-assistant/references/long-run-ops.md)。
+> 本 skill 的 tmux session 前缀：`cpe-<exp_id>-`（各 skill 前缀的场景速查见该文件末尾）。
 
-读真实入口、数据处理、测量/统计及现有准备记录。保存实际commit、未提交diff、解析后配置、脚本/命令、数据/模型版本和所需环境。配置副本存在不证明实际加载了它；代码与数据也不能只填“中期收口版本”。
+## 产出与保存
 
-按 [研究条件规则](../dl-assistant/references/research-conditions.md) 核本轮必须保留项、目标与实际差异、关键现象与未知。低成本配置无永久筛选资格，短训练不替代后期现象。只有小规模才是本研究目标时不强制放大。
+两处产物，schema 单一真相源都是 `references/templates/data-pkg-schema.json`(WP 验收照它机械核对）。
 
-新实现、测量/统计改动给用户实际diff及语义说明，继承code-reading的人类阅读和关键改动审阅要求。已经明确授权的工程检查直接继续，不因进入论文阶段跳过语义审阅。
+### 中期 repo 侧（GPU 服务器，跑的地方）——目录契约，写死
 
-比较协议按问题逐项制定：相同与不同条件、参数选择、权重/checkpoint来源、公平性和混杂。不能把相同seed、统一checkpoint规则、所有参数相同或固定消融配置当充分证明。探索与确认分开，无依据不填预计增益、2×std或通用重复数。
-
-## 3. 按已批准范围启动与恢复
-
-保存不可变plan副本、批次run-spec、设计与实际配置，使用唯一batch_id、exp_id和attempt_id；结构见execution-contract。与现有任务/结果对照，按条件、来源、有效性和用途决定能否复用，不因文件在或曾通过就直接复用。
-
-只在计划明确需要时搜索参数或选配置，写范围、选择数据、成本、解释/停止规则；不默认pilot或扫描。测试数据不得被用于未批准的选择与反复调参；实际协议变化保留版本，不覆盖原设计。
-
-**启动自查**：实际代码/配置/条件与批准设计一致吗，必要对照和原始读数是否可取得，允许调整与资源边界是否明确？在预算内按资源和真正依赖排程；GPU、显存、CPU/RAM、存储/I/O和共享资源按实际需要核，不强制多卡、并行或must先于所有依赖。
-
-启动前做与操作相适配的最小检查；纯分析不要求前向/反向/存checkpoint，已有等价检查可引用。低成本检查仅证明所查范围，不能替代研究条件或完整结果。
-
-中断先核进程/调度器、退出状态、日志与产物，再决定重连、恢复、另起尝试或不继续；不默认重跑，不覆盖失败现场。无退出码不自动视为仍运行。
-
-## 4. 保存全部尝试与变更
-
-所有启动、失败、取消、阻塞、未执行、选择/排除和恢复都入记录；种子身份与尝试身份分开，重试不算新独立重复。重复不足时核原因、选择影响及仍能解释什么，不仅改“置信度”。
-
-已批准范围内且不改变科学含义的日常调整可自主并留依据；新预算、关键条件、科学比较或测量/分析变化返回确认。**条件变化自查**写明原/新条件、原因、关键影响及批准；OOM不自动授权缩输入、batch、精度或训练阶段，改变受保护条件不能继续原假设检验。
-
-相对原计划的增加/变更/不再执行都保留来源和实际决定；新增科学实验先取得新批准计划，不以“执行时可加改”替代设计。互相冲突的批次配置隔离，不能并发覆盖同一活文件。
-
-## 5. 复核结果并分批交接
-
-每个实验按实际状态声明所需产物，不要求分析有train.log、失败有最终指标。由原始读数与选择记录复核统计量；均值/标准差/比例、分母、单位、重复和不确定性类型明确。复杂分析保留输入、脚本/版本与真实输出，不能因文件可解析就认证计算或科学有效。
-
-```bash
-bash <skill目录>/scripts/check-run-artifacts.sh --expdir <批次>/experiments/<exp_id> --spec <批次>/run-spec.json --exp-id <exp_id>
-bash <skill目录>/scripts/check-run-artifacts.sh --pkgdir <数据包目录>
+```
+experiments/
+├── run-spec.json              # 本批执行契约（Step 4 产——launch 确认点确认的就是它）
+├── pilot/
+│   └── scan-results.json      # val pilot 扫描数据（WP 敏感性分析素材）
+└── <exp_id>/                  # 每个实验一个目录，结构写死、验收照它查
+    ├── configs/               # 实际用的 config 冻结副本（repo 原件会被改，不冻结不可回溯）
+    ├── scripts/               # 启动脚本（train.sh / eval.sh，含完整命令行）
+    ├── runs/
+    │   └── seed-<n>/
+    │       ├── train.log      # 完整训练日志（全量，不是 tail——出错时唯一的事故现场）
+    │       ├── eval.log
+    │       └── metrics.json   # 该 seed 原始指标
+    ├── figures/               # qualitative 实验的可视化产物（其他类型可空）
+    ├── results.json           # 该实验 mean±std + 各 seed 原始数 + signal 判定
+    ├── meta.json              # experiment meta（git/type/claim_cids/状态/gpu_hours）
+    └── 报告.md                # 人读：TL;DR 结论先行（模板见 exp-report-template.md）
 ```
 
-脚本复用execution的记录检查并核本skill的身份、尝试、引用、集合和声明汇总。退出0为所声明记录核对完成，不是实验全成功；1为错误，2为用法错误，3为记录/来源/复算未完成。失败记录完整可以通过，仍明确显示失败和可用范围。
+### 数据包（CPE 产 → WP ingest-results 消费，一批一包）
 
-**交接自查**：计划—实际—结果是否逐项对应；数据有效性、统计/选择、条件、偏差和失败是否诚实；原来相信什么、观察什么、支持到哪一步；是否需要返回研究？保存具体依据与行动影响，不靠目录齐全替代。
+```
+paper-data-pkg-v<N>/           # N 对齐 plan 版本
+├── experiments-actual.json    # 实际跑了哪些 + 相对 plan 的加/改/删（删带原因）
+├── results.json               # 逐实验结果汇总（mean±std/n seeds/signal 判定/fairness）——增量写
+├── pkg-meta.json              # 验收清单 + 权重/log 指针 + GPU-hours 台账
+├── pilot/
+│   └── scan-results.json      # 超参扫描（WP 敏感性分析素材）
+└── experiments/<exp_id>/      # 副本：configs/ scripts/ results.json meta.json 报告.md figures/
+                               # runs/ 的权重与全量 log 不进包（太大）——pkg-meta.json 给 GPU 路径指针
+```
 
-数据包可交部分、失败或未决；must缺失说明对主张影响和下一步决定，不默认重跑到成功，也不凭任务标签决定论文能否定稿。小型关键读数/统计输出/源码配置优先提供；大文件按用途、成本和授权复制或外部引用，记录校验值、实际可访问性、缺失及影响，不一律禁止权重或日志。
+**产物分工**:
 
-包与批次不覆盖历史，每次交接明确plan/run-spec快照、batch_id、全部计划项及状态。writing-paper按实际数据和条件接收，release只取可用且对应其用途的具体结果；两者不能把旧done/success/全规模标签当可信认证。
+- **experiments-actual.json** = 实际跑了哪些 + 相对 plan 的 deviation(WP 据此**对齐 experiment section**)。
+- **results.json** = 结果（mean±std + n seeds + signal 判定，增量写；WP 据此**填数字** + 诚实性自审对照预注册 bar)。
+- **报告.md**（每实验）= 人读封面——你随时打开就能看明白这个实验；数字照抄 results.json，不另造机读字段。
 
-## 资料与限制
+## 核心纪律
 
-[执行/复算/包契约](references/execution-contract.md)、[机读模板](references/templates/data-pkg-schema.json)、[单实验报告](references/templates/exp-report-template.md)。文件检查只核声明、身份和有限复算，不证明实际授权、预登记时间、语义一致、跨规模迁移或科学判断正确。
+- **用户确认 launch 和每个加/改**——full-scale 烧 GPU,launch 确认 run-spec + 排程 + 成本；加/改先改 run-spec 再跑，都用户点头，别自作主张。
+- **两道验收**——run 级验收不过不接收结果（先补/重跑）；包级验收不过不交 WP。
+- **config/脚本冻结副本进实验目录**——repo 原件会被后续改动，不冻结永远不可回溯。
+- **log 全量保存**——train.log 是出错时唯一的事故现场。
+- **增量写**——每跑完一个实验就写 results.json 条目 + 报告.md，别攒到最后（中途崩了已完成的还在）。
+- **val 上选，不看 test**——超参与 config 决策只用 validation split；主表数字出来后 config 不再动（test peeking 红线）。
+- **eval 协议全实验统一**——checkpoint 选择规则 launch 前定死写进 run-spec,eval split 统一；seed/baseline 间选法不一，mean±std 就是假的。
+- **消融不是调参**——消融复用主表同一冻结配置（减组件），否则对比被污染；调参是 pilot / decides_config 实验的事。
+- **趋势反转先当 bug 查**——full vs reduced 方向/量级对不上，先查 config/数据/评估，别当科学发现流向 WP。
+- **部分 seed 如实报 n**——n=3 不当 n=4 报，signal 判定降置信。
+- **must 全覆盖才定稿**——`priority=must` 没跑完不能定稿；跑不了的进 deviation 的 drop 带原因，别悄悄缺。
+- **多 seed**——论文级要 mean ± std,reduced 单 seed 不够。
+- **权重/全量 log 不进数据包**——留 GPU,`pkg-meta.json` 给指针。
+- **不碰 claims.json**——CPE 只跑实验产数据，不裁决脊柱。
+- **方法超参扫描数据别扔**——落 `pilot/scan-results.json`，是 WP 敏感性分析的素材，一份 GPU 两份用。
+- **别在会话里用 `$...$` LaTeX**——会话符号用 Unicode（横切规范见 `dl-assistant` SKILL.md「横切规范」)。
+
+---
+
+## 工作流
+
+```mermaid
+flowchart TD
+    START["Step 1 读 plan-vN.json + 续跑协议<br/>没有 plan → 让用户去 writing-paper 产"] --> G1{"有计划包?"}
+    G1 -->|没有| EXIT["让用户去 writing-paper 产"]
+    G1 -->|有| TASK["Step 2 TaskList 建实验任务<br/>（每个 exp 一个：待跑/跑完/加/改）"]
+    TASK --> PILOT["Step 3 val pilot 定 config 候选<br/>训练超参沿用 · 方法超参 coarse-to-fine 扫<br/>扫描沉淀 pilot/scan-results.json"]
+    PILOT --> SPEC["Step 4 产 run-spec.json + 拓扑排程<br/>depends_on 建 DAG → 分层 → 层内 GPU 装箱"]
+    SPEC --> L{"用户确认 launch<br/>（run-spec + 排程表 + 成本）"}
+    L -->|确认| LOOP
+
+    subgraph LOOP["Step 5 按编排跑（full + 多 seed，long-run-ops 托管）"]
+        direction TB
+        R0["smoke（几步 + eval 走通）<br/>过了才正式 launch"] --> R1["跑一个实验"] --> R2["run 级验收<br/>check-run-artifacts.sh --expdir<br/>+ agent 看 log 完整性/指标合理性"]
+        R2 --> R3["增量写 results.json 条目 + 报告.md<br/>结果 sanity：和 reduced 趋势对照"]
+        R3 --> R4{"decides_config 实验?"}
+        R4 -->|是| R5["配置冻结确认点（用户拍板）<br/>依赖它的层才开跑"]
+        R4 -->|否| R6{"要加/改实验?"}
+        R5 --> R6
+        R6 -->|是| R7["用户确认 → 先改 run-spec 再跑<br/>记 deviation"]
+        R6 -->|否| R8{"还有未跑的?"}
+        R7 --> R8
+        R8 -->|有| R1
+    end
+    R8 -->|全跑完| FINAL["Step 6 包级验收 + 定稿数据包<br/>must 全覆盖自查 + check-run-artifacts.sh --pkgdir<br/>→ 交 WP ingest-results"]
+    FINAL --> END([用户拿回本地])
+```
+
+### Step 1：读实验计划包 + 续跑协议
+
+读 `plan-vN.json` 的 `experiments[]`。没有计划包 → 让用户去 `writing-paper` 产（CPE 不从零决定跑什么）。多批并存时按版本顺序消费，一批一个数据包。
+
+**续跑协议**（中断后重进）:① 读 `experiments/` 各 `meta.json` 状态 + 包级 `results.json` 已增量写到哪 → 定位断点（哪个 exp、哪个 seed、跑到哪一步）;② 已完成的不重跑；③ 中断的按 `long-run-ops.md` 重连规则恢复（tmux / 状态文件三连）;④ 恢复不了的重跑该 seed，并在 deviation 里记录。
+
+### Step 2：TaskList 建实验任务
+
+plan 的每个 exp 一个任务 + 状态（待跑 / 跑完 / 加 / 改），进度可见不可跳。
+
+### Step 3：val pilot 定 full config 候选
+
+超参分两类，先验不同、打法不同：
+
+- **训练超参**（lr / batch / schedule）：先验强——沿用前作 + 从 reduced 反推，基本不用扫。
+- **方法超参**（loss 权重 / 阈值 / 数量 / 维度——方法的一部分，直接决定性能上限）:**先验可能为零**（中期方法一直在变，没扫过是正常的）。在 **val 上 coarse-to-fine 扫**：不耦合 scale 的先 reduced 粗扫（**优先用 reproduction 交付的 `reduced_setting`**——已验有效、scale_method 在案，没有再自造）；耦合 scale 的（token 数 / cluster 数之类）full 短程确认。
+- **扫描数据沉淀**：扫描结果按 analysis 实验标准记录（扫描范围 / 取值 / 指标 / 选定值 + 理由），落 **`pilot/scan-results.json`**——WP 的敏感性分析直接消费，一份 GPU 两份用。
+- **pilot 出的是候选，不是定案**：候选配置由 plan 里 `decides_config=true` 的实验（全量设置下的组件消融 / 超参选定）确认后才冻结（Step 5 的确认点）。pilot 计划（扫哪几个 / 范围 / 预算）用户确认（烧 GPU）。
+
+### Step 4：产 run-spec.json + 拓扑排程，用户确认 launch
+
+1. **逐实验落条目**:`entry_script` / `config_file`（指向 `configs/` 冻结副本——把实际要用的 config 拷进实验目录）/ `command`（完整启动命令，封装进 `scripts/train.sh`)/ `seeds` / `gpu` / `expected_cost` / `expected_artifacts`。
+2. **eval 协议定死**:`checkpoint_rule`(val 选 best，禁 test 挑）+ `eval_split`，写进 run-spec 的 `eval_protocol`——全实验统一。
+3. **拓扑排程**：读各实验 `depends_on` 建 DAG → 拓扑分层 → **层内无依赖的并行**（按 GPU 数装箱，长实验先排）→ 层次写进 `run-spec.scheduling.layers`。**漏标 depends_on = 该并行的串行等，GPU-hours 白烧**——发现 plan 里依赖标漏了，标出来跟用户确认后补进 spec。
+4. **decides_config 闸门**：含 `decides_config=true` 实验的层排在最前；该层跑完 → **配置冻结确认点（用户拍板）** → 依赖它的层（主表批）才开跑。配置未冻结主表不开跑——主表用拍脑袋配置跑，headline 数字非最优，发现时主表重跑、对比/消融/数字回填全牵连。
+5. **用户确认 launch**：把 run-spec + 排程表（哪层并行 / 哪层等待 / 预估总时长）+ 成本（`expected_cost` 汇总，`priority` 标清，**must 先跑**）摆给用户，确认才开跑。
+
+### Step 5：按编排跑 + run 级验收 + 增量写（循环）
+
+- **smoke 先行（每个实验正式 launch 前必过）**：用该实验的冻结 config + `scripts/` 启动脚本跑一个 **smoke**——几步 iteration + eval 流程走通（数据加载 → 前向反向 → 落 checkpoint → eval → 指标写出），几分钟的事。**验证的是链路不是性能**：端到端能跑通、产物落在目录契约的位置。smoke 过了才进编排队列正式 launch；不过 → 修 config/命令/路径再复 smoke。config 写错/命令拼错/数据路径不对这类问题，full-scale 跑两三小时才炸是最贵的浪费——smoke 就是防这个。
+- **跑一个实验**:full config + 多 seed 训练（`long-run-ops.md` 托管）+ eval，产 mean ± std。填 `meta.json`(git 填中期 repo 收口版本，type/claim_cids 填 plan 的）。
+- **run 级验收（结果进 results.json 之前，必过）**:
+  - 机器项：`bash <本skill目录>/scripts/check-run-artifacts.sh --expdir experiments/<exp_id> --spec experiments/run-spec.json --exp-id <exp_id>`——目录契约存在性、json 可解析、必需字段、seed 数对账；
+  - agent 项：`train.log` 完整性（有正常结尾和 eval 段，不是中途截断）、指标合理性（量级离谱不离谱）;
+  - **查不过不接收**——先补（找回 log / 修产物）或重跑，别拿缺项结果进包。
+- **结果 sanity**：跟 reduced（中期迭代）趋势对照——方向一致？量级合理？趋势反转先当 bug 查（config / 数据 / 评估）。
+- **增量写**：验收过了 → 写 `experiments/<exp_id>/results.json` + `报告.md`（人读封面，模板见 `references/templates/exp-report-template.md`)→ **同时追加包级 `results.json` 条目**（防中途崩丢已完成）。
+- **qualitative 实验**：用主 run 的 checkpoint 产可视化样本（预测图 / 对比 / 失败案例）→ 落 `figures/`;results 条目记 checkpoint 来源、样本选择、对应 `output_to_paper` 图位。
+- **run 级失败处理**:crash(OOM / 抢占 / 掉线）→ 按 `long-run-ops.md` resume;resume 不成 → **用户决策**（重跑 / 降配置 / 标记失败）；部分 seed 成功 → 如实写 n,signal 判定降置信。
+- **要加/改实验**（补消融 / 换 baseline / 调 config)→ **用户确认** → **先改 run-spec.json 再跑** → 记 deviation(plan 没有的=add、plan 有但 config 变=change)。
+
+### Step 6：包级验收 + 定稿数据包
+
+1. **must 全覆盖自查**:plan 里 `priority=must` 的都跑了？没跑的进 deviation 的 drop 并带原因。
+2. **包级验收**:`bash <本skill目录>/scripts/check-run-artifacts.sh --pkgdir paper-data-pkg-v<N>`——三件套可解析、交叉对账（actual / results / pkg-meta 三边一致）、results 条目必需字段、权重 log 没混进包。
+3. **定稿**：组装数据包（各 exp 目录副本：configs / scripts / results.json / meta.json / 报告.md / figures;runs/ 留 GPU 给指针）+ 填 `pkg-meta.json`（含 GPU-hours 台账：实际消耗 vs `expected_cost`)。
+4. **交接**：用户拿回本地 → `writing-paper` ingest-results（按批，不等全部跑完）。
+
+## 常见错误
+
+- **没实验计划包别硬跑**——让用户去 `writing-paper` 产。CPE 不从零决定跑什么（但 plan 基础上可加/改）。
+- **别跳过 run-spec 直接跑**——plan 接过来先落 run-spec.json（脚本 / config 冻结副本 / 命令 / seeds / eval 协议 / 排程）,launch 确认点确认的就是它；跑中改了没回写 spec，审计链就断了。
+- **别跳过 smoke 直接全量 launch**——每个实验先用冻结 config + 脚本跑几步 + eval 走通，过了才进编排队列；config/命令/路径错跑几小时才炸是最贵的浪费。
+- **验收不过别接收**——run 级查不过先补/重跑；缺 configs/scripts/log 的实验进包，WP 拿到的数字就不可回溯。
+- **config/脚本必须冻结副本**——直接引用 repo 里的活文件，实验跑完文件一变，永远查不回当时用的什么配置。
+- **log 全量留**——train.log 截 tail 省事，出错时就没有事故现场了。
+- **加/改实验要用户确认 + 先改 spec**——和 launch 一样高消耗，每个加/改用户点头，spec 先改再跑。
+- **增量写结果**——每跑完一个就追加包级 results.json 条目 + 写 报告.md，别攒到最后。
+- **deviation 记全**——加了/改了/删了哪些相对 plan,WP ingest-results 靠这个对齐 experiment section，漏了 WP 不知道实际跑了啥。
+- **报告逐实验带 signal 判定**——success / failure / partial 纯客观对照预注册 bar，不做 storytelling；否定信号如实写，WP 靠它做诚实性自审。
+- **配置未冻结主表不开跑**——`decides_config` 实验跑完、用户拍板冻结后，主表批才 launch。
+- **排程靠 depends_on 拓扑**——别拍脑袋串行跑；层内并行按 GPU 数装箱，长实验先排。
+- **eval 协议全实验统一**——checkpoint 规则 launch 前定死进 run-spec；选法不一 mean±std 就是假的。
+- **趋势反转先当 bug 查**——full vs reduced 对不上先查 config/数据/评估。
+- **部分 seed 如实报 n**——n=3 不当 n=4 报，判定降置信。
+- **定稿前 must 全覆盖 + 包级验收**——缺 must 不能定稿；包级机械核对过了才交 WP。
+- **不碰 claims.json**——CPE 只跑实验产数据，不裁决脊柱。
+- **权重/全量 log 不进数据包**——留 GPU,`pkg-meta.json` 给指针。
+- **别在会话里用 `$...$` LaTeX**——会话符号用 Unicode（横切规范见 `dl-assistant` SKILL.md「横切规范」)。
+
+## references / scripts
+
+| 路径 | 讲什么 | 什么时候用 |
+|---|---|---|
+| `references/templates/data-pkg-schema.json` | 全部机读产物（run-spec / results / experiments-actual / pkg-meta / scan-results / meta / metrics）的 schema 单一真相源 | Step 4 产 spec、Step 5 写结果、Step 6 验收时 |
+| `references/templates/exp-report-template.md` | 每实验人读 `报告.md` 模板（TL;DR 结论先行 + 各节指引） | Step 5 增量写时 |
+| `scripts/check-run-artifacts.sh` | 产物验收（run 级 `--expdir` / 包级 `--pkgdir`，输出 Status 表） | Step 5 每实验跑完、Step 6 交包前 |
+| `dl-assistant/references/long-run-ops.md` | 长训练托管（tmux / 状态文件 / 重连 / resume / 防爆盘） | Step 5 跑长训练时 |

@@ -1,26 +1,31 @@
-# 研究价值讨论记录
+# 模板：方向N-<slug>-importance.json（Step 5 重要性独立预审落盘 · 机读）
 
-文件可用 `方向N-<slug>-importance.json`。不需要固定的“严苛审稿人”轮次；agent应提出自己的推荐并解释正反理由，用户能理解后参与决定。
+> 流程见 `direction.md` Step 5；公共语言规范见 `output-contract.md`。
+
+1 个重要性独立预审（人设 = 严苛顶会审稿人 / AC）对 1-2 个方向骨架逐个过 Hamming 五问，论证"**为什么这个方向重要**"——影响面（谁会在意）、时机（浪潮头还是退潮尾）、被忽视的代价（不填这个空白会怎样）。**拿真实文献证据戳，产重要性漏洞清单，不打分不排序**（判决归讨论①的用户）。
 
 ```json
 {
-  "schema_version": 2,
-  "problem_id": null,
-  "problem_version": null,
-  "question": null,
-  "if_supported": {"new_knowledge_or_capability": null, "why_it_matters": null, "evidence": []},
-  "limited_value_results": [],
-  "closest_work_differences": [],
-  "counterarguments": [],
-  "unknowns": [],
-  "agent_recommendation": null,
-  "recommendation_reason": null,
-  "user_response": null,
-  "decision": null,
-  "scope_change": {"previous_question": null, "retained_value": null, "lost_value": null, "reassessed": false}
+  "direction": "{方向 slug}",
+  "verdict": "立得住 | 存疑 | 没人需要",
+  "affected_community": "{哪类研究者 / 哪个子社区，具体到人群}",
+  "timing": {
+    "label": "浪潮头 | 上升期 | 退潮尾",
+    "evidence": "{近 1-2 年该问题的论文数趋势 + arXiv ID}"
+  },
+  "neglected_cost": "{这空白一直被忽视的代价，一句话}",
+  "hamming": [
+    { "q": "谁会在意这个结果？", "answer": "{具体人群，答不出 = 没人 care 的边角}", "evidence": ["{arXiv ID}"] },
+    { "q": "审稿人凭什么 care？", "answer": "{significance 一句话}", "evidence": ["{arXiv ID}"] },
+    { "q": "三年后还有人做吗？", "answer": "{浪潮头 / 退潮尾 + 趋势}", "evidence": ["{arXiv ID}"] },
+    { "q": "做出来了谁接着做？", "answer": "{能开一条线 / 一次性工作}", "evidence": ["{arXiv ID}"] },
+    { "q": "太小（一个 trick）或太老（十年前的问题）？", "answer": "{是 / 否 + 依据}", "evidence": ["{arXiv ID}"] }
+  ],
+  "flaws": [
+    { "flaw": "{戳出来的重要性漏洞}", "evidence": "{实证依据 + 出处}" }
+  ],
+  "conclusion": "{立得住 / 存疑 / 没人需要 + 一句话依据}"
 }
 ```
 
-研究价值可以是认识、方法、理论、评测或实际能力，不要求全部满足。差异、文献覆盖、证据支持与价值分别论证；引用数、star、热度、方法年代和关键词缺失不证明重要或无用。
-
-用当前问题评价，不把“该大领域重要”直接套到收窄后命题。decision可为继续推理/进一步取证/修改问题/暂缓/停止；认同继续讨论不自动批准实验预算。不要预测录用概率或三年后关注度。
+> **预审铁律**：产**漏洞清单（哪点重要 / 哪点像自嗨 + 证据）**，不打分排序。pitch 品味杀验"用户想不想做"，Step 3 调研验"空白真不真"，本份验"**这空白值不值得填**"；被戳死的方向不是"没人做过"的问题，是"**没人需要**"的问题。

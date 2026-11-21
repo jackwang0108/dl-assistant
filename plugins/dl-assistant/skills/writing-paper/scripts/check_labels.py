@@ -2,10 +2,10 @@
 
 用法: python3 check_labels.py <paper_root>
 
-扫描主 tex 及静态可解析的本地 include/input（剥注释后，不展开宏/条件）：
+扫描主 tex + sections/*.tex + tables/*.tex（剥注释后）：
 - FAIL undefined_ref : \\ref/\\eqref/\\autoref/\\cref/\\Cref 指向不存在的 \\label
 - WARN orphan_label  : 定义了 \\label 但全文无引用
-- WARN bare_number   : 裸编号 "Figure N" 等（非 \\ref、非 \\label 参数内）
+- FAIL bare_number   : 裸编号 "Figure N" 等（非 \\ref、非 \\label 参数内）
 """
 import os
 import re
@@ -49,13 +49,13 @@ def main():
 
     main_tex, problems = find_main_tex(root)
     if main_tex is None:
-        rep.unchecked("main_tex_not_found", "; ".join(problems))
-        return rep.emit()
+        rep.fail("main_tex_not_found", problems)
+        rep.emit()
+        return 1
     files = scan_tex_files(root, main_tex)
 
     labels = {}       # label -> (disp, lineno) 首次定义处
     used = set()      # 被引用过的 label
-    duplicates = []
     ref_hits = []     # undefined ref
     bare_hits = []
 
@@ -68,8 +68,6 @@ def main():
         for i, line in enumerate(lines):
             for m in LABEL_RE.finditer(line):
                 lab = m.group(1).strip()
-                if lab in labels:
-                    duplicates.append(hit(disp, i + 1, "重复label: " + lab))
                 labels.setdefault(lab, (disp, i + 1))
 
     # 第二遍：查 \\ref 族与裸编号
@@ -93,9 +91,6 @@ def main():
                     continue
                 bare_hits.append((disp, ln, m.group(0)))
 
-    if duplicates:
-        rep.fail("duplicate_label", duplicates)
-
     if ref_hits:
         rep.fail("undefined_ref",
                  [hit(d, l, "%s -> 未定义: %s" % (snippet, key))
@@ -111,7 +106,7 @@ def main():
         rep.pass_("orphan_label")
 
     if bare_hits:
-        rep.warn("bare_number",
+        rep.fail("bare_number",
                  [hit(d, l, "%s （裸编号，应用 \\ref）" % snip) for d, l, snip in bare_hits])
     else:
         rep.pass_("bare_number")

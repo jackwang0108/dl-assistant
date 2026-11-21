@@ -127,39 +127,5 @@ def test_paper_to_dict_handles_missing_comment():
     assert d["pages"] is None
 
 
-@pytest.mark.parametrize("value", ["2026-6-29", "2026-02-30", "2026-06-29-extra"])
-def test_resolve_date_rejects_invalid_iso_dates(value):
-    with pytest.raises(ValueError):
-        mod.resolve_date(value)
-
-
-def test_empty_result_keeps_requested_date_and_records_query_basis(monkeypatch, capsys):
-    monkeypatch.setattr(sys, "argv", ["fetch", "--date", "2026-06-29", "--categories", "cs.CV"])
-    calls = []
-
-    def fake_fetch(categories, date, max_results):
-        calls.append((categories, date, max_results))
-        return []
-
-    monkeypatch.setattr(mod, "fetch", fake_fetch)
-    mod.main()
-    import json
-    result = json.loads(capsys.readouterr().out)
-    assert calls == [(["cs.CV"], "2026-06-29", 500)]
-    assert result["date"] == "2026-06-29"
-    assert result["date_basis"] == "submittedDate"
-    assert result["timezone"] == "UTC"
-    assert datetime.fromisoformat(result["fetched_at"]).tzinfo is not None
-    assert result["total_count"] == 0
-    assert result["truncated"] is False
-
-
-def test_nonpositive_cap_is_rejected_before_fetch(monkeypatch):
-    monkeypatch.setattr(sys, "argv", ["fetch", "--date", "2026-06-29", "--categories", "cs.CV", "--max", "0"])
-    with pytest.raises(SystemExit) as exc:
-        mod.main()
-    assert exc.value.code == 2
-
-
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-v"]))

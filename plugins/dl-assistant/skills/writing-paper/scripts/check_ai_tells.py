@@ -1,11 +1,11 @@
-"""表达建议扫描；匹配不判断作者身份、诚信或科学质量。
+"""AI 腔 + 自我削弱表达硬正则检查（零误报清单）。
 
 用法: python3 check_ai_tells.py <paper_root>
 
 对 sections/*.tex（剥注释，不剥 math）跑 case-insensitive 正则：
-- ai_tell：可能冗余或空泛，命中只作 WARN。
-- defensive_write：限定语结合证据判断，只作 WARN——
-  按 word-craft 结合事实判断；真实的有限提升或落后可以保留
+- ai_tell：AI 腔/填充语，命中即 FAIL。
+- defensive_write：预防性自我削弱表达（防御性写作指纹），命中即 FAIL——
+  按 word-craft 原则 4 改写成边界声明或删除；诚实披露局限不属此类
   （局限该说，但不用道歉式措辞说）。
 """
 import os
@@ -13,7 +13,7 @@ import re
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _common import Report, hit, read_lines, relpath, find_main_tex, scan_tex_files
+from _common import Report, hit, read_lines, relpath, tex_files
 
 PATTERNS = [
     r"it is worth noting",
@@ -32,7 +32,8 @@ PATTERNS = [
     r"in order to",
 ]
 
-# 这些短语可能准确表达真实限制，只提示审阅，不强制删除或改写。
+# 预防性自我削弱表达（防御性写作指纹）。入选标准：几乎只用于
+# 道歉式示弱的措辞；诚实的边界声明有别的说法，不在这里。
 DEFENSIVE_PATTERNS = [
     r"\bunfortunately\b",
     r"\bregrettably\b",
@@ -56,11 +57,7 @@ def main():
     root = sys.argv[1].rstrip("/")
     rep = Report("ai_tells")
 
-    main_tex, problems = find_main_tex(root)
-    if main_tex is None:
-        rep.unchecked("text_scan", "; ".join(problems))
-        return rep.emit()
-    files = scan_tex_files(root, main_tex)
+    files = tex_files(root, "sections")
     if not files:
         rep.skip("ai_tell", "无 sections/*.tex")
         rep.skip("defensive_write", "无 sections/*.tex")
@@ -83,11 +80,11 @@ def main():
                 defensive_hits.append(hit(disp, i + 1, "%s" % " / ".join(defensive)))
 
     if hits:
-        rep.warn("expression_review", hits)
+        rep.fail("ai_tell", hits)
     else:
         rep.pass_("ai_tell")
     if defensive_hits:
-        rep.warn("qualification_review", defensive_hits)
+        rep.fail("defensive_write", defensive_hits)
     else:
         rep.pass_("defensive_write")
     return rep.emit()

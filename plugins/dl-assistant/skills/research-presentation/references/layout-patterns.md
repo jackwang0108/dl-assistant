@@ -1,28 +1,63 @@
-# 按信息关系选择布局
+# 布局速查 (inline grid)
 
-同一组比较保持位置、颜色和尺度一致；不为了视觉变化改排列。每页一个明确任务，可以包含多个有关系的图/信息块，不是机械限制每页一个对象。
+保持原 skill inline 哲学：**不造 preset layout 类**，每页用 inline `style="display:grid"` 自由搭。每个 `<section>` 要有唯一 `id`，主内容包在 `<div class="content">` 里。
 
-根section带唯一id，标题后用.content承载正文。图片优先figure/figcaption；纯布局用div，文字用语义元素。span和SVG文字可以正常使用，只需明确其字体/颜色继承，不按标签名称判定可读性。
+所有可见文字必须在 `<p>/<li>/<h1>-<h6>` 里（继承基础样式），`<div>` 只做布局容器。
 
+## 单栏
 ```html
-<section id="method-overview">
-  <h2>方法如何保留时间信息？</h2>
-  <div class="content grid" style="grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)">
-    <figure>
-      <div class="visual"><img data-asset-id="method" src="assets/method.svg" alt="带时间顺序的处理流程"></div>
-      <figcaption>根据当前实现绘制，示意图。</figcaption>
-    </figure>
-    <div><p>在此解释读图顺序和关键关系。</p></div>
-  </div>
-  <p class="footnote">实际来源及范围。</p>
-  <aside class="notes">先指输入与输出，再讲需要保留的关系。</aside>
-</section>
+<div class="content">
+  <p>内容</p>
+</div>
 ```
 
-- 单一复杂图：让图占主体，少量标注说明读图顺序，不再旁边重复一屏文字。
-- 图文并列：根据图的细节给足空间；左右比例由内容决定，不默认对半。
-- 方法比较：两侧同样样本/尺度/颜色，差异在同一位置标注；不能将一个方法的有利样本与另一个方法的不利样本拼在一起。
-- 结果图：标题说明待答问题/观察，图旁只写有依据的解释与限制；完整条件和来源保持可取得。
-- 图表/代码+输出：给容器min-height:0并测试实际尺寸，避免flex/grid子元素把页面撑开。
+## 双栏
+```html
+<div style="display:grid; grid-template-columns:repeat(2,1fr); gap:30px;">
+  <div><p>左</p></div>
+  <div><p>右</p></div>
+</div>
+```
 
-SVG/图片内部小字不因外层没溢出就变得可读。局部放大可用第二个裁剪图或DOM局部标注，记录裁剪关系，不删掉会改变解释的证据。附录另页不与正文重叠隐藏。
+## 三栏
+```html
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:25px;">
+  <div><p>1</p></div><div><p>2</p></div><div><p>3</p></div>
+</div>
+```
+
+## 不等列（1fr 2fr）
+```html
+<div style="display:grid; grid-template-columns:1fr 2fr; gap:30px;">
+  <div><p>窄</p></div>
+  <div><p>宽</p></div>
+</div>
+```
+
+## 图文左右
+```html
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:30px; align-items:center;">
+  <div><img src="..." style="width:100%"></div>
+  <div><p>说明文字</p></div>
+</div>
+```
+
+## 代码 + 输出
+```html
+<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+  <div class="code-block"><pre><code class="language-python">...</code></pre></div>
+  <div><p>输出说明</p></div>
+</div>
+```
+
+## 数据卡行（stat-card grid）
+```html
+<div style="display:grid; grid-template-columns:repeat(3,1fr); gap:20px;">
+  <div class="stat-card">...</div>
+  <div class="stat-card">...</div>
+  <div class="stat-card">...</div>
+</div>
+```
+
+## 时间线
+用 `.timeline` 组件（见 components.md），不用 inline grid。

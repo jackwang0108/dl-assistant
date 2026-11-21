@@ -1,201 +1,184 @@
-# 准备报告、操作证据与机读交接
+# Setup Report 模板（code-project-setup）
 
-按任务即时记录实际操作与结果，最终汇总每项操作的范围，不把最终回忆写成执行证据。保存setup-report.md与setup.json，路径尊重用户和项目约定；新任务不覆盖旧报告。
+> setup 的**人读正文**，也是**活文档**：工程执行区每完成一个任务，**当场回填**对应任务节
+> （实际结果 + 是否成功），不是最后一次性补写——产物即真相，回忆录式报告会丢真相。
+> 「就绪结论」节在 T7 报告收尾时定稿。
+>
+> 机读交接区单独在 **`setup.json`**（下游 agent 直接消费）；本份是给人理解
+> "这个 repo 被准备成什么样了"的叙事 + 执行台账。技术术语保留，整体中文。
+>
+> 保存 `setup-report.md`，和 `setup-spec.md` / `setup-plan.md` / `setup.json` / `<repo>-datasets-intro.md` / `smoke.py` / `env/` / `images/`
+> 同目录，**固定落 `docs/code-project-setup/<repo>-<日期>/`**。
 
-## setup-report.md
+---
 
-```markdown
-# 本轮环境与入口准备报告
-> 日期、当前目标、项目/机器、来源survey与spec/plan；本次实际检查范围。
+````markdown
+# Project Setup Report: <repo-name>
 
-## 1. 当前能做什么
-操作 | 对应需求/组件 | 已检查的具体条件/范围 | 证据 | 未验证/受阻事项 | 下一步
-没有运行的入口不写已验证；少量样本不称全量，部分完成不伪装失败或成功。
+> 由 code-project-setup 在 GPU 服务器（开发卡）产出。机读交接在 `setup.json`。
+> 任务台账（§2）随执行动态回填；本份末尾「就绪结论」在收尾时定稿。
 
-## 2. 来源与版本
-实际用户决定、上游schema、全部组件/版本/角色；真实代码commit和未提交diff；配置/资产/环境身份。
-survey的静态预判与本次实际观察分别写，差异核对版本/条件，不简单以新数字覆盖旧记录。
+## 0. 就绪结论（T7 收尾时定稿——读报告先看这一节）
 
-## 3. 执行前自查和任务记录
-目标、预期依据、改动/授权与范围；已知/未知及对执行的影响。
-每任务记录对应操作/R需求/survey任务、目的、输入条件、预期行为及依据、实际命令/工作目录/环境、代码/config/数据/权重、日志/退出状态、观察、解释范围、失败/偏差与后续。
-进程状态和检查结果分开；没有有依据预期时记观察和待调查。
+- **三层验证**：Layer 1 import <✓> / Layer 2 synthetic smoke <✓> / Layer 3 smoke run <✓ 或部分>。
+- **能直接干什么**：<ready 入口一句话——eval / smoke train / inference 各自命令在 setup.json>。
+- **不能干什么（blocked）**：<blocked 清单一句话，如 train_full 需 8 卡、dataset2 待用户手动下>。
+- **最大的语义风险**：<一句话，如 checkpoint 有 3 个 unexpected key 已确认是 module. 前缀、不影响>。
+- **建议下一步**：<code-paper-reproduction（主线）/ code-reading>。
 
-## 4. 资产、转换与改动
-原始与派生数据身份/数量/划分/单位、转换规则与对应检查；权重使用/遗漏/额外/有意初始化；环境与依赖改动。
-每改动给原因、影响、验证和实际授权，未决保留；不因让程序执行而改研究设计。
+## 1. repo 介绍 + 继承来源
 
-## 5. 实际资源与随机性
-测量条件/方式、实际观察、估计依据与未知分开；一次短运行不代表全规模成本。
-实际随机性设置与位置、是否修改及授权，不因设seed就声称结果完全可重复。
+- **是什么 / 来自哪**：<任务 + 框架；baseline-survey 推荐（commit）/ 用户指定>。
+- **继承自 `baseline-survey.json`**：执行链骨架 / 依赖地雷预判 / 关键风险（不重查，直接吃）。
+- **实测推翻 / 修正 survey 的地方**：<survey 预判 X，实测为 Y——如"预判 mmcv 难编译，实测官方 wheel 直接可装"；没有就写"无">。
 
-## 6. 交接前自查与survey任务回应
-已检查结论是否有证据、范围是否夸大、改动是否按规则检查、需求/多组件是否遗漏、剩余责任是否明确。
-逐个survey实测任务给实际证据、限制、仍未知和后续owner；其他阶段任务只移交，不填本次完成。
+## 2. 任务台账（随执行动态回填——每完成一个任务当场更新）
 
-## 7. 下一步与恢复
-给reproduction的验证目标/协议和未决可信度、给code-reading的实际环境/源码/入口；需要返回选型或研究讨论的具体问题。
-已有任务状态、资产完整性/版本、检查复用条件、提交状态与恢复位置；不默认merge/push或重复启动。
-```
+> 每个任务五件套：目的 / 做了什么 / 预期结果 / 实际结果 / 是否成功。
+> 目的和预期结果从 setup-plan.md 对应任务抄；实际结果写**实测值**（不是"通过了"），失败写现象 + 处置。
 
-## setup.json
+### T1 网络镜像就绪
 
-schema_version=2。以下是尚未执行的结构示例；不把占位、空值或文件存在当作已完成检查。实际只建立本轮需要的操作、环境和检查，允许不同组件用不同环境。
+- **目的**：<从 plan 抄>
+- **做了什么**：<实际执行的策略——直连通 / 配了 HF_ENDPOINT=... / PIP 走清华镜像>
+- **预期结果**：<从 plan 抄>
+- **实际结果**：<三条通道实测各一句话>
+- **是否成功**：✓ / ✗（原因）
+
+### T2 环境配置（含编译型依赖）+ Layer 1
+
+- **目的**：<从 plan 抄>
+- **做了什么**：<环境路线（conda / docker）、关键安装命令与版本决策、编译型依赖的最终对齐方案与踩坑（诊断详见 `compile-deps.md`）>
+- **预期结果**：<从 plan 抄>
+- **实际结果**：<Layer 1 实测：import 通过情况、torch/cuda 真值、算子 import 结果>
+- **是否成功**：✓ / ✗（原因）
+- **环境导出**：`env/` 五件套；CUDA/cuDNN 版本在 setup.json；OS 系统依赖（apt 装的）记这。
+
+### T3 数据 & 权重就绪 + 数据集速览
+
+- **目的**：<从 plan 抄>
+- **做了什么**：<每个数据集：下载源 / 转换 / 改了哪些硬编码路径 / subset 造法；checkpoint 加载验证>
+- **预期结果**：<从 plan 抄>
+- **实际结果**：<每个 dataset 版本 / 路径 / loader 验证结果（真实样本非空）；checkpoint strict 加载 key 情况>
+- **是否成功**：✓ / ✗（原因；blocked-by-* 的记这里并进 setup.json 的 blocked）
+
+> 数据集本身长啥样（是什么 / 规模 / 真实样本）见 `<repo>-datasets-intro.md`，台账只记就绪状态。
+
+### T4 Layer 2 synthetic smoke
+
+- **目的**：<从 plan 抄>
+- **做了什么**：<smoke script 调了哪些真实组件；script 已落盘 `smoke.py`>
+- **预期结果**：<从 plan 抄>
+- **实际结果**：<实测值：smoke loss = X.XX（参考量级 ln(N)≈Y）、输出有限非全零、梯度范数 > 0>
+- **是否成功**：✓ / ✗（原因）
+
+### T5 Layer 3 官方命令 smoke run
+
+- **目的**：<从 plan 抄>
+- **做了什么**：<枚举了哪些官方命令、各判 ready / blocked；smoke 跑了哪些>
+- **预期结果**：<从 plan 抄>
+- **实际结果**：<smoke train：loss X.XX → Y.YY 下降；tiny eval metric = Z（非 0 非假满分）；checkpoint missing/unexpected keys 清单；单 step 显存 XGB / 耗时 Ys>
+- **是否成功**：✓ / ✗（原因）
+
+> smoke run 跑出的 metric 只证"评估链能跑、数机械上合理"，**不对照论文数字**——对照是 code-paper-reproduction 的事。
+
+### T6 可复现性基线
+
+- **目的**：<从 plan 抄>
+- **做了什么**：<查了哪些文件的随机性来源>
+- **预期结果**：<从 plan 抄>
+- **实际结果**：<seed 位置 / cudnn deterministic·benchmark / dataloader shuffle·worker seed——机读版在 setup.json `reproducibility` 块，这里记叙事与发现（如"repo 根本没设 seed"）>
+- **是否成功**：✓（只摸清未强改——留给 execution 的可比性审计做依据）
+
+### T7 报告收尾
+
+- **做了什么**：就绪结论定稿、setup.json 全字段填齐、产物核对。
+- **是否成功**：✓
+
+### T8 git 汇报 → merge
+
+- **实际结果**：<用户同意，merge 回主分支（merge commit）/ 停在分支待确认>
+- **是否成功**：✓ / 待确认
+
+## 3. 允许的 setup fixes 与语义风险
+
+- 本次在 `code/project-setup` 分支做了哪些 setup fix（dependency / path / config 运行参数），用户已同意 merge。
+- **仍需注意的语义风险**（触及或未触及但需提防：strict=False 影响、label map、metric 参数、与实验相关的 config 默认值）。
+
+## 4. 下游交接
+
+- ready 入口 → 推荐给 `code-paper-reproduction`（验性能，主线下一步）/ `code-reading`（读源码）/ `code-idea-execution`（实现 idea）的具体 command / config / 数据 / checkpoint。
+- 仍 blocked 的资源清单。
+- Layer 3 smoke run 的 loss 趋势 / metric 量级已打底，`code-paper-reproduction` 在此基础上往上靠论文数字。
+- 建议下一步 skill。
+````
+
+---
+
+## setup.json（机读交接区，单独文件）
+
+> 下游 agent（`code-paper-reproduction` / `code-reading` / `code-idea-execution`）直接读这一份继承配置。
+> 字段名稳定、值要真（验证过才填 ✓，没验证标状态，查不到标 unknown，不编）。
 
 ```json
 {
-  "schema_version": 2,
-  "tracking_ref": null,
-  "created_at": null,
-  "updated_at": null,
-  "status": "not_started",
-  "goal": null,
-  "source_survey": null,
-  "source_spec": null,
-  "requirements": [],
-  "survey_task_responses": [],
-  "repo": {
-    "name": null,
-    "url": null,
-    "branch": null,
-    "commit": null,
-    "dirty": null,
-    "diff_path": null
+  "repo": { "name": "<repo>", "url": "<git-url>", "branch": "<branch>", "commit": "<sha>" },
+  "conda_env": "<env-name>",
+  "python": "3.x",
+  "torch": "2.x (cuda 11.8)",
+  "cuda_toolkit": "11.8",
+  "ready_commands": {
+    "eval": "python tools/test.py configs/xxx.py ckpts/xxx.pth --eval bbox",
+    "train_smoke": "python tools/train.py configs/xxx.py --cfg-options runner.max_iters=5",
+    "inference": "python demo.py --img demo.jpg --config configs/xxx.py --ckpt ckpts/xxx.pth"
   },
-  "repo_role": null,
-  "components": [],
-  "sources": [],
-  "environments": [],
-  "conda_env": null,
-  "operations": [
-    {
-      "id": "O1",
-      "purpose": null,
-      "requirement_ids": [],
-      "component_ids": [],
-      "status": "not_checked",
-      "check_ids": [
-        "C1"
-      ],
-      "supported_scope": null,
-      "limitations": [],
-      "remaining_tasks": []
-    }
+  "data": {
+    "<dataset>": { "path": "/data/<dataset>", "split": "train/val", "status": "✓ loader 读到真实样本" }
+  },
+  "checkpoint": {
+    "<name>": { "path": "/ckpts/<file>.pth", "status": "✓ strict=True 全 key 加载", "source": "<url>" }
+  },
+  "blocked": [
+    "train_full: blocked-by-resource（需 8 卡，开发卡仅够 smoke）",
+    "<dataset2>: blocked-by-data（需 Kaggle 账号，待用户手动下）"
   ],
-  "checks": [
-    {
-      "id": "C1",
-      "operation_id": "O1",
-      "layer": "component",
-      "object": null,
-      "input_conditions": null,
-      "expected_behavior": null,
-      "basis_refs": [],
-      "context": {
-        "component_ids": [],
-        "environment_id": null,
-        "code_refs": [],
-        "config_refs": [],
-        "data_refs": [],
-        "checkpoint_refs": [],
-        "device": null,
-        "precision": null,
-        "mode": null,
-        "randomness": null
-      },
-      "execution": {
-        "status": "not_started",
-        "command": null,
-        "working_directory": null,
-        "started_at": null,
-        "ended_at": null,
-        "exit_code": null,
-        "log_path": null,
-        "output_paths": []
-      },
-      "result": "not_checked",
-      "observations": [],
-      "interpretation": null,
-      "limits": [],
-      "follow_up": null
-    }
-  ],
-  "supported_operations": [],
-  "ready_commands": {},
-  "data": {},
-  "checkpoint": {},
-  "blocked": [],
-  "resource_observations": [],
+  "dev_card_footprint": {
+    "card": "1×A100 40GB",
+    "single_step": { "mem_peak": "18GB/40GB", "time": "0.8s/iter @ bs=2" },
+    "verdict": "够支撑 smoke 迭代开发；full 规模需 release 后上多卡运行服务器"
+  },
   "reproducibility": {
-    "observed_settings": [],
-    "unverified": [],
-    "changes": []
+    "seed_locations": ["<train.py:42 全局 seed>", "<dataloader.py worker_init_fn>"],
+    "cudnn": { "deterministic": "true | false | 未设置", "benchmark": "true | false | 未设置" },
+    "dataloader": { "shuffle": "<train: true / val: false>", "worker_seed": "<固定 | 未固定>" }
   },
-  "changes": [],
-  "paper_metrics": [],
-  "validation_targets": [],
-  "self_checks": {
-    "before_execution": [],
-    "before_handoff": []
-  },
-  "dataset_report": null,
-  "env_export": [],
-  "smoke": null,
-  "remaining_tasks": [],
-  "revisions": []
+  "paper_metrics": [
+    { "metric": "<如 mAP>", "value": "<论文值>", "dataset": "<数据集/split>", "source_page": "<出处页码>" }
+  ],
+  "dataset_report": "<repo>-datasets-intro.md",
+  "env_export": "env/",
+  "smoke": "smoke.py"
 }
 ```
 
-### 状态与需求映射
+字段说明（json 无注释，写在这里）：
 
-- 顶层status=not_started/in_progress/completed/partial/blocked/failed/cancelled，只描述本次约定准备工作的执行情况。completed也不表示全部仓库链路或科学可信。
-- requirements引用survey/研究设计的R编号及条件；独立任务可自行建明确需求。survey_task_responses每项含原task_id/owner、对应operation/check、实际状态、证据、回答了什么、仍未知与下一步owner。要移交的任务不填完成。
-- operations.status=not_checked/in_progress/checked/partial/blocked/failed/not_applicable，分别保存范围与限制。checked必须有本轮必要检查的实际证据；失败/未查/部分操作不能用一条命令无异常代替。not_applicable需理由，不替代未完成。
-- checks.result=matches_expected/investigate/conflicts_with_expectation/not_checked/not_applicable，与execution.status（not_started/running/completed/failed/blocked/cancelled）分别记录。退出0不推导符合预期；有与预期冲突/需调查/未执行的必要项时，不把受影响操作列为已支持。
-- execution.status=completed表示过程已结束且对应运行记录完整，不认证行为正确；命令执行失败应failed，缺退出状态先核实，不能当still running。输入不符合测试约束也需说明，不能把测试缺陷写成原模型错误。
+- `conda_env`：激活方式 `conda activate <env-name>`；走 docker 路线时改为镜像名 + 进入方式。
+- `torch` / `cuda_toolkit`：torch 及其绑定的 CUDA / 环境内 nvcc 版本。
+- `ready_commands`：**只放 Layer 3 已验证过的入口**，下游可直接用。`train_smoke` 是分钟级链路冒烟，不是 reproduction 的 reduced setting（小时级迭代代理），名字不混用。
+- `data` / `checkpoint` 的 `status`：✓ = 已验证可读，✗ = blocked。
+- `blocked`：下游要知道还差什么。
+- `dev_card_footprint`：开发卡实测足迹——判断够不够支撑 execution 迭代，非对标原文多卡规模。
+- `reproducibility`：可复现性基线（只摸清未强改），给 execution 的可比性审计打底；叙事版在任务台账 T6。
+- `paper_metrics`：自 `baseline-survey.json` **原样继承、不核对**——指标契约的传递带，code-paper-reproduction 的验收基准初稿（CPR 会回论文核对并冻结）。
+- `dataset_report` / `env_export` / `smoke`：指向同目录的补充材料。
 
-### 实际身份与运行上下文
+---
 
-repo保留主要仓库兼容入口；components列全部实际组件，含id、survey candidate_id、roles、路径、来源/revision、实际commit与dirty/diff、配置/资产关联和改动。没有主要仓库可null，不虚构一个repo。环境/权重/数据身份变化后核受影响检查，历史结果仍保留来源。
+## 模板使用说明
 
-environments每项含id、kind（conda/venv/container/system/other）、实际激活/调用方式、运行目录、解释器与依赖版本、平台、必要设备/驱动/运行库、构建工具（需要时）、导出/构建记录及来源。容器额外记镜像来源/digest、必要挂载与运行条件；conda_env只存主要conda环境名，不适用为null，不改作容器名。env_export只列实际存在的相关导出记录，不要求五件套。
-
-sources条目含id、类型、实际URL/路径、版本、读取/运行时间、范围，给basis_refs和原文/代码位置引用。paper_metrics保留来源声明和条件，调查/准备核对了哪部分写明；不是setup已复现。validation_targets关联实际组件、协议/参考来源、已核对范围和交reproduction的未知，不由repo_role决定。
-
-每项check的context绑定实际代码commit+diff（如有）、配置文件/值与版本或内容校验、数据/权重版本/校验和样本ID、环境/设备/精度/模式等与操作相关条件。无关条件可null但说明不适用，未知不能填示例规格。command、working_directory、环境选择、实际覆盖样本/步数、日志、退出码和输出路径保存到execution；当时未提交的代码要保留diff，不能只记HEAD。修改后的条件不继承旧通过。
-
-检查阶段的配置另存，不能覆盖正式实验参数；--help、dry-run、合成输入、小样本和完整运行的范围明确区分。自造教学输入不充当真实数据记录。检查时异常/失败、尝试过程和批准修改保存到changes或任务记录，不只保留最终成功配置。
-
-### 资产和检查结果
-
-data和checkpoint以资产ID为键，每项记录来源身份、实际路径、配置/版本、状态和对应检查。可用status=not_obtained/partial/obtained/checked/blocked，检查范围另列；obtained不表示读取/加载已验证，checked不表示数据全部正确或科学有效。完整性依据、原始/派生关系、转换脚本、样本计数/划分/单位、实际权重覆盖与遗漏另附细节/来源。
-
-supported_operations每项记录operation_id、具体范围、所依据check_ids、代码/环境/资产条件和限制，**不是一组宽泛“ready”布尔值**。仅在必要检查符合预期、无未解决关键冲突且条件对应时填写；调查未决可交部分结果，不支持其受影响范围。
-
-ready_commands只保留旧消费者定位用的命令字符串映射，每条都必须指向对应的supported_operation和实际入口check；详细工作目录/环境/配置见checks。仅import、--help或组件检查通过不能填完整eval/train入口。train_smoke只表示当时短运行范围，不外推正式训练；没有已检查入口就空对象，不补造可运行命令。
-
-blocked每项说明受影响operation/asset、原因、实际证据、解除条件与owner；无关事项可另记剩余任务，不把本轮未包含的大训练自动归为失败。
-
-### 资源、改动、自查与恢复
-
-resource_observations每项记录对应check/运行、设备、模型/输入/batch/精度、训练或推理、测量方式/预热/范围、实测显存/耗时等实际数据及限制；估计另标并给依据。不能将短运行结果填成完整训练能力，CPU任务不虚构开发卡。
-
-reproducibility.observed_settings记录实际设置与代码/config位置（seed、采样/worker等适用内容），未知用null或unverified，不以“未设”代替未查。changes保存设置变更及依据/授权，不自动强改确定性。
-
-changes每项含时间、对象、前后版本、原因、对数据/计算/比较影响、批准范围/实际授权、验证与限制。self_checks.before_execution/before_handoff每项含check、status(clear/limited/needs_revision)、finding、证据/版本、unknowns和effect；已有证据直接引用，不新增自查JSON/脚本。needs_revision先处理或如实交受阻事项，不能同时给“已就绪”结论。
-
-dataset_report、env_export、smoke/检查脚本只引用实际生成的文件；无需时null/空数组并说明。不要求每次有图像或数据样本导出。revisions保存旧结论、变化证据、原因与影响，不批量覆盖历史。
-
-恢复时核正在运行任务、环境/代码/config/资产与记录版本、完整性和检查范围，再决定复用或重跑；文件存在不代表完成，报告也不是不需核查的事实。人读报告与JSON即时对应，实际执行有新证据时保留原预期与修订，不把事后观察改写为原本预期。
-
-## 旧消费者与边界
-
-reproduction、prepare与code-reading已按实际目标/用途和行为证据接收新版；当前后期skills按实际来源与检查范围接收；历史项目中的conda_env、ready_commands、data/checkpoint或smoke仅作为定位入口。交接明确schema_version=2、主要入口与全部组件、检查范围及未决；接收方先核对语义，不认识字段时不能忽略多环境/多组件或将checked读成研究可信。旧JSON缺信息是未知，不假装已迁移；旧字段仅帮助定位，不恢复旧的统一数值判据。
-
-## 研究条件核对（与本轮用途有关时）
-
-引用条件记录的路径和版本，写明目标与实际条件、必须保留项的代码/配置/数据位置及检查证据、未知/偏差、所查范围和不能外推的内容。记录下一次目标条件验证的触发点或不适用理由。按本 skill 职责分别说明静态调查、准备、阅读或实际运行，不能将尚待检查项写成已落实；条件或假设变化后重新核对。
-
-## W&B 来源与同步交接
-
-tracking_ref 指向项目的非敏感配置及版本；按 [共同记录](../../wandb/references/experiment-records.md) 保存实例、SDK/MCP验证范围及运行身份。执行、同步和有效性分别报告；保留所有尝试、本地关键结果、实际查询快照与校验值，缺失不补造，不写凭证。
+- **活文档纪律**：任务台账（§2）是执行过程中逐节回填的——每完成一个任务当场写「实际结果 + 是否成功」，不留到最后。实际结果写**实测值**（loss 数值、显存 GB、key 数量），不写"通过了"三个字。
+- **就绪结论前置**：§0 是收尾时定稿的 TL;DR——用户读报告先看这节就知道"就绪到什么程度、能干什么、不能干什么、最大的坑"，后面各节是证据。
+- **任务节与 plan 一一对应**：plan 加了 / 删了任务，台账同步加 / 删节；「目的」和「预期结果」直接从 plan 抄，「实际结果」回填时对照预期写。
+- **机读区单一真相源**：conda_env / ready_commands / data / checkpoint / blocked / dev_card_footprint / reproducibility / paper_metrics 这几个 key 下游 agent 直接读。人读 `setup-report.md` 描述同一事实的另一面，**别让两边打架**——改了路径 setup.json 和 setup-report.md 都改。
+- **恢复入口**：`setup.json`（尤其 conda_env / data / checkpoint / ready_commands）+ 任务台账的成败状态，就是 setup 中断后的恢复总纲，配合扫 env / 数据 / ckpt 真实文件定位断点（见 `dl-assistant/references/long-run-ops.md`）。

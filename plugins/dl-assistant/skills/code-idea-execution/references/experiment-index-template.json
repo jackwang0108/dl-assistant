@@ -1,13 +1,29 @@
 {
-  "schema_version": 2,
-  "version": null,
-  "experiments": [],
+  "version": "v<N>-<slug>",
+  "experiments": [
+    {
+      "experiment_id": "exp-001-<name>",
+      "claim_cids": ["C1"],
+      "plan_phase": "Phase-1",
+      "anchor_run": "reproduction.json reduced_setting.baseline_result",
+      "primary_metric": "refcoco val cIoU",
+      "primary_value": 78.71,
+      "anchor_value": 77.49,
+      "verdict_local": "keep",
+      "reason": "超锚点 +1.22，大于 2×noise_floor.std（0.30），且新增代码仅 20 行",
+      "status": "completed",
+      "date": "2026-01-01"
+    }
+  ],
   "_notes": {
-    "row": "每个计划实验一行：experiment_id、type、design_mode、research_question_ids、hypothesis_ids、claim_cids、meta_path、status、status_reason、data_validity、inference_status、updated_at。meta_path可为null或exp-XXX/meta.json",
-    "timing": "登记即记行，不等跑完；元信息和台账状态一致。failed/blocked/cancelled以及未执行均保留，不用keep率判断研究价值",
-    "values": "status/type/design_mode/data_validity/inference_status枚举与meta模板一致；主数字可作摘要但含来源，不代替逐样本记录",
-    "attempts": "每实验多次尝试在meta.attempts逐项保留，attempt使用独立输出；改变科学设计新实验ID或明确的新设计版本，不覆盖原始结果",
-    "scope": "全部计划和临时尝试均登记，准备任务可没有claim但须关联问题或明确purpose。没有实验目录的计划行需status=not_started并说明，开工前补meta和产物声明",
-    "legacy": "旧verdict_local=keep/discard只读为历史处置；旧状态未知或字段缺失保留未知，不推导证伪/成功"
+    "这是什么": "实验台账。ideas/v<N>-<slug>/experiments/index.json，execution 维护——每跑完一个实验记一行；验收子 agent 看全景、iterate 看尝试地形（keep/discard 率是收口判断的客观信号）都读它。",
+    "粒度": "一轮实验一行（含自治带内试过的工程级变体）——全景地形靠它，细节去对应 exp 目录读 meta.json + 报告.md",
+    "experiment_id": "与 experiments/ 下的目录名一致",
+    "claim_cids": "这个实验验证哪些子论点（C1 等，见 claims.json）",
+    "anchor_run": "对比锚点——台账横向可比的前提是所有行锚点口径一致",
+    "primary_value / anchor_value": "主指标的本实验值与锚点值，并排写，一眼看 delta",
+    "verdict_local": "keep / discard / pending——按该实验 meta.json 预登记的 decision_rule 判",
+    "reason": "一句话原因，写清依据（delta vs noise_floor、复杂度权衡）",
+    "status": "completed / failed / in_progress——failed 的行也留着，失败的尝试地形同样重要"
   }
 }

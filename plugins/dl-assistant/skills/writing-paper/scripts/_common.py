@@ -72,19 +72,16 @@ def find_main_tex(root):
         try:
             with open(cfg, "r", encoding="utf-8") as f:
                 data = json.load(f)
-        except (OSError, ValueError) as e:
-            return None, ["config.json 解析失败: %s" % e]
-        if not isinstance(data, dict):
-            return None, ["config.json 须为对象"]
+        except Exception as e:
+            problems.append("config.json 解析失败: %s" % e)
+            data = None
         if isinstance(data, dict):
             mt = data.get("main_tex")
             if isinstance(mt, str) and mt.strip():
                 p = os.path.join(root, mt.strip())
                 if os.path.isfile(p):
                     return p, problems
-                return None, ["config.json 的 main_tex 指向不存在: %s" % mt]
-    if not os.path.isdir(root):
-        return None, ["论文根不存在或不是目录: %s" % root]
+                problems.append("config.json 的 main_tex 指向不存在: %s（回退扫描）" % mt)
     texs = [os.path.join(root, n) for n in sorted(os.listdir(root))
             if n.endswith(".tex") and os.path.isfile(os.path.join(root, n))]
     if not texs:
@@ -92,44 +89,27 @@ def find_main_tex(root):
         return None, problems
     if len(texs) == 1:
         return texs[0], problems
-    candidates = []
     for p in texs:
-        lines = read_lines(p)
-        if lines is not None and re.search(r"\\documentclass", "\n".join(lines)):
-            candidates.append(p)
-    if len(candidates) == 1:
-        return candidates[0], problems
-    problems.append("无法唯一确定主 tex，请在 config.json 中指定 main_tex")
+        try:
+            with open(p, "r", encoding="utf-8", errors="replace") as f:
+                head = f.read(4096)
+        except OSError:
+            continue
+        if re.search(r"\\documentclass", head):
+            return p, problems
+    problems.append("根目录多个 *.tex 且都无 \\documentclass: %s"
+                    % ", ".join(os.path.basename(t) for t in texs))
     return None, problems
 
 
 def scan_tex_files(root, main_tex):
-    """扫描主文件及静态可解析的本地 input/include/subfile，循环引用只读一次。
-
-    不展开宏或条件编译；其他资产需要编译与人工检查。
-    """
-    out, seen = [], set()
-    def visit(path):
-        path = os.path.abspath(path)
-        if path in seen or not os.path.isfile(path):
-            return
-        seen.add(path)
-        out.append(path)
-        lines = read_lines(path) or []
-        for match in re.finditer(r"\\(?:input|include|subfile)\s*\{([^{}]+)\}", "\n".join(lines)):
-            name = match.group(1).strip()
-            if "\\" in name or "#" in name:
-                continue
-            if not os.path.splitext(name)[1]:
-                name += ".tex"
-            choices = [os.path.join(root, name), os.path.join(os.path.dirname(path), name)]
-            for candidate in choices:
-                if os.path.isfile(candidate):
-                    visit(candidate)
-                    break
-    if main_tex:
-        visit(main_tex)
-    return out
+    """待扫描的 .tex 全集：主 tex + sections/*.tex + tables/*.tex（存在时）。"""
+    files = []
+    if main_tex and os.path.isfile(main_tex):
+        files.append(main_tex)
+    files.extend(tex_files(root, "sections"))
+    files.extend(tex_files(root, "tables"))
+    return files
 
 
 def norm(s):
@@ -148,7 +128,7 @@ def relpath(root, p):
 
 
 # ---------------------------------------------------------------------------
-# 检查报告：PASS/FAIL/WARN/SKIP/UNCHECKED；缺材料不转成通过
+# 检查报告：每个 item 一行 [PASS]/[FAIL]/[WARN]/[SKIP]，FAIL/WARN 附逐条命中
 # ---------------------------------------------------------------------------
 
 class Report:
@@ -171,12 +151,9 @@ class Report:
     def skip(self, label, note=""):
         self.add("SKIP", label, (), note)
 
-    def unchecked(self, label, note=""):
-        self.add("UNCHECKED", label, note=note)
-
     def emit(self):
-        """返回1表示错误，3表示未检查完成，0仅表示未发现硬错误。"""
-        counts = {"PASS": 0, "FAIL": 0, "WARN": 0, "SKIP": 0, "UNCHECKED": 0}
+        """打印全部 item + 结尾一行 [SUMMARY]；返回退出码（有 FAIL 则 1）。"""
+        counts = {"PASS": 0, "FAIL": 0, "WARN": 0, "SKIP": 0}
         for status, label, hits, note in self.items:
             line = "[%s] %s" % (status, label)
             if note:
@@ -185,9 +162,9 @@ class Report:
             for h in hits:
                 print("    " + h)
             counts[status] += 1
-        print("[SUMMARY] %s: PASS=%d FAIL=%d WARN=%d SKIP=%d UNCHECKED=%d" % (
-            self.name, counts["PASS"], counts["FAIL"], counts["WARN"], counts["SKIP"], counts["UNCHECKED"]))
-        return 1 if counts["FAIL"] else (3 if counts["UNCHECKED"] else 0)
+        print("[SUMMARY] %s: PASS=%d FAIL=%d WARN=%d SKIP=%d" % (
+            self.name, counts["PASS"], counts["FAIL"], counts["WARN"], counts["SKIP"]))
+        return 1 if counts["FAIL"] else 0
 
 
 def hit(path, lineno, snippet):

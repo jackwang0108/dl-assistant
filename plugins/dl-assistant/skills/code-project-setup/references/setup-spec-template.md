@@ -1,41 +1,100 @@
-# 本轮准备规格
+# Setup Spec 模板（code-project-setup）
 
-保存 `setup-spec.md`。说明目的、范围、选择依据、允许改动、投入与检查标准。简单任务可简写。和 plan 一起交用户审阅，两份均获明确确认后才执行。记录确认对应的版本及授权范围，已有具体授权可作为审阅依据。未读和未知明确保留。
+> 动手前的**准备规格说明**——让用户看清 agent 打算干啥 / 缺啥 / 风险在哪 / 资源够不够，确认后才转 Plan。
+> spec 定 what / why（做什么、为什么、风险、标准），Plan 定 how（分任务执行）。
+>
+> 保存 `setup-spec.md`。继承自 `baseline-survey` 的结论融进各节、标 "(自 survey)"，不单成一节。
+> 技术术语保留，整体中文。
 
-```markdown
-# 本轮环境与入口准备
-> 日期、实际项目/机器、当前代码/配置版本、来源survey/研究说明与用户目标。
+---
 
-## 1. 准备哪些操作，为什么需要
-操作ID、对应R需求、全部组件/角色、需要取得的行为/输出；必要条件与偏好分开。
-本轮范围（如少量真实样本评测入口）、不适用部分、尚未定义或需返回研究讨论的问题。
+````markdown
+# Setup Spec: <repo-name>
 
-## 2. 上游与当前现场
-survey的实际决定/条件、requirements、verification_tasks及验证目标映射。
-所选版本与本机实际commit/未提交diff、配置/资产身份是否匹配；版本变化及影响。
-已有环境/文件/任务与历史检查是否能复用，缺什么依据，不仅检查目录存在。
+> 动手前对齐。审阅通过后转为 setup-plan.md 执行。有问题就改，改到确认再转 Plan。
 
-## 3. 环境与资产方案
-各组件所需环境与选择理由；实际设备/OS/依赖约束、来源、安装路线与失败时的有依据替代。
-容器/conda/venv等按项目选择，可能多个环境；未知耗时、存储、显存不编数字。
-每份数据/权重的身份、来源、版本/配置、访问条件、完整性验证、实际用途。
-数据划分/标签/单位/预处理与加载要求，原始与派生数据分开。
+## 1. repo 介绍
 
-## 4. 操作与检查设计
-每项：对象 → 输入/条件 → 预期行为及实际依据 → 运行/观察办法 → 支持范围与不能推断什么。
-按需要选环境、组件、真实入口检查，不要求每项都训练或用合成输入。
-没有有依据的预期时明确观察性检查及待调查，不填通用正loss/非零输出/几步必降。
-真实入口、来源版本、必要配置/资产依赖；尚未验证的命令不记ready。
+- **是什么**：<任务 + 框架 + 血缘一句话，如 基于 MMDetection 3.x 的目标检测 repo，Detectron2 的近亲改造>。
+  （写到"用户不看 README 也知道接手的是什么"为止；不要抄 README 简介。）
+- **来自哪**：baseline-survey 推荐（commit <sha>）/ 用户指定（<url>）。
+- **要 setup 成什么样**：可读（代码能 import）/ 可调（能改参数跑）/ 可信（三层验证 + 数值 sanity 通过），为下游 code-paper-reproduction / code-reading / code-idea-execution 备好 baseline。
 
-## 5. 改动、授权、预算与暂停条件
-将改变什么、为何需要、是否改变数据/计算/比较，如何检查对应关系。
-允许自主进行的修复、已批准需验证的适配、影响不明/科学设计变化时返回谁。
-授权来源与范围、资源依据/未知、暂停/报告条件；不给无限安装重试或调参授权。
+## 2. 环境决策（每个决策都要带理由——没有理由的决策用户没法审）
 
-## 6. 执行前自查与待定项
-目标是否对应需求；输入/预期依据是否明确；改动/授权是否一致；验证范围/成本是否清楚。
-逐项写clear/limited/needs_revision、依据/版本、未知和行动影响；已有完整材料直接引用。
-有影响当前行动的缺陷先修正/讨论，已明确且不受影响的准备可继续。
-```
+- **环境路线**：conda 新建 / repo 官方 docker——<选择 + 理由>。
+  （判据：repo 有官方维护的 Dockerfile / 镜像 且 编译型依赖重 → 优先 docker，省掉本地编译对齐；否则 conda。）
+- **conda env 名** / **Python 版本**：<env-name> / 3.x
+- **torch × CUDA 组合**：<torch 2.x + cuda 11.8>——<理由：机器 nvcc 是 X、repo 要求 Y，所以选这个组合>
+- **编译型依赖处置方案**（自 survey 预判的地雷，逐条给打法）：
+  - <mmcv-full：用预编译 wheel（cu118/torch2.1 index），不本地编译——理由：官方 wheel 覆盖此组合>
+  - <flash-attn：无覆盖组合，源码编译预计 20 分钟；失败 fallback xformers>
+  - 无编译型依赖则写"无"。
+- **资源判断**：开发卡 <1×A100 40GB>，预计 smoke run 单 step 显存 <XGB>（依据：模型参数量 / 官方 config 的 bs），够支撑 execution 迭代开发（不对标 repo 声称的 8 卡规模）。
 
-格式转换、加载映射的正确性需说明并验证，不按某个参数名机械决定。纯CPU/纯数据/纯评测任务无需编GPU/训练目标。用户已选择研究问题不等于授权任意安装、数据替换或算法重建。
+## 3. 数据 & 权重清单
+
+**数据集**：
+
+| 数据集 | 在 repo 里的角色 | 版本 | 来源 | 大小 | 需账号? | 处理（转换 / 预处理） | 自动 / 手动 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| <COCO> | 训练 + val benchmark | v2 | <url / 官方> | ~25GB | 否 | COCO 格式直用 | 自动 |
+| <CustomX> | 消融用 | - | <网盘> | 5GB | 是(提取码) | 需转 COCO 格式 | **手动(账号)** |
+
+**checkpoint / 权重**：
+
+| 权重 | 来源 | 大小 | 加载方式 | 自动 / 手动 |
+| --- | --- | --- | --- | --- |
+| <backbone.pth> | <url> | 200MB | strict=True 全 key | 自动 |
+
+> 「在 repo 里的角色」一列必须填——它决定这个数据集值不值得花时间（benchmark 必须版本对齐论文，消融用可以宽松）。
+
+## 4. 验证标准（"setup 完成"的定义——每条都要是可判定的通过条件，不是"能跑通"）
+
+- **Layer 1 import / config**：framework + 项目 package + config 系统加载无报错；`torch.cuda.is_available()` 为真；编译型算子 import 无 undefined symbol。
+- **Layer 2 synthetic smoke**：smoke script 调真实 model/loss/collate，forward 输出有限且非全零、loss 量级合理（参考：<N 类分类交叉熵初始 ≈ ln(N)>）、backward 梯度非全零。
+- **Layer 3 官方命令 smoke run**：smoke train <5 iter> loss 从 <初始量级> 下降且无 NaN；tiny subset eval metric > 0 且非假满分；实测开发卡单 step 显存 / 耗时。
+- （执行链骨架自 survey：训练链 `train.py:main → build_model → forward → loss`；eval 链 `eval.py:evaluate → load_ckpt → forward → metric`；数据链 `dataset.py:__getitem__ → transforms → collate`。）
+
+## 5. 预判地雷 + 语义改动预警
+
+**确定要处置的**（已知、已列入计划）：
+- <config 多处硬编码 data_root，逐处改全>
+- <mmcv 编译（处置方案见 §2）>
+
+**风险待验证的**（可能踩、setup 中实测核验）：
+- <survey 预判：数据集 v1 vs v2 标注有改动，metric 可能对不上——数据就绪时对齐版本（自 survey)>
+- <社区有人报 checkpoint key mismatch——Layer 3 加载时核 missing/unexpected keys（自 survey)>
+- license 同意：<某权重需点击同意条款，是停下交用户的点>
+
+**语义改动预警**（命中即停，汇报为什么 + 怎么改，等用户拍板）：
+- checkpoint 加载可能 strict=False（key mismatch）→ 即停
+- <数据集 annotation 可能要 label map 修正> → 即停
+- <metric 调用参数 / config 中与实验相关的默认值> → 即停
+````
+
+---
+
+## 填好的示例片段（深度对照）
+
+**环境决策 · 浅（不合格）**：
+
+> torch 2.1 + cuda 11.8，conda 新建。
+
+**环境决策 · 深（合格）**：
+
+> 环境路线：conda 新建——repo 无官方 Dockerfile，且依赖里有 mmcv-full 要现场对齐，docker 没有现成镜像可用。
+> torch 2.1 + cuda 11.8——机器 nvcc 11.8、驱动支持到 12.x；repo requirements 钉 torch==2.1.*；
+> survey 预判 mmcv 编译难，但官方 wheel index 恰好覆盖 cu118/torch2.1，直接预编译，不现场编译（自 survey，已核 wheel index 有货）。
+
+差别：浅的只给结论，深的给了"为什么是这个结论"——用户审 spec 审的是后者。
+
+---
+
+## 模板使用说明
+
+- **spec 是对齐不是流水账**：用户审 spec 是确认"方向 / 方案 / 风险"对不对，不是逐行核数据。写法上突出**决策点（环境 / 资源，带理由）+ 缺口（哪些要用户手动）+ 风险（地雷 / 语义预警）**。
+- **地雷分两档**：「确定要处置」= 已核实、已列计划的工程活；「风险待验证」= 预判、要在 setup 中实测坐实或推翻的。混在一起用户分不清哪些是计划哪些是赌注。
+- **继承自 survey 不单列**：survey 的执行链骨架进第 4 节、依赖地雷进第 2 / 5 节、关键风险进第 5 节，各标 "(自 survey)"。
+- **没有 survey 也能填**：独立 setup 时，"来自哪"写用户指定，各节从 repo 实际探索填，不强依赖 survey。
+- **spec 确认后才转 Plan**：spec 没确认不往下走（SKILL 核心纪律 · 两个确认点）。

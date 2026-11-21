@@ -1,7 +1,25 @@
-# 来源、标注与附加元素
+# 工具库 (qrcode + iconify)
 
-来源应能定位：论文标识/版本及图号，项目代码/数据/运行，截图环境和日期，或实际网页及使用条件。页脚可短写，完整信息保存在规划sources/assets与实际材料中，不用一长串URL挤占正文。
+## qrcode.js（全局已引，二维码）
+生成二维码，slide 末尾分享链接/扫码互动：
+```html
+<div id="qrcode"></div>
+<script>
+  new QRCode(document.getElementById('qrcode'), {
+    text: 'https://example.com',
+    width: 200,
+    height: 200,
+    colorDark: '#000000',
+    colorLight: '#ffffff'
+  });
+</script>
+```
 
-图标、徽标、二维码和地图仅在帮助定位对象、入口或地理信息时使用。需要它们时选择实际可用且本地可保存的工具/库，记录来源与许可；生成器不默认加载图标网络、地图瓦片或二维码库。
-
-链接/二维码应指向已经存在且允许分享的目标，交付前实际检查。内部实验和个人凭证不出现在公开演示素材中。无法公开的原始材料用经过授权的替代内容并说明范围，不能编造看似真实的证据。
+## iconify（按需引，海量图标）
+Font Awesome 不够时用 iconify（含 Lucide/Tabler/Material/品牌 logo 等，百万图标，按需加载）：
+```html
+<script src="https://cdn.jsdelivr.net/npm/iconify-icon@2"></script>
+<iconify-icon icon="lucide:rocket" width="32"></iconify-icon>
+<iconify-icon icon="mdi:github" width="32"></iconify-icon>
+```
+图标名查 iconify.design。按需引（不全局，避免重）。

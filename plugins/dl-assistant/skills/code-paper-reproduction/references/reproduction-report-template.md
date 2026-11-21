@@ -1,217 +1,236 @@
-# 逐目标复现记录与交接
+# Reproduction 交付模板（code-paper-reproduction）
 
-默认docs/code-paper-reproduction/<实际日期>-<slug>/，尊重用户指定位置。保存spec.md、reproduction.json、report.md、alignment.md、runs/<唯一run-id>/及实际必要产物。失败/未决/部分结果同样保存，新运行不覆盖旧日志或原协议。大资产保留实际位置、身份与可取得条件。
+> reproduction 的交付是一个**目录** `docs/code-paper-reproduction/<repo>-<日期>/`（固定路径，不问用户），含：
+> - `spec.md` — 复现规格（Step 2 产出，用户审过；模板见 `reproduction-spec-template.md`）
+> - `reproduction.json` — **机读交接区**（下游 execution / CIP 直接消费，单一真相源）
+> - `report.md` — 人读正文（**活文档**：spec 确认后建立，随验证逐节回填）
+> - `runs/<run-slug>/` — 各 run 的 log / EXIT_CODE / metrics / 训练曲线（run-slug：eval / dev-full / scaled-b / trend-a / sweep-<档位> / reduced）
+> - `alignment.md` — 论文 vs repo vs setup 对齐核对 + trust-traps 排查底稿
+>
+> 机读区单独拆 `reproduction.json`（和 `setup.json` / `baseline-survey.json` 一致），`report.md` 是人读叙事。
+> 技术术语保留，整体中文。run 产物路径用**目录内相对路径**。
 
-## reproduction.json
+---
 
-新版schema_version=2。以下是未执行结构示例，null/空值不是验证成功；按实际目标增加/删除条目，无关或未知明确说明，不复制示例为真实证据。
+## reproduction.json（机读交接区）
+
+> 下游 `code-idea-prepare` / `code-reading` / `code-idea-execution` 直接读这一份。字段名稳定、值要真（验证过才填，查不到标 unknown，不编数字）。json 写不下注释，字段含义统一在模板下方的「字段说明」讲。
 
 ```json
 {
-  "schema_version": 2,
-  "tracking_ref": null,
-  "created_at": null,
-  "updated_at": null,
-  "status": "not_started",
   "inherits": {
-    "setup_report": null,
-    "survey_report": null,
-    "source_spec": null
+    "setup_report": "docs/code-project-setup/<repo>-<日期>/setup.json",
+    "conda_env": "<env-name>",
+    "repo": { "commit": "<sha>", "branch": "<branch>" }
   },
-  "components": [],
-  "environments": [],
-  "sources": [],
-  "targets": [
-    {
-      "id": "T1",
-      "requirement_ids": [],
-      "survey_task_ids": [],
-      "component_ids": [],
-      "purpose": null,
-      "target_type": "evaluation",
-      "requested_scope": "original_conditions",
-      "reference": {
-        "source_refs": [],
-        "location": null,
-        "conditions": null,
-        "reported_result": null,
-        "statistic_definition": null,
-        "limitations": []
-      },
-      "protocol": {
-        "id": "P1",
-        "version": 1,
-        "status": "draft",
-        "conditions": null,
-        "basis_refs": [],
-        "comparison_rule": null,
-        "comparison_basis": null,
-        "repetition_plan": null,
-        "analysis_plan": null,
-        "budget": null,
-        "approval_ref": null
-      },
-      "comparability": {
-        "status": "unresolved",
-        "items": [],
-        "limitations": []
-      },
-      "execution_status": "not_started",
-      "run_ids": [],
-      "data_validity": "unassessed",
-      "uncertainty": {
-        "sources": [],
-        "design": null,
-        "raw_result_refs": [],
-        "analysis": null,
-        "limitations": []
-      },
-      "assessment": "not_assessed",
-      "finding": null,
-      "evidence_refs": [],
-      "use_scope": {
-        "supported_uses": [],
-        "unsupported_inferences": [],
-        "remaining_checks": []
-      },
-      "gap_investigation_ref": null
-    }
-  ],
-  "runs": [
-    {
-      "id": "RUN1",
-      "target_id": "T1",
-      "protocol_id": "P1",
-      "protocol_version": 1,
-      "status": "not_started",
-      "code_refs": [],
-      "environment_id": null,
-      "config_refs": [],
-      "data_refs": [],
-      "checkpoint_refs": [],
-      "randomness": null,
-      "selection_rule": null,
-      "command": null,
-      "working_directory": null,
-      "started_at": null,
-      "ended_at": null,
-      "exit_code": null,
-      "log_path": null,
-      "result_paths": [],
-      "observations": [],
-      "resume_from": null,
-      "deviations": []
-    }
-  ],
-  "gap_investigations": [],
-  "low_cost_configs": [],
-  "self_checks": {
-    "before_execution": [],
-    "before_handoff": []
+
+  "idea_kind": "needs_retraining",
+  "repo_role": "baseline | substrate（对打 baseline / 实验基座——baseline-survey clone 卡标，经 setup.json 透传）",
+  "repro_strategy": "dev_full",
+
+  "eval_判定": "reproduced",
+  "training_判定": "full_reproduced",
+  "trustworthy_for_delta": true,
+  "evidence_strength": "high",
+  "full_scale_alignment": "done",
+
+  "target": {
+    "paper": "<paper title / arxiv id>",
+    "table_row": "Table 3, row 'baseline R50'",
+    "dataset": "<dataset> / <split: val|test>",
+    "metric": "mAP@[.5:.95] (pycocotools 官方 eval)",
+    "paper_number": 41.2,
+    "tolerance_band": "±0.5",
+    "eval_reproduced": 41.0,
+    "eval_in_band": true,
+    "training_reproduced": 40.8,
+    "training_in_band": true,
+    "scaled_small_setting": "R18 @ 1x on COCO-mini (论文 Table 7)",
+    "scaled_trend_ok": true,
+    "frozen": true
   },
-  "survey_task_responses": [],
-  "ready_commands": {},
-  "checkpoint": {},
-  "resource_observations": [],
-  "changes": [],
-  "remaining_tasks": [],
-  "next_step": null,
-  "revisions": []
+
+  "frozen_components": ["eval 协议", "metric 实现", "数据 split", "official checkpoint 血缘"],
+  "mutable_components": ["loss", "架构", "数据增强", "优化器"],
+
+  "noise_floor": {
+    "metric": "mAP@[.5:.95]",
+    "seeds": [42, 43, 44],
+    "values": [40.8, 41.0, 40.7],
+    "std": 0.15,
+    "verdict_rule": "execution 的 delta < 2×std 时不可判 keep/discard"
+  },
+
+  "ready_commands": {
+    "eval": "python tools/test.py configs/xxx.py ckpts/xxx.pth --eval bbox",
+    "train": "python tools/train.py configs/xxx.py",
+    "train_scaled": "python tools/train.py configs/xxx_r18_coco-mini.py"
+  },
+
+  "artifacts": {
+    "eval": { "log": "runs/eval/run.log", "metrics": "runs/eval/metrics.json", "exit": "runs/eval/EXIT_CODE" },
+    "dev_full": { "log": "runs/dev-full/run.log", "metrics": "runs/dev-full/metrics.json", "exit": "runs/dev-full/EXIT_CODE", "work_dir": "/server/path/to/work_dir" },
+    "alignment": "alignment.md"
+  },
+
+  "baseline_curves": {
+    "loss": "runs/dev-full/loss_curve.png",
+    "metric": "runs/dev-full/metric_curve.png",
+    "prediction_dynamics": "runs/dev-full/pred_dynamics/"
+  },
+
+  "checkpoint": {
+    "<name>": { "path": "/ckpts/<file>.pth", "kind": "raw (非 EMA)", "select": "best", "strict_load": "strict=True 全 key", "source": "<url>" }
+  },
+
+  "reproduced_baseline_checkpoint": {
+    "path": "/ckpts/reproduced_baseline.pth",
+    "seed": 42,
+    "config": "configs/xxx.py",
+    "note": "execution 微调从这切，不从 official ckpt 切"
+  },
+
+  "training_chain": {
+    "bn": "SyncBN (论文多卡同步；开发卡用 b 小 setting 补统计差)",
+    "loss_reduction": "mean",
+    "effective_batch": "论文 16 (8卡×2)；复现 16 (1卡×2×accum8)",
+    "lr_scaling": "linear, base 0.02 @ bs16；warmup 500 iter"
+  },
+
+  "determinism": {
+    "seeds": [42, 43, 44],
+    "cudnn": { "deterministic": true, "benchmark": false },
+    "worker_seed_fixed": true
+  },
+
+  "dev_card_footprint": {
+    "card": "1×A100 40GB",
+    "eval": { "mem_peak": "12GB/40GB", "time": "8min full val" },
+    "train": { "mem_peak": "34GB/40GB", "time": "~14h full / ~40min 小setting" }
+  },
+
+  "known_pitfalls": [
+    "本 repo 的 mAP 自实现与 pycocotools 差 0.4 个点——已统一用官方库 eval",
+    "official ckpt 是 EMA 权重，execution 对比实验注意血缘"
+  ],
+
+  "blocked": [
+    "full 规模多 seed/多数据集铺开: 未做（投稿级实验，归运行服务器；本 skill 只验训练链可信）"
+  ],
+
+  "reduced_setting": {
+    "enabled": true,
+    "scale_method": {
+      "data": "各数据集等比采样（seed=42 固定抽样；档位按 wall-clock 标定，见 scale_sweep）",
+      "schedule": "保持原文 100 epoch 计划（iteration 锚定项已换算，EMA 窗口按 iter 数等比调）"
+    },
+    "baseline_result": { "metric": "AP", "value": 72.3, "std": 0.2 },
+    "scale_sweep": {
+      "axis": "data（唯一缩减轴，模型容量不动）",
+      "points": [
+        { "data": "3%", "wall_clock": "12min", "value": 61.2 },
+        { "data": "10%", "wall_clock": "40min", "value": 67.8 },
+        { "data": "30%", "wall_clock": "2.5h", "value": 72.3 }
+      ],
+      "fit": "log-log 幂律（前 3 点拟合）",
+      "holdout": { "data": "60%", "wall_clock": "4h", "predicted": 74.8, "actual": 74.5, "tolerance": "±0.5（跑前写死）", "hit": true },
+      "verdict": "scaling_law_confirmed"
+    },
+    "noise_floor": { "metric": "AP", "std": 0.2, "calibration": "论文消融 -backbone 在 reduced 上 -1.8 AP（同向）；±0.4 以内视为噪声" },
+    "config": "configs/xxx_reduced.py",
+    "command": "bash scripts/train_reduced.sh",
+    "footprint": { "time": "2.5h", "gpu_memory": "10GB" },
+    "validity_check": { "method": "ablation_contrast", "evidence": "论文消融 -backbone 在 reduced 上 -1.8 AP，方向一致", "confidence": "medium" }
+  }
 }
 ```
 
-### 来源与目标
+### 字段说明
 
-inherits指实际取得的setup/survey/研究说明路径及版本，缺文件不伪称已读。components/environments引用或保存当前实际身份/commit+diff/配置/资产和环境上下文；不能只继承旧conda_env、repo_role或ready_commands后声称前置全部满足。sources每项含id、类型、URL或实际路径、版本、取得时间与读取/运行范围。
+- **`inherits`**：吃的哪份 setup（机读路径）+ conda env + repo commit/branch——可回溯到具体环境状态。
+- **`idea_kind`**：`training_free` | `needs_retraining`。**`repro_strategy`**：`eval_only` | `dev_full` | `scaled_b_plus_a`。official checkpoint eval 是所有分流的公共地基；`eval_only` = training-free 做完公共 eval 即止；`dev_full` = eval 地基上叠开发卡 full 完整对齐；`scaled_b_plus_a` = eval 地基上叠缩规模等价复现 + 大规模趋势外推。
+- **双轨判定**：`eval_判定` ∈ `reproduced` | `partially_reproduced` | `not_reproduced_diagnosable` | `not_trustworthy`；`training_判定` ∈ `NA`(training-free) | `full_reproduced` | `b_plus_a_confirmed` | `partial` | `blocked_需运行卡` | `not_trustworthy`。`trustworthy_for_delta` 是总判断：training-free 看 eval_判定，要重训看 training_判定。
+- **`evidence_strength`**：`high`（full 对齐）| `medium`（b+a）| `low`（组件级 + 旁证）——证据阶梯落到哪级写哪级。**`full_scale_alignment`**：`done` | `deferred_to_running_server`；deferred 时数值对齐归 `code-paper-experiment`，execution 的 delta 带着这个风险认知。
+- **`target`**：指标契约的冻结块——metric 写精确定义（`mAP@[.5:.95] (pycocotools 官方 eval)`，不只写名字，trust-traps ①）；`table_row` 钉死哪行哪 setting（trust-traps ⑤）；`tolerance_band` 说明是论文自报还是默认；`scaled_*` 仅 `scaled_b_plus_a` 填；**`frozen: true` 表示已冻结，下游改口径 = 语义改动即停**。
+- **`frozen_components` / `mutable_components`**：execution 的迭代边界——frozen 动了就破坏与论文基线的可比性（harness 只读），mutable 是 method 迭代空间。
+- **`noise_floor`**：同配置跨 seed std，execution keep/discard 的判据来源；分流 B/C 训练侧默认 ≥2-3 seed（full 太贵时至少 2 个并在报告写明）。
+- **`ready_commands`**：验证过的可运行入口；`train_scaled` 仅 scaled_b 填。
+- **`artifacts`**：各 run 产物（目录内相对路径；恢复入口 + 审计依据）；scaled_b / trend_a / reduced 按实际分流填，不存在的省略。
+- **`baseline_curves`**：baseline 训练参照曲线（loss / metric / 固定批预测演变）——execution 每版改动对照曲线形状，判"训崩了还是方法不行"。
+- **`checkpoint`**：official ckpt 血缘（trust-traps ③，execution 要知道站在哪版权重上）。**`reproduced_baseline_checkpoint`**：本 skill 自己重训出的 baseline ckpt——execution 微调从这切。
+- **`training_chain`**：重训对齐清单（trust-traps ⑦ 落地）——execution 重训时要对齐 BN / loss 归约 / 等效 batch / lr 缩放。
+- **`determinism`**：seed 列表 / cudnn 实际设置 / worker seed 固定否（静态设置继承 setup.json `reproducibility` 块，复现时确认）。
+- **`known_pitfalls`**：排 trust-traps 时命中的坑，execution 必读。
+- **`blocked`**：没做的 / 做不了的，下游要知道边界。
+- **`reduced_setting`**：要重训且 full 超迭代预算（默认 2-3h、上限 4h）时默认建；training-free 或 full 本就在预算内则整块省略——字段见 `reduced-setting.md`「交付格式」。**只缩数据轴**（模型容量不动，动容量 = 改 baseline 语义），档位按 wall-clock 标定；`scale_sweep` 存 scaling 验证链（各点数字 / 拟合 / 留验点预测 vs 实测 / verdict），`verdict: degraded` 时 execution 只排方向。
 
-target_type=evaluation/training/behavior；可有多种目标，不强制成对出现。requested_scope=original_conditions/modified_conditions，说明目的：复现报告原条件，还是验证明确修改条件下的参考/行为。reference记录真实出处、位置、原条件、报告的统计量/单位/选择过程和限制；无数值参考不编数字，行为参照写具体定义/答案及出处。
+---
 
-每目标协议记录原条件与实际条件，至少包括相关模型/结构/初始化/权重来源、数据版本/split/样本分组、预处理/采样/排除、指标实现/参数/单位/聚合、训练与保存/选择流程、设备/精度/随机性。按实际目标适用，不要求行为检查填训练参数。源配置与实际展开配置均可追踪，不能只记配置文件名。
+## report.md（人读正文·活文档）
 
-protocol.status=draft/approved/amended，approval_ref指实际授权/确认，已有授权可复用。条件或规则变化保留旧协议和run的对应版本，在changes/revisions写原因/影响/授权；不能看结果后覆盖旧比较界限或预期。fields为空的示例不是可直接执行的计划。
+> **spec 确认后即建立，随验证逐节回填**——每个验证节当场写「目的 / 做了什么 / 预期结果 / 实际结果（实测值）/ 是否成功」，不留到最后补写。机读在 `reproduction.json`，本份**不重复 json 里的数字**，只叙事 + 指向 json / runs / alignment。
 
-### 可比性、执行与判断分开
+````markdown
+# Reproduction Report: <repo-name>
 
-comparability.status=matched/different/unresolved/not_applicable；items逐项写原参考、实际设置、same/different/unresolved/not_applicable、来源与影响。not_applicable须说明原因，不用来跳过必要条件。matched只是所核条件相符，不证明所有实现行为相同。
+> 由 code-paper-reproduction 在开发服务器产出。已对齐论文/repo/checkpoint/metric，按分流验证，落双轨可信度判断。
+> 机读在 reproduction.json；本份是人读叙事。
 
-顶层status与targets.execution_status可用not_started/in_progress/completed/partial/blocked/failed/cancelled，指执行/分析任务是否按本轮范围完成，不表示参考结果已复现。runs.status用not_started/running/completed/failed/blocked/cancelled记录实际运行。退出0不自动完成目标分析，缺退出码先核实际状态，不据其断言任务仍运行。
+## 0. 双轨结论（Step 6 定稿，建立时先占位）
+- eval_判定 / training_判定 / trustworthy_for_delta / 证据强度 / full_scale_alignment / 能否开始 method 修改（能 / 先解决 X / 不建议基于此 repo 重训）。
 
-data_validity=unassessed/valid/limited/invalid，写具体问题和影响范围。不能由命令退出0或格式齐全自动填valid，也不能把局部异常推广全仓库。
+## 1. 复现目标与分流（Step 2 定稿）
+- 论文 / 目标行 / 数据集 split（确认 val 还是 test）/ metric 精确定义 / 论文数 + 容差 band。
+- idea 类型 / 训练规模估算 / 选定分流及理由 / scaled 的小 setting（若有）。
 
-assessment：
-- consistent_with_reference：在声明条件、有效证据和有依据的比较办法下与参考一致；不认证整体实现或跨规模推广。
-- discrepant：有效且可比的证据显示与参考不一致，说明差距、规则与范围；原因可以未知，不等于假设错误。
-- insufficient_evidence：信息/重复/参考不足，或有效范围不足以作目标判断；说明具体缺口。
-- not_comparable：条件不同或未知使当前目标无法直接比较，不能用近似数值或放宽界限宣称原条件已复现。
-- not_assessed：尚未判断；not_applicable仅目标不适用，说明原因，不代替未完成。
+## 2. 继承来源（Step 1 填）
+- 吃的哪份 setup / 继承了什么（env/commit/ready 命令/数据 ckpt 路径/footprint/reproducibility 块）/ setup 标的语义风险实测结果。
 
-原条件目标若实际条件有实质差异，不填consistent作为“原条件复现”。改条件结果若有自己的有效参照，建立对应modified_conditions目标并保留原目标的未决，不更名掩盖差异。无有效数据不能填consistent/discrepant；有限数据需明确它是否足以支持本目标、不能推广哪些范围。
+## 3. 论文 vs Repo vs Setup 对齐表（Step 3-4 持续更新）
+| 项目 | 论文 | Repo/config | Setup | 状态 |
+|------|------|-------------|-------|------|
+| backbone / 输入尺寸 / batch / optimizer / lr / scheduler / epochs | | | | 对齐/不一致/unknown |
+| 数据增强 / metric 实现 / 评测协议(TTA/multi-scale) | | | | |
+| checkpoint 血缘(EMA?best/last?) | | | | |
+| 训练链(BN类型/loss归约/等效batch/lr缩放/warmup) | | | | 仅要重训时填，对照 trust-traps ⑦ |
 
-findings、assessment与evidence_refs要对应实际run/来源。use_scope记录当前证据支持的具体用途、不能推断内容及所需补验；不是无限授权后续方法比较。偏弱或条件不明的实现不能仅靠“报告了限制”就用来宣称研究提升，需iterate/用户结合公平比较与设计决定。
+> 不一致项：哪些是"setting 差异（可解释）"，哪些是"对不上（要查）"。
 
-### 运行、随机性和选择过程
+## 4. 推理链验证（Step 3 当场回填）
+- **目的**：用 official checkpoint eval 校准推理链标尺。
+- **做了什么**：命令 / seed / 排了哪些 trust-traps（①-⑥）。
+- **预期结果**：论文数 ± band。
+- **实际结果**：实测值（不是"通过了"）/ 差距 / 在 band？
+- **是否成功**：是 / 否（否则记录修法与重验）。
+- log 路径见 `runs/eval/`，对齐核对底稿见 `alignment.md`。
 
-runs保留全部相关尝试，精确绑定代码commit及未提交diff、环境、实际配置、模型/数据版本或内容校验、采样/seed、日志/退出状态、结果路径及恢复来源。每次重启保留独立记录或attempt，不覆盖原输出。不知道身份/条件就说明，不能补示例设备、性能和路径。
+## 5. 训练链验证（Step 4 当场回填，training-free 时空着注明）
+- 每个 run 一小节（dev-full / scaled-b / trend-a 各自）：**目的 / 做了什么（命令、seed 列表）/ 预期结果 / 实际结果（多 seed 列逐值 + std）/ 是否成功**。
+- 噪声底线：noise_floor 怎么测的、std 多少。
+- scaled_a 的 loss 曲线形状是否对齐论文；命中证据阶梯哪一级、deferred 了什么。
+- baseline 训练曲线产物（loss / metric / 固定批预测演变）路径。
 
-observations逐项给实际读数/行为、单位、分母或样本/分组范围、结果来源；原论文值和本次观测分开。选择最佳checkpoint、平均权重、按验证集选择等流程写selection_rule与实际执行，不能只留下最好seed或最接近参考的运行。
+## 6. reduced 配置（Step 5，可选；无则注明未建）
+- 配置 / 有效性验证（方法 + 证据 + confidence）/ 噪声标定结论。
 
-uncertainty分别记录数值误差、训练随机性、评测随机性、数据抽样/分组等实际来源、设计/重复单位、逐次读数引用、分析办法/依据和限制。未测标准差就未知；有标准差也不转成固定复现容差或未来差值裁决。已有参考仅报最佳值/统计含义不明时保留限制，不凭任务名套band。
+## 7. 差距分析（命中了哪些 trust-traps）
+> 详细逐条核验落 `alignment.md`，本节是摘要 + 结论：metric 定义 / split / ckpt 血缘 / 评测协议 / 训练链伪对齐 / 噪声 vs 真差 / 表格行 / 最可能的差距来源（一句话定性）。命中的坑已同步进 json `known_pitfalls`。
 
-resource_observations绑定实际run/模型/输入/设备/精度、测量方式与范围，实测与估计分开。批准预算、实际消耗和剩余任务可查，不把短检查估计写成确定全训练耗时。
+## 8. 下游 handoff（Step 6 定稿）
+- 给 CIP / execution：可信 baseline / 走的分流 / ready 命令 / 双轨数字 + 容差 band + 噪声底线 / frozen|mutable 边界 / 曲线参照 / ckpt 血缘 / 训练链关键设置。
+- 分诊结论（过不过 CIP）+ 理由。
+- 仍 blocked / 未做的；建议下一步。
+````
 
-### 差距调查、自查与低成本配置
+---
 
-gap_investigations每项含id/target_id、观察与来源、competing_explanations（主张、支持/反对、未知和区分办法）、checked_items（检查范围/已排除或受限解释）、next_check（信息价值、成本/授权或选择不做）、current_finding/unknowns与对use_scope影响。可引用alignment.md具体位置，不强写唯一根因。
+## 模板使用说明
 
-self_checks.before_execution/before_handoff按主文件必查项记录check、status(clear/limited/needs_revision)、finding、证据/版本、unknowns与effect。已有材料直接引用，不另写自查JSON或脚本；需要修正时保存实际问题和受阻目标，不把它改成通过以完成流程。
-
-low_cost_configs可为空；有需求时每项含id、用途、状态(proposed/executed)、原target/protocol、实际配置/差异、run/结果引用、支持范围、不能推断内容、预算/批准及未决。详见reduced-setting.md；不填scale_sweep、scaling_law_confirmed或任何由baseline拟合得出的新方法外推认证。未运行的建议不列可直接使用入口。
-
-survey_task_responses逐条映射原任务/owner、target/run、实际观察、回答的未知、限制和剩余责任。不属于本轮执行的科学实验/准备任务只移交，不写本次已完成。
-
-ready_commands/checkpoint保留定位入口，分别指实际run和资产身份/条件。命令字符串无环境/工作目录/协议/范围就不够用；少量样本运行不能冒充完整训练命令已验证。自训权重不是所有后续微调的强制起点，来源选择由问题和批准设计决定，保留公平比较及选择过程。
-
-changes/revisions保留协议/代码/资产/解释的变化原因、前后版本、实际授权与受影响目标。next_step说明继续验证/返回准备或研究讨论/暂停等实际建议与用户决定，不能自动推到后期。旧记录历史保留，未取得来源保持未知。
-
-## report.md
-
-```markdown
-# 本轮复现与验证报告
-> 日期、实际目标与范围、来源、当前协议/代码/config/环境和资产身份。
-
-## 1. 逐目标结论与用途
-目标/原条件或改条件 | 实际证据 | 可比性 | 有效范围 | 参考判断及依据 | 支持/不支持哪些用途 | 未决/下一步
-部分完成、受阻和差距同样交付，不用整体可信布尔值概括。
-
-## 2. 协议、参考和实际条件
-原文/发布身份及位置、统计量含义；版本化协议、实际差异/未知和影响。
-
-## 3. 运行与分析记录
-目的、原预期/比较依据、实际命令/上下文、逐次读数/选择、日志/退出、数据有效范围、随机性/抽样及分析限制。
-已有材料可引用，但必要结论要让读者能理解，不禁止正文出现关键数值。
-
-## 4. 差距调查
-观察、竞争解释、支持/反对、已排除/仍未知、最有信息且成本合理的下一项检查或不继续的理由；详见alignment。
-
-## 5. 低成本配置（仅实际讨论/执行时）
-用途、condition_review_ref 与条件记录版本、目标和实际条件差异、必须保留项的落实证据/未知、当前结果/成本、解释范围及目标验证触发点；不写自动规模外推认证。
-
-## 6. 自查、变更与交接
-执行前与交接前自查的具体依据和行动影响，全部相关偏差/失败、版本修订和survey任务回应。
-给prepare/reading/execution的具体入口、条件、用途与限制；旧消费者需核对的新语义。
-需要继续研究的关键验证不因规模或机器转成论文补实验。用户代码阅读仍必经，清理按实际需要。
-```
-
-## alignment.md
-
-按目标写参考条件—实际条件—证据—差异/未知—影响的对应表，再记录竞争解释和后续查证。它是调查记录，不要求最后每项都“查明根因”。来源或实际条件改变时留修订，旧推断不升级成事实。
-
-## 旧字段和消费者
-
-旧eval_判定/training_判定、trustworthy_for_delta、evidence_strength、frozen/mutable组件列表、noise_floor、reduced_setting.scale_sweep及里程碑tag都不能自动转换成新版结论。历史原数据/日志可按实际条件重新核，但旧标签不认证实现、比较公平或跨规模推广；不批量迁移原项目。
-
-prepare与code-reading已按保留用途/实际变更与证据范围接收；后期消费者仍将在各自审查时同步。交接说明schema_version=2和具体target/run/use_scope；不认识新格式时先核对，不回退一个整体布尔值，也不把新协议/检查范围压成旧双轨认证。
-
-## W&B 来源与同步交接
-
-tracking_ref 指向项目的非敏感配置及版本；按 [共同记录](../../wandb/references/experiment-records.md) 保存实例、SDK/MCP验证范围及运行身份。执行、同步和有效性分别报告；保留所有尝试、本地关键结果、实际查询快照与校验值，缺失不补造，不写凭证。
+- **机读区是契约**：`idea_kind` / `repro_strategy` / `eval_判定` / `training_判定` / `trustworthy_for_delta` / `evidence_strength` / `full_scale_alignment` / `target` / `frozen_components` / `mutable_components` / `noise_floor` / `ready_commands` / `checkpoint` / `reproduced_baseline_checkpoint` / `training_chain` / `determinism` / `dev_card_footprint` / `known_pitfalls` / `blocked` 这几个 key 下游直接读，**字段名稳定、值要真**（验证过才填，查不到标 unknown，不编）。
+- **双轨 verdict 是 execution 的入场判断**：**eval 对齐 ≠ baseline 可信**。绝大多数 idea 要重训，execution 看 `training_判定`——它是 `not_trustworthy` 或停在 `blocked_需运行卡` 时，`trustworthy_for_delta=false`，execution 知道不能在这 repo 上重训做创新实验（论文炸弹）。只有 training-free 才退看 `eval_判定`。
+- **`repro_strategy` 让 execution 知道可信度成色**：`dev_full` = 训练链端到端在开发卡验过（最硬）；`scaled_b_plus_a` = 小 setting 对齐 + 大规模趋势对（够开工，full 规模数字上运行服务器补）。`evidence_strength` 进一步标证据强度，`low` 时 execution 只排方向、重大决策回 full。
+- **`target.frozen` 是指标契约的冻结标记**：冻结后 metric 口径 / 评测协议 / 数据 split 只读，execution 改协议 = 语义改动即停。
+- **metric 定义不能只写名字**：`mAP` 没用，要写 `mAP@[.5:.95] (pycocotools 官方 eval)`（trust-traps ① 落地）。
+- **report.md 是活文档**：spec 确认后建立、随验证逐节回填（目的/做了什么/预期/实际/是否成功），Step 6 只定稿「双轨结论」和「handoff」两节——不最后一次性补写。
+- **单一真相源**：`reproduction.json` 和 `report.md` 描述同一事实的两面，**别打架**——改了数字两处都改。run 产物由 json `artifacts` 引用，不复制进正文。
+- **恢复入口**：`reproduction.json`（尤其 `artifacts`）就是 reproduction 中断后的恢复总纲，配合扫 `runs/*/run.log` / `EXIT_CODE` / metric 文件定位断点（见 `dl-assistant/references/long-run-ops.md`）。

@@ -1,67 +1,93 @@
 {
-  "schema_version": 2,
   "_notes": {
-    "purpose": "进度和来源索引，不是独立科学事实；空值为待确定，不代表通过。",
-    "research": "判断来源保留版本/实际证据，输入变化重新核；核心未决返回iterate。",
-    "editing_sources": "每节记录实际编辑源及外部变更，不能由旧Markdown覆盖LaTeX。",
-    "sections": "实际节ID -> {status:planned/drafting/drafted/needs-data/needs-revision/locked, editing_source, written_against_blueprint, digest:{thesis,terms,symbols,key_numbers,assets}, page_budget,page_used}；locked只指当前内容状态，不冻结科学结论。",
-    "impact_checks": "每项含id、原/新判断及输入版本、记录路径、受影响对象/理由/行动与状态；实际处理后才关闭。",
-    "self_checks": "每项记录阶段、实际输入版本、检查记录位置、clear/limited/needs_revision、目标行动与实际决定；不是仅勾选。",
-    "backlog": "每项id/source/type/purpose/target/status/decision_ref/closure_criteria；完成按具体判据核，不因页数或deadline默认为关闭。"
+    "是什么": "paper-state.json 的 schema——论文工程的机读真相源（产物即真相）。每个目标干完立即更新；续跑读它 + writing.log 恢复。",
+    "sections.<name>.status": "节名 <name> 来自蓝图的节清单（design-story 定的设计决定，不写死七节）。planned（蓝图里排了还没动）| drafting（写作中）| drafted（文字定稿，可能有占位图表）| needs-data（在等某批实验数据）| needs-revision（被蓝图重塑/review/新数据波及，要回改）| locked（内容锁死，finalize 后）",
+    "sections.<name>.digest": "节摘要——写后续节时注入 prompt 的上下文（纪律：不要各节独立作战）。thesis=本节核心论点句；terms=本节确立的术语；symbols=本节引入的符号（与 _draft/content/ 符号表一致）；key_numbers=本节出现的关键数字（canonical 值）；assets=本节图表 label 清单",
+    "backlog[].type": "八个目标之一：init-setup|design-story|write-section|design-experiment|ingest-results|make-visual|audit|finalize",
+    "backlog[].source": "五个来源：blueprint-init|venue-contract|user|review-response|data-arrival",
+    "experiments.new_needs": "写作中冒出的实验需求先记这里，攒一批或急就先走，凝成下一版 plan（plan 版本化递增，不一次定死）",
+    "compress_candidates": "写作期登记的可砍/可挪 appendix 内容（只登记不砍——砍/挪是 finalize 压缩工序里用户逐项拍板的事）。page_budget 是参考量级（软约束），不做逐节硬预算",
+    "deadline": "建议机制按 must/should/nice 加权用；临近截稿 agent 主动给砍量方案"
   },
   "venue": {
-    "name": null,
-    "year": null,
-    "track": null,
-    "stage": null,
-    "deadline": null,
-    "page_limit": null,
-    "contract": null,
-    "columns": null,
-    "anonymity": null
+    "name": "AAAI 2027",
+    "deadline": "YYYY-MM-DD",
+    "page_limit": 7,
+    "columns": "double",
+    "anonymity": "double-blind",
+    "contract": "_draft/venue-contract.md"
   },
-  "research": {
-    "package_ref": null,
-    "source_version": null,
-    "assessment_ref": null,
-    "evidence_map": "_draft/evidence-map.md",
-    "readiness": "unassessed",
-    "open_questions": [],
-    "returns": []
-  },
-  "blueprint_version": 0,
-  "sections": {},
-  "editing_sources": {},
-  "impact_checks": [],
-  "self_checks": [],
-  "experiments": {
-    "batches": [],
-    "data_dependencies": [],
-    "new_needs": []
-  },
-  "backlog": [],
-  "compress_candidates": [],
-  "milestones": [],
+  "blueprint_version": 1,
   "palette": {
     "locked": false,
-    "swatch": null
+    "swatch": "_draft/visuals/palette.png"
   },
-  "preservation": {
-    "method": null,
-    "location": null,
-    "last_verified": null,
-    "unprotected_items": []
+  "sections": {
+    "related-work": {
+      "status": "planned",
+      "page_budget": 0.75,
+      "page_used": 0,
+      "written_against_blueprint": 1,
+      "digest": {
+        "thesis": "",
+        "terms": [],
+        "symbols": [],
+        "key_numbers": [],
+        "assets": []
+      }
+    }
   },
-  "verification": {
-    "file_checks": null,
-    "compile": null,
-    "visual": null,
-    "research": null,
-    "local_version": null,
-    "remote_version": null
+  "experiments": {
+    "batches": [
+      {
+        "version": 1,
+        "plan": "_draft/experiments/plan-v1.json",
+        "status": "drafting",
+        "sent": null,
+        "received": null
+      }
+    ],
+    "data_dependencies": [
+      {
+        "waiting": "section:experiments",
+        "exp_id": "exp-main",
+        "batch": 1,
+        "status": "pending"
+      }
+    ],
+    "new_needs": [
+      {
+        "need": "写作中发现的实验需求（例：Method 写到一半发现需要一个机制分析撑着）",
+        "raised_by": "write-section:method",
+        "status": "queued",
+        "batch": null
+      }
+    ]
   },
-  "sync": {
-    "authorized_scope": null,
-    "status": "not_requested"
-  }
+  "backlog": [
+    {
+      "id": "B1",
+      "type": "write-section",
+      "source": "blueprint-init",
+      "payload": "写 related-work 节",
+      "status": "open",
+      "created": "YYYY-MM-DD"
+    }
+  ],
+  "compress_candidates": [
+    {
+      "what": "method 节 X 段的推导细节（例）",
+      "action": "move-to-appendix（move-to-appendix | cut | trim）",
+      "reason": "主线不依赖， reviewer 感兴趣再看",
+      "raised_by": "write-section:method",
+      "status": "queued（queued | accepted | rejected——压缩工序用户拍板）"
+    }
+  ],
+  "milestones": [
+    {
+      "name": "full-draft",
+      "date": "YYYY-MM-DD",
+      "git_tag": "paper/full-draft"
+    }
+  ]
 }

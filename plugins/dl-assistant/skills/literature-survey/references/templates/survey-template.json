@@ -1,38 +1,45 @@
 {
-  "schema_version": 2,
   "_notes": [
-    "这是待填写模板，不是已完成调研；未知用 null，尚无记录用空数组。",
-    "purpose 和 familiarity 记录用户已确认用途与背景。axis 表示分类维度，不意味着只能单标签。",
-    "taxonomy 保留类别名称数组；papers[].category 为便于旧调用保留的主类别，可为 null，categories 数组记录全部类别，均与 taxonomy 对齐。",
-    "papers 包含实际纳入范围的论文；pending_papers 单列未决纳排和身份记录，不把原始未筛结果都冒充已纳入。排除项与完整观测可追查 pool.json。",
-    "每篇包含 pool_id、title、arxiv/doi/url、authors、版本与来源、category/categories、role、approach、reading_level、evidence_locations、限制及比较资料。role 为奠基/里程碑/近期前沿/其他或 null，重要性需附理由。",
-    "reading_level 为 metadata/abstract/partial_text/detailed；来源位置含版本和章节/页码。未知版本明确标记。",
-    "引用、投票等数值保留来源和观测时间；不能用最大值、热度或引用数直接推断质量。",
-    "comparisons 每项包含研究问题、参与论文标识、方法/假设/数据/评测/成本/限制、证据位置、可比性和未知项；不同设置指标不可直接排名。",
-    "gaps 每项保留 id、label、category、desc、sources；增加 source_type（author_statement/synthesis/hypothesis）、evidence_locations、current_status（unverified/partly_addressed/addressed）、checked_at、search_scope 和未决问题。sources 使用实际 arXiv ID/DOI/URL，不限 arXiv。",
-    "gaps 为待验证问题，不是已确认创新点；作者未来工作不证明当下仍未解决。分类和问题判断均说明核查范围。",
-    "coverage 引用实际请求和 coverage-review.md，分别记录 planned、executed、partial、failed、not_run、停止依据与剩余任务。最新命中日期不代表完整覆盖。",
-    "旧文件缺失字段按未知处理，不将旧 gaps 是客观事实的解释沿用为当前结论；保留来源，不批量改写既有调研。"
+    "survey.json 模板（Step 6 用 · 机读数据 · 下游契约）——与 report.md（人读散文，report-template.md）同源、Step6 一起产出。",
+    "axis / purpose / familiarity 用中文，和 organizing-axis.md 词汇表对齐。purpose 枚举：学习理解 / 找研究方向 / 定位自己的工作 / 选技术方案。familiarity 枚举：基本陌生 / 有点了解 / 就在其中做。二级轴写法：'按方法 > 按时间'。",
+    "papers[].category 必须对齐 taxonomy；role 枚举：奠基 / 里程碑 / 近期前沿 / 其他；论文标识用 arXiv ID / DOI / URL，不用 paper_id（横切规范见 dl-assistant SKILL.md「横切规范」）；一篇不漏（含 report.md 只顺带提及的）。",
+    "gaps[] 是客观事实：每条带至少一个真实 arXiv 锚点 + category（对齐 taxonomy，挂到组，下游台账落格直接对号入座）；不判断哪个 gap 值得做——那是 idea-find 的活。label 枚举：性能 / 效率 / 可解释 / 数据 / 评测 / 其他。",
+    "hf_upvotes 可选——仅 HF 源带来的篇标，upvote≠质量，只当信号。",
+    "消费关系只在消费方声明（idea-find 自取 taxonomy 领域地图 / papers 论文池 / gaps 线索）；本 skill 不产正式 bib、不写论文章节，只给结构化原料。"
   ],
-  "topic": null,
-  "slug": null,
-  "date": null,
-  "purpose": null,
-  "familiarity": null,
-  "axis": null,
-  "scope": null,
-  "sources": [],
-  "coverage_notes": null,
-  "coverage": {
-    "request_records": [],
-    "review_path": "coverage-review.md",
-    "stop_reasons": [],
-    "remaining": []
-  },
-  "status": "planned",
-  "taxonomy": [],
-  "papers": [],
-  "pending_papers": [],
-  "comparisons": [],
-  "gaps": []
+  "topic": "视频生成中的扩散模型",
+  "slug": "video-diffusion",
+  "date": "2026-06-29",
+  "purpose": "定位自己的工作",
+  "familiarity": "有点了解",
+  "axis": "按方法",
+  "scope": "近3-5年，共42篇",
+  "sources": ["semantic_scholar", "scholar", "arxiv", "hf-papers"],
+  "coverage_notes": "主要覆盖英文主流叫法；X 社区 'Y' 叫法未深挖",
+  "taxonomy": [
+    "基于扩散的方法",
+    "基于自回归的方法",
+    "混合方法"
+  ],
+  "papers": [
+    {
+      "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "arxiv": "2112.10752",
+      "year": 2022,
+      "venue": "CVPR",
+      "category": "基于扩散的方法",
+      "role": "里程碑",
+      "approach": "在 latent 空间做扩散，降算力",
+      "hf_upvotes": 320
+    }
+  ],
+  "gaps": [
+    {
+      "id": "gap-1",
+      "label": "效率",
+      "category": "基于扩散的方法",
+      "desc": "扩散采样步数多、推理慢",
+      "sources": ["2112.10752", "2202.09778"]
+    }
+  ]
 }

@@ -1,42 +1,45 @@
-# spec.json：计划、批准与进度
+# spec.json 模板（调研方案 · 机读 · 会生长 · 承载两次方案呈现）
 
-检索计划及分类/详细阅读计划分别经用户确认后保存；继续已有调研时保留旧计划和修改原因。未知字段用 null，示例不是已执行结果。
+主会话在 Step1（检索方案）和 Step3（深挖方案）两次方案呈现、用户确认后写入。落盘让方案**可追溯**：事后能复盘「当时为什么这么搜、这么分」。方案呈现是在对话里做给用户看的，文件本身是机读留痕，所以用 json。字段值中文，专有名词保留英文。
 
 ```json
 {
-  "schema_version": 2,
-  "topic": "待调研问题",
-  "created": "2026-07-13",
-  "output_dir": "用户确认的实际目录",
+  "topic": "视频生成中的扩散模型",
+  "created": "2026-06-29",
+
   "search_plan": {
-    "purpose": "学习理解",
+    "_comment": "Step1 产出，用户确认后写入",
+    "purpose": "定位自己的工作",
     "familiarity": "有点了解",
-    "include": [],
-    "exclude": [],
-    "borderline": [],
-    "time_range": null,
-    "date_basis": null,
-    "seed_papers": [],
-    "source_rationale": [],
-    "query_groups": [],
-    "budget": null,
-    "stop_conditions": [],
-    "approved": false
+    "time_range": "近 3-5 年",
+    "seed_papers": ["有就列标题/arXiv ID；无则空数组，从关键词出发"],
+    "novelty_level": "扫新力度定级（规则见 source-strategy.md 用途×熟悉度加权）",
+    "query_groups": [
+      {
+        "name": "核心概念组",
+        "queries": ["query 词1", "query 词2"],
+        "rationale": "为什么这么设计（给用户看的，方案呈现时讲的就是它）"
+      }
+    ]
   },
+
   "deep_dive_plan": {
-    "axis": null,
-    "taxonomy": [],
-    "subfields": [],
-    "budget": null,
-    "approved": false
-  },
-  "progress": {"status": "planned", "completed_batches": [], "remaining": []},
-  "changes": []
+    "_comment": "Step3 产出，用户确认后冻结",
+    "axis": "按方法",
+    "axis_rationale": "选这根轴的理由",
+    "scale_recommendation": "每子领域深挖多少代表作 + 总量 + 推荐理由",
+    "subfields": [
+      {
+        "name": "子领域1",
+        "papers": ["标题 + arXiv key，从 pool.json 划给它"],
+        "focus": "按轴的梳理重心（模板见 organizing-axis.md 第七节）",
+        "serves_purpose": "让子 agent 知道该把什么写显眼（找研究方向就重点挖 limitation/future work）"
+      }
+    ]
+  }
 }
 ```
 
-用途和背景独立记录；时间范围、来源与预算用具体值，不用“全且新”等模糊等级。`source_rationale` 记录各来源采用/不采用的理由；query_groups 写实际查询、范围与输出路径。停止条件可检查且不声称绝对搜全。
-
-详细阅读计划保留 `axis` 名称供旧调用识别，值为具体分类维度；taxonomy 可含交叉类别。每个 subfield 写类别、分配的 pool_id/稳定标识、需回答问题、读取范围与独立路径。`approved` 只在真实收到用户确认后改 true。
-
-progress 用 planned/in_progress/partial/completed，completed 指本次约定范围完成，不是全领域覆盖；剩余工作和来源故障单独列出。方案调整和引用版本变化进 changes。
+- `search_plan` 是 Step1 的第一次方案呈现；`deep_dive_plan` 是 Step3 的第二次方案呈现（并行展开前最后一次拍板）。
+- `purpose` 枚举：学习理解 / 找研究方向 / 定位自己的工作 / 选技术方案；`familiarity` 枚举：基本陌生 / 有点了解 / 就在其中做。两个变量独立，别合并成一个。
+- 保存目录不进 spec——目录写死 `docs/literature-survey/<日期>-<topic-slug>/`，无需记录。

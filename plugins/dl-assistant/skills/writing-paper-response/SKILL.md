@@ -1,80 +1,184 @@
 ---
 name: writing-paper-response
-description: 核查审稿人、导师、合作者或预审意见，结合实际研究证据制定处理方案，追踪意见覆盖、修改执行和回复陈述。生成改稿交接及可核对的回复草稿；核心研究未决返回 code-idea-iterate，不自动发送或提交。
+description: 论文意见回应（后期）：处理审稿人/导师/合作者/模拟审稿的修改意见，逐条与用户讨论定方案，汇总成 revision-brief 交 writing-paper 改稿 + rebuttal letter。当用户要回复审稿意见、写 rebuttal 时使用。
 ---
 
-# 核查意见、安排处理并核对回复
+# Writing Paper Response
 
-每条意见回答：提出了什么关切、依据是否成立、影响哪项认识或主张、下一步做什么、实际完成到哪里、回复能准确说什么。不以消除所有批评、维持原贡献或说服审稿人作为事实标准。
+## 这个 skill 干啥
 
-## 职责与协作
+论文写出来后会收到各种**修改意见**——不只来自审稿人。导师的组会意见、合作者的建议、自己回看发现的问题，本质和审稿意见一样：**对论文的质疑，需要回应**。本 skill 覆盖多种来源：
+
+- **审稿人意见** → 正式 rebuttal（回复给 reviewer / AC，措辞讲究、对抗性辩护）
+- **导师 / 合作者 / 用户自己的意见**（组会、讨论、自己回看）→ 内部回应（讨论、采纳、说明，措辞平和）。论文写作层面的润色建议通常 writing-paper 写作期已消化，这里聚焦方法 / 论证 / 实验层的意见。
+- **`writing-paper-review` 模拟审稿** → 当真实审稿处理（走 rebuttal 语气）
+
+**逐条讨论制**：对每条意见，agent 给初始判断（六类分类 + 三层分流）+ 修改方案，**和用户一起打磨**（每条一个确认点，认可了下一条），每条单独落 md。全过完汇总成**修改需求清单**（`revision-brief.json`，交 writing-paper 改稿）+ **rebuttal letter**（`rebuttal-letter.md`，交提交 / 导师）。
+
+## 核心心智（最关键）
+
+**审稿人只看得到 PDF（paper 端 storytelling），看不到中期 claims.json。** 所以意见攻击的是**论文成稿**（PDF / `_draft/content/*.md`——reviewer 读的就是它），不是中期脊柱。**真相优先级：成稿 > blueprint**——blueprint 是脊柱/意图层参考（判断改法动不动 contribution 时用），但可能滞后于成稿（写作中交互改所致，writing-paper 的 finalize 目标会誊正）；**两者冲突以正文为准**，并提示用户蓝图滞后。
+
+- **改的是 blueprint.md**（writing-paper 定的论文级脊柱：总论点 + contribution 清单挂 C-ID + 每节意图 + locked_decisions）——re-frame、补澄清、调重点、修措辞。但**改稿动作交给 writing-paper**：response 不直接编辑论文内容，只产**修改需求清单**。
+- **不碰中期 claims.json**——它是 iterate 收口后冻结的迭代脊柱，response 彻底脱离。补实验确立的新主张记在 blueprint.md（论文级），不回写中期。
+- **不设计实验**——实验设计归 writing-paper（它规划实验是核心能力）。response 只判断「该不该补 + 补的核心目的」，具体设计 + 产 plan + 调 CPE 都交 writing-paper。
+
+> 一句话：**response 处理意见 + 产清单（决策），writing-paper 改稿（执行）。response 不碰论文内容、不碰中期脊柱、不设计实验。**
+
+## 在系统里的位置
 
 ```mermaid
 flowchart LR
-    RV[writing-paper-review：版本绑定的预审记录] --> RS[writing-paper-response]
-    U[真实审稿、导师、合作者与用户意见] --> RS
-    RS -->|明确批准范围的修改/补充需求| WP[writing-paper]
-    WP -->|实际修改、证据与核查记录| RS
-    RS -->|核心研究未决与实际依据| IT[code-idea-iterate]
-    IT -->|研究判断变化、依据和限制| RS
-    RS -.->|可选：回复、论文版本及未决| SUB[writing-paper-submission]
-    SUB -->|适用回复要求与人工提交待办| RS
+    PDF[/论文 PDF/] --> WPR["writing-paper-review<br/>模拟审稿"]
+    WPR --> COMM[("审稿意见<br/>round-N/problem-list.json")]
+    COMM --> WRESP["writing-paper-response<br/>逐条讨论 + 产清单"]
+    ADV["导师/合作者/用户自己的意见"] --> WRESP
+    WRESP --> RBRIEF[("revision-brief.json<br/>+ rebuttal-letter.md")]
+    RBRIEF --> WP["writing-paper<br/>待办项队列按类型路由"]
+    WP -->|定稿| WPS["writing-paper-submission<br/>终审"]
 ```
 
-全局关系见dl-assistant。response负责意见分析、处理方案和回复记录；不直接改正文或研究命题，不替代实验设计/执行，也不把生成文件视为已经提交或发送。明确授权的对外操作按实际任务处理，写回复本身不新增发送授权。
+**图例**：圆柱体 = skill 间内部流转（审稿意见 / 修改需求清单，不对外暴露）；平行四边形 = 外部成品（论文 PDF）。完整全局图见 `dl-assistant`。
 
-表达、图表和范围明确的补充需求交writing-paper；核心现象、有效性、新颖性、重要性或目标条件证据未决，按 [研究与写作判断](../dl-assistant/references/research-transition.md) 交iterate设计、execution取证，不能只交写作换措辞。方法是否变化、期限长短和意见类别都不决定科学分工。
+## 边界
 
-## 1. 核输入和版本
+**做**：意见分类（六类 + 三层分流）、逐条和用户讨论定方案（含冲突当场裁决）、每条单独落 md、汇总产 revision-brief.json + rebuttal-letter.md、判断该不该补实验（给核心目的，不设计）。
 
-优先读取用户指定意见与材料，不重复询问已有信息，不强制Overleaf或固定目录。新回应目录可用response/<唯一标识>/，已有目录不覆盖；每个交接输出用独立目录保留历史。
+**不做**（交给相邻 skill）：
 
-区分四类来源：被评论的稿件、实际实现/数据/分析、原研究判断、当前稿件与主张。稿件说明作者写了什么，不自动证明实际做了什么；结构说明和研究状态也不能代替证据。冲突先核查，不指定正文或blueprint永远优先。
+| 场景 | 用 |
+|---|---|
+| 写 / 改论文正文（按清单改 blueprint + section）| `writing-paper`（吃 revision-brief.json 进待办项队列，按类型路由到各目标）|
+| 设计 + 跑补实验（方法不变）| 设计交 `writing-paper`，跑交 `code-paper-experiment` |
+| 投稿前作者自查合规 | `writing-paper-submission` |
 
-模拟预审读取确切problem-list路径、schema_version、run_id、mode、paper.sha256、completion和原始来源；不取最大轮次。真实审稿/内部意见保存实际原文与来源，不强迫先补一份模拟review。可按用户指定范围处理部分意见，完整保留其他意见及未检查状态。
+> **改方法（机制被质疑）**：rebuttal 时限内改方法做不完——默认走「降 claim / 承认局限 / 给替代证据」（纯改稿 + 回复，进修改需求清单），**不走 execution 全链**。少数情况作者决定 rebuttal 后下一版走全链，才另外导准 spec 给 execution（那是下一轮，不是 rebuttal 期内）。
 
-按 [记录格式](references/response-record.md) 保存response-state.json及来源路径/校验值。相对路径按记录所在目录解释。旧字段可作为历史输入重新核查，不能补成从来已批准/已验证的新记录。
+## 输入材料
 
-## 2. 拆关切、核判断
+- **意见来源 + 原文**：
+  - **审稿**（真实 / `writing-paper-review` 模拟）：reviewer comments；模拟审稿场景读**最新一轮** `<论文根>/review/round-N/problem-list.json`（多轮取最大 N；机读契约，人读 problem-清单.md 是派生物别当输入）+ 同轮 `meta-review.md`（「已排除指控」是 rebuttal 防线弹药——被 AC 驳回的攻击点，写回复时可预判）。
+  - **非审稿**（组会 / 导师 / 合作者 / 自己回看）：**启动时直接问用户收集意见**——用户本人想到的、导师组会上提的、合作者说的都算；用户逐条口述或贴文本，多条先合并去重。
+- **论文成稿**（PDF 或 `_draft/content/*.md`）：reviewer 攻击的对象本身——page-line 定位、引用澄清的原料，与 blueprint 冲突时以它为准。
+- **paper storytelling**（`blueprint.md`）：脊柱/意图层参考（判断改法动不动 contribution 时用）。
+- **目标会议的 rebuttal 规则**（字数 / 格式 / **时限**）——审稿场景；时限同时是 Step 3 工作量盘点的硬约束。
+- **证据存货**（可选但强烈建议）：论文根的实验结果区（CPE 交回的数据包 / ingest-results 产物）——回应优先序阶梯①②层（论文已有 / 已有数据没写进论文）的判断依据，不靠用户记忆；没有就问用户（作者自己清楚），不跨机器读。
 
-一条原意见可能含多个关切，拆分后保留原ID；相似关切可以共享行动，但不能丢掉来源、差异或逐项回答。维护 [意见与处理结果对应表](references/response-record.md)，分类只供组织，不直接决定真伪和处理方式。
+**论文根定位**（四级发现规则）：⑴ 用户显式指定 → ⑵ CWD 本身是论文根（含主 tex + `_draft/`）→ ⑶ CWD `papers/` 下唯一候选 → ⑷ 多个或没有 → 问用户。论文根 = `papers/<slug>/`（Overleaf clone）。
 
-**形成处理方案前自查**：意见理解是否忠实；具体证据与未知是什么；原来相信什么、观察到什么、改变了什么；核心贡献/范围受到什么影响？说明依据与行动影响，不能只勾选。不同来源使用相同事实标准，不因审稿/导师身份决定同意程度。
+启动时确认：**意见来自哪里**（审稿 / 非审稿）？决定回复语气、产物组织（轮次目录）和要不要查 rebuttal 规则。
 
-策略见 [核查与处理](references/fix-strategy.md)。先判断意见与研究结论，再比较行动和成本；可以直接纠错、澄清、不采纳有依据的要求、补充明确证据、返回研究、收窄后重评、延后或停止。无有效替代证据就如实说明不能回答，不必须编一个替代方案。
+## 产出与保存
 
-## 3. 制定与批准行动
-
-agent主动核已有材料并提出推荐、替代办法、影响与成本未知。已授权的普通核查和方案整理连续完成；用户决定核心研究变化、重要取舍、新投入与争议方案，可以成组讨论，不要求每条意见单独点头。
-
-行动分别记录批准与实际执行：proposed/approved/in_progress/completed/verified/blocked/cancelled。批准不表示完成，完成不表示核查通过，意见已回应不表示科学问题已解决。未决可保留，不能因为已讨论或已写回复就关闭。
-
-**交付修改任务前自查**：目标与研究分流正确吗；具体位置/动作/验收条件、依赖、预算和批准范围是否明确；是否与其他方案冲突？需要修正则先处理，只交已就绪的批次，不要求等待全部意见过完。
-
-通过 [revision-brief格式](../writing-paper/references/templates/revision-brief-template.json) 把已批准、可执行行动交writing-paper；核心研究任务单独交iterate。不自动启动或重复运行实验。writing-paper按实际执行回传结果、来源和核查，response再更新记录；不能只回填页码就算完成。
-
-## 4. 追踪跨意见影响
-
-主张、范围、协议、证据或结果变化时，检查其他意见/回复、已批准行动、摘要/结论/图表及原研究判断。记录影响理由、处理状态和依据；同处加删、不同回复互相矛盾等冲突明确登记，不只在最后拼接时发现。
-
-输入变化保留旧记录并重新自查。行动已完成后发现新问题，保留实际完成事实，另记核查失败/新行动，不能覆盖历史假装从未发生。
-
-## 5. 写回复并核实际完成情况
-
-按 [回复写作](references/rebuttal-writing.md) 使用准确、尊重、直接的表达，不预设对抗或让步。原问题、立场/依据、实际改动/限制按真实需要组织；正式格式与材料限制依据适用官方要求，不强制AC cover letter。
-
-回复陈述分开登记：立场、证据陈述、已核查行动、明确的未来计划、限制。只有实际已验证的行动才能作为“已增加/已修改/已验证”的依据；尚未完成不得写成过去事实。来源中的数值、条件和分析须实际可追查，不能编造实验或以future work弥补当前核心缺证。
-
-**回复定稿前自查**：指定范围是否逐项有处理/明确未决；每项事实与完成陈述有实际依据吗；跨回复/稿件是否一致；引用和位置对应哪版稿；适用规则/批准范围/剩余问题真实吗？检查不通过就保留草稿，不能因期限强行标可交付。
-
-```bash
-python3 <skill目录>/scripts/check_response.py --record <response-state.json> --output-dir <新的交接目录>
+```
+<论文根>/response/round-N/       # 审稿来源：回应 review 的 round-N，取同一编号
+<论文根>/response/<主题>/         # 非审稿来源：如 response/zuhui-0815/
+├── comment-1.md        # 每条意见的处理（关切/分类+分流/根因/修改方案/回复/要不要补）
+├── comment-2.md
+├── ...
+├── revision-brief.json # 修改需求清单（机读契约，交 writing-paper 进待办项队列）
+└── rebuttal-letter.md  # rebuttal letter / 内部回应说明（人读）
 ```
 
-脚本核来源快照、意见/关切/行动/回复引用、批准和完成状态、影响/冲突、自查以及所声明覆盖，生成revision-brief、对应表、回复和检查报告。退出0仅为记录检查完成，1为错误，2为用法错误，3为草稿/部分完成；它不能判自然语言是否真实、证据是否足够或科研问题是否解决。
+多轮审稿历史保留：新一轮意见开新目录，不覆盖旧的。
 
-## 交付
+## 工作流
 
-输出明确区分plan、handoff、final三个阶段。plan是讨论材料；handoff仅含已批准且可交执行的批次，回复仍可有待做项；final为经过实际核对的回复版本，不等于论文已投稿就绪或对外已发送。未解决问题可以在final回复中诚实说明，不强求接受每项要求或关闭全部科学问题。
+**TaskList 跟踪流程**：Step 1 后建任务（起手 / 逐条讨论（每条意见一项子任务）/ 汇总 / 交接）——逐条制，每条过完勾一条。
 
-需要查询回复要求或核指定材料时，给submission已有来源、实际回复/论文版本及未决；它整理清单与人工待办，平台填写、上传和提交由用户完成。无法核官方规则、实际修改或重要事实时，指出缺什么及影响，可以保存/交付有限草稿。
+```mermaid
+flowchart TD
+    S1["Step 1 起手<br/>确认来源（审稿/非审稿）· 拿意见原文（审稿=最新 round-N problem-list.json<br/>非审稿=问用户收集+去重）· 读 blueprint + 成稿 + 证据存货<br/>审稿场景查 rebuttal 规则 + 时限"]
+    S1 --> S2
+    S2["Step 2 逐条讨论（每条一个确认点）<br/>agent 给 判断（六类 + 三层分流）+ 修改方案 → 落 comment-N.md → 用户审<br/>已定方案台账：与已定方案冲突当场裁决"]
+    S2 --> G1{"用户认可?"}
+    G1 -->|要改·打磨| S2
+    G1 -->|认可| G2{"还有意见?"}
+    G2 -->|有·下一条| S2
+    G2 -->|没了| S3["Step 3 汇总（= 交接产出）<br/>comment-*.md 机械汇编 → revision-brief.json（按优先级排序）+ rebuttal-letter.md<br/>工作量盘点：改稿/补实验成本 vs 时限，做不完给降级方案"]
+    S3 --> S4["Step 4 交接<br/>revision-brief.json → writing-paper 待办项队列（按类型路由）<br/>附待办：改稿完成后回填 letter 的 page-line"]
+    S4 --> END(["writing-paper 改稿 → 定稿后<br/>writing-paper-submission 终审"])
+```
+
+### Step 1 起手
+
+- **确认意见来源 + 拿意见原文**：
+  - 审稿场景：读最新一轮 `problem-list.json`（多轮取最大 N）+ 同轮 `meta-review.md`（已排除指控 = 防线弹药）；查 venue 当年 rebuttal 规则（字数 / 格式 / **时限**，照 `references/rebuttal-writing.md` 的查纪律）。
+  - 非审稿场景：直接问用户收集意见（用户本人 / 导师 / 合作者），逐条口述或贴文本，合并去重。
+- **论文根定位**（四级发现规则）+ 读 `_draft/blueprint.md` + 成稿。
+- **证据存货盘点**：读论文根的实验结果区（CPE 数据包 / ingest-results 产物），列出「已有什么证据」——逐条讨论走阶梯①②层时随手可查。
+
+### Step 2 逐条讨论（每条一个确认点）
+
+对每条意见：agent 给**初始判断 + 修改方案** → 落该条 `comment-N.md` → **用户确认**（认可下一条 / 要改就改）。
+
+**初始判断**：
+- **六类分类**：misunderstanding（误解）/ missing evidence（缺证据）/ writing clarity（表达不清）/ novelty concern（创新质疑）/ experiment concern（实验质疑）/ impossible request（不可能要求）
+- **三层分流**（顶层分流，决定改稿动作）：**substance**（真站不住，要补实验 / 大改）/ **misread-risk**（写法触发，一句话能澄清）/ **polish**（打磨）。
+- **输入是 problem-list.json 时按字段机械分流**：`severity=致命` → 基本锁 substance（必正面改 + 正面刚）；`改进` → 多为 polish / misread-risk 可权衡；**`type=合规` 的条目不走六类讨论**——照 authorkit / venue 硬性要求改，没有策略空间，直接进清单（局部改），跟用户确认一轮即可；**`type=指控成立` 按致命处理**（魔鬼代言人提出、AC 裁决成立的，是最凶的攻击点）。标签是先验，用户可推翻。
+
+**修改方案**（进清单的料）：**策略照 `references/fix-strategy.md`**——回应优先序阶梯（先查已有、再谈补新）+ 六类 × 修改策略 + page-line 定位（每条必做：意见锚点 + 修改落点）。
+- **稿件修改**：哪个 section + 落点（锚点 / 图表）、改动类型（re-frame / section 重写 / 局部改 / 补图表 / 补实验项）、具体要求。补实验项只给核心目的（**设计交 writing-paper**）。
+- **关闭判据（必填）**：「改成什么样这条意见就算关闭」的可验收条件——随修改方案一起给用户确认。来源三种：review 来的意见**继承** problem-list 的 `close_criterion` 初版（讨论中可修订）；外部意见（导师/合作者/真实审稿人）没有判据，由 agent **随方案起草**——起草动作逼模糊意见具体化（「这段不清楚」必须落成「第 X 段歧义点 Y 消除」），拿不准的当场和用户掰扯明白；taste 级意见允许写成**用户确认型**（「改后该段交用户过目认可」），不强制每条都机械可验。
+- **回复文本**：审稿场景 → rebuttal；非审稿 → 平和说明。按 tone preset（见 `references/rebuttal-writing.md`）。
+- **要不要补实验**：是 → 补的核心目的；否。
+
+**已定方案台账**：逐条讨论时维护已定方案的落点清单；每条新方案与已定方案**冲突时当场标出、当场和用户裁决**（同一处两个改法、一条要加一条要删）——不攒到汇总。
+
+> 前四类（误解 / 表达 / novelty / 不可能）纯改 storytelling。缺证据 / 实验质疑可能要补——但 response 只给目的，设计交 writing-paper。
+
+### Step 3 汇总（= 交接产出）
+
+所有条过完，把 `comment-*.md` 机械汇编成两个文件：
+
+- **`revision-brief.json`**（交 writing-paper）：按 `writing-paper/references/templates/revision-brief-template.json` schema；items 按 **严重度 × 阶梯层级** 排序（数组顺序即优先级，writing-paper 按序消费）。
+- **`rebuttal-letter.md`**（交提交 / 导师）：按 venue 字数预算 + Comment / Response / Changes 三段式；审稿场景顶部给 AC cover letter 综合层（跨 reviewer 一致性权衡——Step 2 台账里裁决过的冲突写进这里）。**Changes 用「section + 锚点（原句 / 图表号）」定位，page-line 栏留空**——改稿后页码必变，page-line 由 writing-paper 改稿完成后回填（见 Step 4）。
+- **工作量盘点**（汇总时给用户）：几项纯改稿、几项补实验、各自预估成本；对照 Step 1 确认的时限，做不完的给降级方案（降 claim / 承诺 future work / 砍 polish 项），**用户拍板后清单定稿**。
+
+### Step 4 交接
+
+- `revision-brief.json` → `writing-paper`（进待办项队列，按类型路由：re-frame → design-story、section 重写 / 局部改 → write-section、补图表 → make-visual、补实验项 → design-experiment → CPE → ingest-results）。附一项待办：**改稿完成后回填 `rebuttal-letter.md` 的 Changes page-line**。
+- `rebuttal-letter.md` → 按 venue 提交 / 发导师合作者。
+- 改稿完成、rebuttal 发出（或定稿）后 → `writing-paper-submission` 终审。
+
+## 逐条 md schema（comment-N.md）
+
+```markdown
+# 意见 N（来源：reviewer #2 / 导师 / 合作者 / 用户自己）
+- 关切：…（意见原文摘要）
+- 锚点：page-line + 原句（意见指的原文位置）
+- 分类：misunderstanding / missing evidence / writing clarity / novelty concern / experiment concern / impossible request
+- 分流：substance / misread-risk / polish
+- 论文根因：claim 不清 / 证据缺 / 定位薄 / 真实局限
+- 稿件修改（进 revision-brief.json）：
+  - section：…
+  - 落点：section + 锚点（page-line 改稿后回填，与 rebuttal 的 Changes 对得上）
+  - 改动类型：re-frame / section重写 / 局部改 / 补图表 / 补实验项
+  - 具体要求：…
+  - 关闭判据：…（必填；来源：继承自 review / 讨论起草 / 用户确认型）
+- 回复文本：…（rebuttal / 说明，按 tone preset）
+- 要不要补实验：是 → 补的核心目的 / 否
+- 冲突记录：与意见 M 的冲突 + 裁决结果（无则略）
+```
+
+## references
+
+| reference | 讲什么 | 何时读 |
+|---|---|---|
+| `references/rebuttal-writing.md` | tone presets / venue 字数预算 / cover letter 综合层 / response letter 结构 / Changes 定位与回填 | Step 2 写回复 + Step 3 汇总 letter |
+| `references/fix-strategy.md` | 回应优先序阶梯（每层操作细则）+ 六类确诊/打法/常见错 + 修改方案质量标尺 + page-line 定位 + problem-list 字段消费 + 反模式 | Step 2 逐条讨论 |
+| `writing-paper/references/templates/revision-brief-template.json` | 修改需求清单 schema（writing-paper 消费） | Step 3 产清单 |
+
+## 常见错误
+
+- **别把意见当纯口头辩护**——misunderstanding 类要改正文（进清单），不只回复里解释。
+- **别直接编辑论文内容**——response 只产修改需求清单，改 blueprint + section 交 writing-paper。
+- **别设计实验**——只判断该不该补 + 补的核心目的，设计 + 产 plan + 调 CPE 交 writing-paper。
+- **别碰中期 claims.json**——rebuttal 改 blueprint.md（论文级脊柱），中期脊柱收口冻结，不回写。
+- **改方法别硬上 execution 全链**——rebuttal 时限内做不完，默认降 claim / 承认局限 / 给替代证据。
+- **别对导师 / 合作者用对抗性 rebuttal 语气**——区分来源，按 tone preset 选语气。
+- **别承诺补不可能的实验**——impossible request 给替代证据 + 诚实说明限制，或降 claim。
+- **每条修改方案别偏离原意见**——核心主张必须直接对应那条质疑。
+- **别把 page-line 写死进 rebuttal letter**——改稿后页码必变；letter 用 section + 锚点定位，page-line 改稿完成后回填。
+- **合规类条目别走六类讨论**——照 authorkit 改没有策略空间，直接进清单。
+- **不要在会话里用 `$...$` LaTeX**——会话符号用 Unicode（横切规范见 `dl-assistant` SKILL.md「横切规范」）。

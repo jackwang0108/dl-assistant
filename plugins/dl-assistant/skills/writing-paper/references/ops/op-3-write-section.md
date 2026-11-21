@@ -1,21 +1,91 @@
-# 写作或修改指定章节
+# 目标 3：write-section（写/重写/局部改任意一节）
 
-读取实际编辑来源、结构说明、该节角色指南、核心主张证据表、相关研究条件、已写章节的必要摘要和符号表。只加载与任务有关的资料，摘要不能替代原始依据。
+## 何时用
 
-1. 确定本节要回答的问题、读者已知内容及批准范围。局部修改按关闭判据执行，不顺势重写整篇；有实质主张变化先做研究判断。
-2. 按内容需要组织段落，写入指定正文来源；记录事实、推理与未知。方法描述核实际实现/协议版本，不以设计意图代替实现，不以结构直觉证明机制。
-3. 每条引用按 [引用核查](../craft/bibtex-on-the-fly.md) 登记身份与句子支持关系；数值按 [数值来源](../templates/canonical-values-template.json) 登记到来源和出现位置。未取得材料用明确工作占位，不补造文献或结果。
-4. 依次自查事实/证据、术语与符号一致、表达可理解性；普通语言优化不新增实验解释。需要独立核查时按 [审阅规则](../craft/section-self-audit.md) 说明任务和依据，未经授权不默认派子 agent。
-5. 图表按实际需要登记并制作；可以完成投稿质量终稿，不强制用户重画或手修 BibTeX。重要视觉选择可给预览，日常修正不逐项停顿。
-6. 有编译条件时编译并查看受影响页；不能编译则记录具体未验证项，仍可保存草稿。保存实际编辑版本，外部 LaTeX 已变时先对照，不能从旧 Markdown 覆盖。
-7. 更新节摘要、证据/引用/数值位置、图表记录和 state。研究内容变化执行影响检查；仅措辞变化不制造一整套变更报告。
+写新节、重写旧节、局部改任意一节，都用本操作。执行单元是 backlog 里的 write-section 项（来源：蓝图初始化/用户/review-response/蓝图重塑波及）。
 
-修改需求分流：结构调整用 design-story；章节/局部修改用本操作；图表用 make-visual；明确补充实验用 design-experiment；核心假设/贡献未决转 iterate。旧 revision-brief 的中文字段继续接收，用户批准与完成状态分别记录。
+**起草顺序只是推荐不是规则**：定位节 → Introduction →（铺垫节，若有）→ Method → Experiment（先写不依赖数据的部分）→ Conclusion → Abstract + Appendix（随各节沉淀）——按蓝图的实际节清单裁剪。推荐顺序来自内容依赖；真实写作里 Method 改了回头改 Intro 是常态，任何时刻可以对任何节调本操作。
 
-## 接收回应任务与回传实际结果
+## 读哪些（写哪节读哪）
 
-新版revision-brief核schema_version、response_id、response_ref的实际文件/校验值、paper快照、各item id/unit_ids、approval/status和depends_on。只处理明确批准且当前可执行项；在paper-state中以response_id+action_id去重，in_progress核已有任务后接续，前置未满足不重复启动。输入稿与当前稿不同先比较修订关系/影响，不因版本不同自动覆盖或假定整份计划失效。
+- `references/sections/<节>-writing.md`（该节论证层指南：选择逻辑 + do/dont + 全节自查 checklist）。**按角色分派**：指南是角色指南——节名有对应角色指南的照读；非默认节（Background/Preliminaries 等）没有专属指南，按蓝图的角色标注借最近角色（铺垫节借 `related-work-writing` 的锚定纪律 + `method-writing` 的符号纪律），方案子步里讲清借了什么、怎么用（确认点兜底）。**experiment 特例**：不依赖数据的部分读 `experiment-writing-setup.md`；结果/分析等有数据再读 `experiment-writing-results.md`（通常在 ingest-results 里写）。
+- `_draft/blueprint.md`（该节叙事任务 + contribution/C-ID + 页数参考 + 三位一体）。
+- **`paper-state.json` 的已写节 digest**（核心论点句/术语/符号/关键数字/图表清单）——**不要各节独立作战**：写任何一节必须注入已写节摘要，术语、符号、数字跨节一致。
+- **符号表**（`_draft/content/notation.md`，Method 定稿后存在；写 Method 时构建，写后续节时遵守）。
+- **三层 craft（跨节通用，每节都要注入 + 自审）**：`references/craft/sentence-craft.md` + `references/craft/word-craft.md` + `references/craft/anti-ai-patterns.md`。
+- `references/craft/bibtex-on-the-fly.md`（bib 当场构造 + 引用 role）。
+- `references/craft/section-self-audit.md`（自审子 agent 协议）。
+- `references/craft/latex-landing.md`（本地编译 + 关键节点 Overleaf 同步 + label/\ref 纪律）。
+- `references/craft/visual-design.md`（图表意图登记 + 分类路由 + palette）。
+- `_draft/venue-contract.md`（该节相关合规项：匿名写法、强制章节要求等）。
 
-每项完成后回传对应response_id/action_id、实际变更/位置、产物路径/校验值、实际current_paper及核查记录。completed与verified分别记录；核查不通过保留原因，不勾完成意见或把计划写成事实。保存带版本的执行/核查记录供response读取，不仅口头说改完。
+## 每节八子步循环
 
-对回复的影响与实际修改一起交回response，由它核对证据、时态、覆盖和其他回复；正文编辑不自动批准回复已定稿。若新发现影响核心研究，保留任务状态并交iterate，不只修改措辞。
+```mermaid
+flowchart TD
+    A1["① 读该节指南 + 注入上下文（蓝图/已写节摘要/符号表/三层 craft）→ 提写法方案"] --> A1G{"确认点：方案满意?"}
+    A1G -->|不满意·改| A1
+    A1G -->|满意| A2["② 写 .md 初稿 + bib 当场构造"]
+    A2 --> A3["③ 写后自审（子 agent：论证 + 三层 craft + 跨节一致性），修复同步 .md"]
+    A3 --> LAND1["④ 初稿本地验证：转译 .tex + 本地编译 + 渲 PDF　第 1 次验证"]
+    LAND1 --> A5{"确认点：用户审 PDF 内容"}
+    A5 -->|不满意·改| A6["⑤ 会话里交互改 + 同步 .md（不重新验证）"]
+    A6 --> A5
+    A5 -->|满意| SPEC["⑥ 图表意图登记：读 visual-design<br/>→ 要不要、几张、每张回答什么问题 → 写 visuals/<id>.md（意图字段）+ manifest（intent）"]
+    SPEC --> SPECG{"确认点：用户审意图清单"}
+    SPECG -->|不满意·改| SPEC
+    SPECG -->|不需要图| LAND2["⑧ final 本地验证（方框占位）"]
+    SPECG -->|确定| A7["⑦ 改正文：加轻占位（figure 方框+caption+label / table 注释占位）"]
+    A7 --> LAND2
+    LAND2["⑧ final 本地验证：转译 .tex + 本地编译 + 渲 PDF（figure 方框占位）　第 2 次验证"] --> DONE["更新 state：节状态 + digest + 页数消耗"]
+```
+
+1. **① 方案（确认点）**：读该节论证指南 + 从蓝图拿这节的叙事任务与页数参考（量级，不硬卡） + **注入上下文**（已写节 digest、符号表、venue 契约相关项、三层 craft 关键原则）→ 提 2-3 个写法方案（**按叙事任务写全**——写作期不预砍；方案里觉得可砍/可挪 appendix 的内容照写，只登记进 state 的 `compress_candidates`）。用户选/讨论。
+2. **② 写初稿 + bib**：写 `_draft/content/<节>.md`，只文字，不渲染真图。每条引用 `paper-search` 取元数据当场构造 bib 落根 `refs.bib`，标 role（core/supporting）。**Method 节**：先按 `method-writing.md` 的符号体系构建节建/更新符号表，再写正文；训练细节（超参/优化器/schedule）不写进 Method，归实验节 setup。
+3. **③ 写后自审（子 agent，general-purpose 禁 Explore）**：派未参与写作的子 agent，跑该节论证 checklist + 三层 craft + **跨节一致性**（术语/符号/gap/named-abstraction/contribution 跟蓝图 + 已写节 digest）+ **引用覆盖** + 公式检查（Method：下标/维度/与符号表一致）。不过回 ②，修复同步 .md。
+4. **④ 初稿本地验证（第 1 次）**：按 `latex-landing.md` Step E——转译该节 `.tex` → 本地 `latexmk` 编译（**红了先修红**，只带错误摘要进上下文）→ grep label/\ref → `pdftoppm` 渲该节 PDF → 报当前页数 → 本地 commit（切小）。**不 push、不调 overleaf-mcp**。
+5. **⑤ 用户审 PDF 内容（确认点）→ 不满意改**：会话里交互改 + 同步 .md（不重新验证，定稿后 ⑧ 统一验）→ 回审；满意 → ⑥。
+6. **⑥ 图表意图登记（确认点）**：文字定稿后，读 `visual-design.md`，逐 claim 判断这节要不要图/表、几张、每张**回答什么问题**（支撑哪个 claim、key takeaway 几条）、放哪 → 写 `_draft/visuals/<id>.md`（只填意图字段）+ manifest 条目（status=intent）→ 用户审**意图清单**（要不要这几张、各自回答什么——文字层面可判断）。**不做详细设计**——布局/结构/元素留到产出时刻对着真材料做（make-visual / ingest-results，见 `visual-design.md`）。palette 未锁时先锁：渲染色卡图（含语义色小套）给用户看图确认，确认才锁。该节不需要任何图/表 → 跳过 ⑥⑦，直接 ⑧。
+7. **⑦ 改正文加轻占位**：figure——通用方框 + caption 初稿（三段式）+ `\label{fig:<id>}`；table——注释占位（`% TODO: tab-<id> 结构待数据到达后定`）+ caption 初稿 + `\label{tab:<id>}`，**不锁 booktabs 结构**（结构对着真数据定；例外：数据本就在手，可直接定结构落 `tables/<id>.tex` 骨架，正文 `\input`）。
+8. **⑧ final 本地验证（第 2 次）**：同 ④ 流程——转译 + 本地编译 + 渲 PDF（figure 位置是方框占位）+ 本地 commit。
+
+## 产出
+
+`_draft/content/<节>.md`、根 `refs.bib`、`sections/<节>.tex`（+ `tables/<id>.tex`）、`_draft/visuals/<id>.md` + manifest 条目。
+
+## 状态更新
+
+节 status（drafting→drafted；等数据的置 needs-data 并登记数据依赖）；digest 更新（本节论点句/术语/符号/关键数字/图表 label）；page_used；写作中冒出的实验需求记 `experiments.new_needs`；**觉得可砍/可挪 appendix 的内容记 `compress_candidates`（只登记不砍——砍/挪是压缩工序里用户拍板的事）**；backlog 对应项关单。writing.log 记一节。
+
+## 确认点
+
+每节三个：① 方案、⑤ 审 PDF 内容、⑥ 审图表意图清单。每节两次本地验证（④ 初稿、⑧ final）；Overleaf 同步不绑节，只在关键节点（里程碑/用户要求/协作需要，见 `latex-landing.md`）。
+
+## 蓝图脱节规则
+
+⑤ 用户交互改可能让成稿偏离蓝图。行文级 drift 不回蓝图；**实质 drift**（贡献变了、故事线变了）当场标「蓝图脱节」，建议回 design-story 重塑——不许攒着。
+
+## 修订项怎么路由（review-response / 用户口述清单）
+
+| 类型          | 路由                                                        |
+| ------------- | ----------------------------------------------------------- |
+| `re-frame`    | design-story 重塑先行，波及节自动生成修订项                 |
+| `section重写` | 本操作走完整八子步                                          |
+| `局部改`      | 本操作定点改（② 只动相关段落，③④ 照跑）                     |
+| `补图表`      | ⑥ 意图登记 → make-visual 产出                           |
+| `补实验项`    | 记 new_needs → design-experiment 产 plan-vN → CPE → ingest-results |
+
+处理原则：re-frame 优先；每项对应一条触发意见（追溯用）；改完跑 ③ 自审（含跨节一致性）；重写/重塑波及其他节的，对受影响节做一致性 sweep（status 置 needs-revision 进队列）。
+
+**关闭判据锁范围（review-response 来源的修订项）**：清单项带 `关闭判据` 时——① **编辑范围被判据锁死**：做满足判据的最小编辑，不顺势重写整节、不动无关段落（连带重写会引入新问题还破坏已确认内容）；② 改完**对着判据自查**「这条关闭了吗」，并在汇报里给出判据 → 证据（改在哪、改成了什么）的对应；③ **未关闭不勾 backlog**——判据没满足时要么继续改，要么回 response/用户重新裁决（判据本身定错了也是常事，别硬凑）。
+
+## 易错点
+
+- **三层 craft + 已写节摘要 + 符号表，每节注入**——别只注入论证层（跟随差根因）；别各节独立作战。
+- **图表意图登记在文字定稿后（⑥）**——文字没定就登记图表意图，意图不准；详细设计一律留到产出时刻（make-visual / ingest-results），对着真材料做。
+- **不渲染真图**——这步只意图登记 + 轻占位；真图真数字由 make-visual / ingest-results 按 manifest 替换。
+- **experiment 节没数据时只写 setup**——结果/分析等数据（ingest-results）。
+- **训练细节归实验节 setup**——Method 只讲方法本身。
+- **自审是子 agent**（fresh eyes），不是写正文的 agent 自审。
+- **本地验证后报页数**——页数每次可见（信息不是警告），别攒到定稿才看。
+- **写作期不预砍**——初稿写全是正常状态；觉得可砍/可挪的内容登记 `compress_candidates`，砍/挪判断留给压缩工序的用户拍板。

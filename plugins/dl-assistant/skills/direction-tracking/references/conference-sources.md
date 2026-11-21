@@ -1,27 +1,45 @@
-# 会议论文集来源与身份核对
+# C：会议 proceedings 抓取
 
-用户给定会议、年份、论文集 URL 或清单后，核对主会、研讨会、论文类型及是否只含部分列表。下面是常用来源候选，不限制只能跟踪这些会议；首次使用某年列表时核实实际 URL 与页面结构，不凭记忆拼接后称已验证。
+**只考虑 11 个顶会**(其他不做):CVPR / ICCV / ECCV / NeurIPS(NIPS)/ ICML / ICLR / AAAI / ACL / EMNLP / ACMMM / IJCAI。
 
-| 来源候选 | 常见会议 |
-| --- | --- |
-| CVF Open Access | CVPR、ICCV |
-| ECVA | ECCV |
-| NeurIPS Proceedings | NeurIPS |
-| PMLR | ICML 等 |
-| ACL Anthology | ACL、EMNLP 等 |
-| AAAI 官方论文集 | AAAI |
-| IJCAI 官方论文集 | IJCAI |
-| OpenReview | ICLR 等，按实际公开 venue 和决定范围核实 |
-| ACM Digital Library | ACM Multimedia 等 |
+按 host 分**开放类**和**受限类**。
 
-来源列表不保证当前可访问或每年沿用同一平台。先尝试公开列表与公开接口；访问限制、认证和网络失败分别记录，不将历史单次失败写成永久登录要求。不要求用户在对话中提供账号密码或 cookie，确需身份时由用户通过适当工具完成认证。
+## host → 会议
 
-获取不到时可请用户提供公开列表、标题清单或 BibTeX，继续处理其他来源。arXiv 关键词查询只是补充，不能承诺覆盖大部分会议论文。原始列表、分页与未取得部分保存在运行目录；付费正文不可得也不妨碍保存可核实书目信息。
+| host | 会议 | 开放度 |
+| --- | --- | --- |
+| CVF(`openaccess.thecvf.com`) | CVPR / ICCV | 开放,好抓 |
+| `ecva.net` | ECCV | 开放 |
+| `papers.nips.cc` | NeurIPS | 开放 |
+| PMLR(`proceedings.mlr.press`) | ICML | 开放 |
+| ACL Anthology(`aclanthology.org`) | ACL / EMNLP | 开放 |
+| `ojs.aaai.org` | AAAI | 开放 |
+| `ijcai.org/proceedings` | IJCAI | 开放 |
+| **OpenReview(`openreview.net`)** | **ICLR** | 受限:Cloudflare 反爬,官方 API 要登录 |
+| **ACM DL(`dl.acm.org`)** | **ACMMM** | 受限:付费墙 / 登录 |
 
-## 同一论文的跨来源身份
+## 开放类（CVF / ecva / nips / PMLR / ACL Anthology / AAAI / IJCAI）
 
-优先使用 DOI、arXiv ID、官方页面互链或明确版本关系。不能用“删掉副标题后相同 + 任一作者姓相同”自动合并。
+- 抓 proceedings 列表(各 paper 标题 + 链接)。
+- **各 host 每年的 URL / 页面结构会变,不写死**:**首次跑某 venue+年份时先 probe 实际 URL 和页面结构**,再抓,不凭记忆编 URL(防漂移)。
+- 映射到 arxiv ID:大多有 arxiv 版本,匹配上就进 seen 去重。**匹配规则**(防误并):标题归一化(小写、去标点、去副标题变体)后相等,**且**至少一名作者姓匹配,才算同一篇;只中一条或都不中 → 标 `unmatched` 留人工看,不硬并。
 
-只有标题和作者信息时，对完整标题、完整作者组合及版本信息进行核查，标明关联证据；仍不确定就保留独立临时身份和待核对关系，不强行合并。标题哈希只是暂存键，不是同一论文的证明。
+## 受限类（OpenReview=ICLR / ACM DL=ACMMM）
 
-无 arXiv 版本的论文用 DOI 或官方稳定 URL 交接。后续发现可靠映射时，在处理记录中建立别名和合并指向，合并全部来源与历史判断；累计库保留一个当前条目，不把身份迁移算成新论文。
+- **OpenReview**:网站走 **Cloudflare 托管、有反爬**;**官方 API 走通要登录账号**(用户实测告知)。两条路:
+  - (a) 用户提供 OpenReview 账号凭证(cookie / token)→ 走官方 API。
+  - (b) 不走 → fallback。
+- **ACM DL**:付费墙,同 fallback。
+
+### Fallback（抓不到时）
+
+让用户直接给 proceedings 清单(URL / 标题列表 / BibTeX)。
+**且 ICLR / ACMMM 论文绝大多数有 arxiv 版本 → A 关键词源会兜住大部分**,C 只作为补充,不必死磕。
+
+## 跨源去重
+
+无论哪个 host 抓到,统一映射到 arxiv ID(优先)进 seen 去重——同一篇被 A 当 arxiv 预印本抓过、又被 C 当会议论文抓到,**只算一条**。少数无 arxiv 版本的 → 标题哈希 / DOI。
+
+---
+
+> 写这页的依据:OpenReview 的 Cloudflare + 官方 API 登录要求是**用户实测告知**,不是凭空写;各 host 具体 URL 模式**不硬编码**,首次用时 probe。

@@ -1,16 +1,64 @@
-# 可复用的页面元素
+# 组件库
 
-组件服务信息关系，不为页面凑数量。base-styles.css包含以下可选类：
+预置 CSS 类（base-styles.css），颜色走 token，换主题（generate-theme.js）自动联动。**重复 3+ 次的视觉模式用组件类，单页独特布局用 inline grid**（见 layout-patterns.md）。
 
-| 类 | 合理用途 |
-| --- | --- |
-| callout | 强调限制、待答问题或关键定义 |
-| stat-card / stat-number / stat-label | 呈现少量有单位和来源的数字；不替代分布/比较 |
-| feature-card | 并列说明少量项目能力/约束 |
-| timeline / timeline-item | 有实际先后关系的过程或进展 |
-| badge / tag | 类别/状态标注，不能仅靠颜色区分 |
-| compare | 保持对象对应的两侧比较 |
-| code-block | 必要的代码片段与输出说明 |
-| text-muted | 次要说明；仍需足够对比度 |
+所有文字必须在 `<p>/<li>/<h>` 里，`<div>` 只做布局容器。
 
-同一模式多次使用时可定义CSS类。按页独有布局可行内设置，不强制“只能inline”或禁止复用grid。来源、解释和图像仍需实际落实，卡片/图标不自动计为视觉证据。
+## callout 提示框
+```html
+<div class="callout">
+  <div class="callout-title">提示</div>
+  <p>内容文字</p>
+</div>
+```
+variant：`tip` / `warning` / `success` / `danger`（加 class，如 `class="callout warning"`）
+
+## stat-card 数字卡（配 countUp.js 数字滚动）
+```html
+<div class="stat-card">
+  <div class="stat-number" data-countup="98.5" data-decimals="1">0</div>
+  <div class="stat-label">准确率 %</div>
+</div>
+```
+countUp.js 按需引（见 interactions.md），数字从 0 滚到目标。
+
+## feature-card 特性卡
+```html
+<div class="feature-card">
+  <div class="feature-icon"><i class="fa-solid fa-lightbulb"></i></div>
+  <h3>标题</h3>
+  <p>描述文字</p>
+</div>
+```
+
+## timeline 时间线
+```html
+<div class="timeline">
+  <div class="timeline-item"><p><strong>2023</strong> 事件一</p></div>
+  <div class="timeline-item"><p><strong>2024</strong> 事件二</p></div>
+</div>
+```
+
+## badge / tag
+```html
+<span class="badge">新</span>
+```
+
+## compare VS 对比
+```html
+<div class="compare">
+  <div><p>方案 A...</p></div>
+  <div class="vs">VS</div>
+  <div><p>方案 B...</p></div>
+</div>
+```
+
+## pull-quote 大字引言
+```html
+<div class="pull-quote">"引言内容"</div>
+```
+
+## blockquote（原 skill 保留）
+```html
+<blockquote>引言内容<cite>来源</cite></blockquote>
+```

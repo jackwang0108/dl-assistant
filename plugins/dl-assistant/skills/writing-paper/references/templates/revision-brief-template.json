@@ -1,26 +1,30 @@
 {
-  "schema_version": 2,
   "_notes": {
-    "purpose": "已批准且就绪的具体批次；原意见和未就绪项留response-state及excluded_actions，不要求全部讨论完才交。空模板不是已批准任务。",
-    "items": "保留section/改动类型/具体要求/关闭判据/涉及claim/触发意见兼容旧记录；新id与response_id用于去重和接续，原顺序不表示可直接启动。",
-    "approval_status": "每项approval.status/basis/source_refs来自实际授权；status是实际执行进度，两者分开。缺批准不执行。",
-    "completion": "writing-paper读取response_ref及paper快照，按items实际工作；回传response_id/action_id、outputs、verification及当前稿版本/位置，response核原材料后更新。旧计划/回复不覆盖成已完成。",
-    "research": "核心研究未决转iterate，不以补实验项包装核心取证，不为得到阳性设关闭条件。",
-    "legacy": "旧格式可先整理来源、范围和既有批准；不能伪造新ID/批准或把旧关闭标签当科学事实。"
+    "是什么": "修改需求清单（revision-brief）的 schema——writing-paper 改稿的输入，由 writing-paper-response 产（或用户直接给）。一份清单 = 一批改稿待办项，逐项进 paper-state.json 的 backlog。职责切分 + 改动类型 → 目标路由 + 处理原则见 references/ops/op-3-write-section.md「修订项怎么路由」。",
+    "items[].改动类型": "re-frame（蓝图层改动）| section重写（整节重写）| 局部改（定点改）| 补图表（新图/表/示意图）| 补实验项（补实验，只给目的）",
+    "items[].具体要求": "改成什么，详细到 agent 能照着改（补实验项不填，改填补实验目的）",
+    "items[].关闭判据": "必填——「改成什么样这条就算关闭」的可验收条件（response 逐条讨论时与用户定稿）。writing-paper 改稿按判据锁编辑范围（最小编辑，不顺势重写），改完对判据自查，未关闭不勾 backlog",
+    "items[].触发意见": "哪条审稿意见 / 谁提的（可选，追溯用）",
+    "items[].补实验目的": "补实验项专用——回应什么质疑 / 确立什么主张，如「补 baseline Y 对比回应公平性质疑」"
   },
-  "任务": null,
-  "来源": "writing-paper-response",
-  "论文草稿路径": null,
-  "response_id": null,
-  "response_ref": {
-    "path": null,
-    "sha256": null
-  },
-  "stage": "handoff",
-  "paper": {
-    "path": null,
-    "sha256": null
-  },
-  "items": [],
-  "excluded_actions": []
+  "任务": "<改稿任务名，如「回应 CVPR 审稿 R1/R2」>",
+  "来源": "writing-paper-response（基于审稿意见）/ 用户直接给",
+  "论文草稿路径": "<论文根（papers/<slug>/），_draft/content/ + blueprint.md + manifest 所在>",
+  "items": [
+    {
+      "section": "Method",
+      "改动类型": "局部改",
+      "具体要求": "<改成什么，详细到 agent 能照着改>",
+      "关闭判据": "<改成什么样这条算关闭——可验收条件>",
+      "涉及claim": ["C2"],
+      "触发意见": "R2 第 3 条"
+    },
+    {
+      "section": "Experiment",
+      "改动类型": "补实验项",
+      "补实验目的": "补 baseline Y 对比回应公平性质疑",
+      "关闭判据": "主表或补充实验含 baseline Y 对比并写进结果分析",
+      "触发意见": "R1 第 1 条"
+    }
+  ]
 }

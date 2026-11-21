@@ -1,58 +1,92 @@
-# 有依据的组件行为与数值检查
+# 数值正确性检查（numeric-sanity）
 
-这里检查具体行为，不认证完整实现或科研结论。保留文件名供旧引用定位，弃用统一“非零/正loss/几步必降”判据。
+> 三层验证的升级核心：每层不只看"不报错"，还看"数值合理"。主文 SKILL.md 说"加数值 sanity"，
+> 这里放每层具体查什么、怎么查、命中红线怎么办。
 
-## 每项检查先明确什么
+## 为什么"跑通"不等于"跑对"
 
-1. 对象：具体组件/参数组/输出/指标及其用途，对应本轮哪项需求。
-2. 输入和条件：真实样本或合法合成输入、配置、权重、设备、精度、训练/推理状态、随机性及范围。
-3. 预期行为和依据：组件定义、数学条件、项目原测试、已知答案或可信参考；来源与版本可追查。
-4. 实际操作和观察：脚本/命令、日志、退出状态、实际读数/结构，不只记“通过”。
-5. 解释：检查符合哪些预期、不能推出什么、需要进一步调查或验证什么。
+setup 最危险的不是报错——报错会停下来，看得见。最危险的是**静默错误**：代码全程不抛异常，
+但结果是错的。常见五种，都在 setup 阶段就能拦：
 
-无预期依据时允许记录观察，但不能现编阈值或宣布matches_expected。输入不满足组件约束时先修测试输入，不能为过测试改算法；若发现原实现与目标协议冲突，记录并返回设计/准备判断。
-
-## 三层内容按任务采用
-
-- 环境与配置：当前解释器/环境、必要依赖、配置和指定设备是否可识别；不需要GPU的任务不要求CUDA。
-- 组件：必要的读取、变换、计算、加载和保存是否符合约定；有编译算子时按真实设备/类型运行最小调用，import成功不替代调用。
-- 实际入口：真实资产和真实入口是否按指定配置完成本轮操作。--help、dry-run、合成输入、少量样本、完整运行分别记录，不能互相替代。
-
-未采用的层/组件说明不适用或未覆盖。合成输入无法表达实际约束时用可追溯小样本；“官方命令”不保证正确，也不要求执行所有train/eval/demo链。
-
-## 如何解释数值
-
-| 对象 | 需要核对的内容 | 避免的错误结论 |
+| 静默错误 | 表象（不报错） | 真相 |
 | --- | --- | --- |
-| 输出 | 结构/形状/类型/单位、按任务定义的有效范围或性质 | 全零直接认定错误；形状正确就认定机制正确 |
-| 非有限值 | 哪些量/位置按定义应有限，掩码或边界表示是否有意使用特殊值 | 盲目断言所有输出位置都必须有限，或对异常一律clamp后称修好 |
-| loss | 实际定义/归约/权重、输入与目标、应满足的条件与范围 | 一律要求正数、接近某固定量级、几步必降 |
-| 梯度/更新 | 当前计算应依赖哪些可训练参数组，冻结/分支/输入/目标条件和实际更新 | 所有参数必须非零梯度；某处为零就认定断链；总梯度非零证明完整训练正确 |
-| 指标 | 输入/标签对应、样本数/分母/单位、聚合、已知答案和条件 | 小子集零分或满分直接认定bug或成功；小样本指标代表全量性能 |
-| 权重 | 身份/版本/配置、参数形状与含义、实际使用/遗漏/额外项及有意初始化部分 | 仅检查无异常或key数量；任何遗漏都错误；strict=True证明权重身份正确 |
+| checkpoint 半加载 | `load_state_dict(strict=False)` 静默吞掉 | 一半权重是随机初始化，eval 数字莫名其妙 |
+| device map 错 | 能跑，慢 | 部分张量在 CPU、部分在 GPU，结果可能对但极慢；或 silently 在错的卡 |
+| 预处理 mean/std 错 | forward 正常出数 | 输入分布偏移，输出全错但形状对 |
+| NaN 传播 | loss 打印出来是 `nan`，训练"在跑" | 学习率/初始化/数据问题，越跑越烂 |
+| 假成功 | eval metric=0.0 或 =1.0 | 数据没真加载 / 全预测同一类 / 标签泄漏，不是真的完美 |
 
-loss/指标的合法范围来自实际定义，不预设所有损失非负或指标落在同一区间。随机/极小样本的趋势不是通用失败标准；已知输入的零误差、零输出或某分支未参与可能合法，须核对具体预期。
+**拦截原则**：每过一层验证，问一句"这个数值如果是错的，它会长什么样？"——对照红线检查。
 
-加载检查采用目标模型实际支持的流程，包括分片/部分训练参数等实际结构，不强行套一段通用load代码。名称映射需要明确一一对应、形状及未覆盖项；有意重初始化需与目标一致、已授权且可追溯。strict=False或名称转换本身不决定对错，遗漏关键权重却用于相同模型评测不能被“能加载”掩盖。
+## Layer 1（import/config）：轻量数值 sanity
 
-## 检查结果与行动
+import 成功后，确认 CUDA 这条链没静默错位：
 
-- matches_expected：在实际输入/条件下符合有依据的预期，只适用于检查范围。
-- investigate：观察异常或依据不足，尚不能判断；记录待查，受影响的操作不能称已就绪。
-- conflicts_with_expectation：与明确预期冲突，保留可重复输入与日志，定位测试或实现问题，不自动推导研究假设错误。
-- not_checked：未执行或未获得足够结果，不能补造通过。
-- not_applicable：当前操作不需要，说明理由，不拿它跳过必要检查。
+```python
+import torch
+assert torch.cuda.is_available(), "CUDA 不可用——驱动/torch 装错"
+print(torch.cuda.get_device_name(0))            # 确认看到的是预期的卡（A100）
+print(torch.__version__, torch.version.cuda)    # 与 nvcc 对齐（详见 compile-deps.md）
+# 若有编译型算子，import 它并跑一次最小调用，确认不是 undefined symbol
+```
 
-进程execution_status与上述result分别记录。退出非零不能标matches_expected；退出0仍可能investigate或conflicts。只完成一部分检查时操作标partial/blocked等实际状态，不能把全部检查结构齐全当ready。
+红线：`is_available()` 为 False、看到的卡不对、编译算子 import 报 undefined symbol → 回 `compile-deps.md`。
 
-## 可复用检查与案例推演
+## Layer 2（synthetic smoke）：关键数值 sanity
 
-脚本调用真实组件，保存输入样本ID/构造约束、配置、代码commit及diff、环境、预期依据、命令和工作目录，输出实际证据。脚本版本改变后旧结果不自动适用；后续用同一检查验证新实现时也要核对条件。小输入或迭代次数调整另存配置，不能覆盖正式参数。
+这是拦截静默错误的主战场。smoke script 调真实组件后，**显式断言数值**，别只看"没抛异常"：
 
-维护时检查以下行动是否合理（人工推演，不是模型行为测试）：
-- 合法全零输入产生按定义应为零的输出：可matches_expected，不为了非零修改模型。
-- 一个分支未参与当前样本：核对预期依赖，必要时再构造能覆盖该分支的检查，不直接修算法。
-- 真实小子集恰好零分或满分：查样本/标签/计数和指标，原因未明记investigate，不直接宣称bug或性能可靠。
-- 训练几步loss上下波动：记录观察，检查目标/更新和配置，不自动调学习率到下降才交接。
-- 加载无报错但关键参数随机初始化：按模型与目标判定影响，未解决不能交等价评测入口。
-- 纯数据转换不需要模型：检查身份/数量/标签/划分，不因未做backward标失败。
+```python
+# forward 输出
+out = model(dummy_batch)
+assert torch.isfinite(out).all(), "输出含 NaN/Inf —— 初始化或前向有问题"
+assert out.abs().sum() > 0, "输出全零 —— 权重没加载 / 前向断链"
+assert out.shape == expected_shape, f"形状不符：{out.shape} vs {expected_shape}"
+
+# loss
+loss = criterion(out, dummy_target)
+assert torch.isfinite(loss), "loss 是 NaN/Inf"
+assert loss.item() > 0, "loss 恰为 0 —— target 退化 / loss 没真算"
+print(f"smoke loss = {loss.item():.4f}")   # 人工瞄一眼量级是否合理（交叉熵初始 ~ln(类别数)）
+
+# backward：梯度真的流动
+loss.backward()
+grad_norm = sum(p.grad.abs().sum() for p in model.parameters() if p.grad is not None)
+assert grad_norm > 0, "梯度全零 —— 计算图断了 / requires_grad 没开"
+```
+
+> **量级直觉**（瞄一眼用，不强卡）：N 类分类交叉熵初始 loss 约 `ln(N)`（10 类 ≈ 2.3）；
+> 检测/分割的初始 loss 看 repo 文档预期。明显偏离（如 1e6 或 1e-8）是信号。
+
+## Layer 3（官方命令 smoke run）：强数值 sanity
+
+smoke 真实数据跑几步/一小轮后：
+
+- **loss 趋势对**：smoke train 几步内 loss 应有下降趋势（不是上涨、不是纹丝不动、不是 NaN）。
+- **eval metric 不离谱**：tiny subset eval 的 metric **> 0 且不是假满分**。
+  - `metric == 0.0` → 数据没真加载 / 预测全错 / 标签对不上，**不是**"小子集太难"就能搪塞的。
+  - `metric == 1.0`（或恰好满分）→ 标签泄漏 / 评估了训练样本 / 度量实现 bug，**假成功比失败更危险**。
+- **checkpoint 加载完整性**（最高频静默坑）：
+
+```python
+ckpt = torch.load(path, map_location='cpu')
+sd = ckpt.get('state_dict', ckpt)
+missing, unexpected = model.load_state_dict(sd, strict=False)
+print(f"missing keys: {len(missing)}", missing[:10])       # 模型要、ckpt 没给 → 这些层是随机初始化！
+print(f"unexpected keys: {len(unexpected)}", unexpected[:10])  # ckpt 有、模型不要 → 可能 key 命名没对上
+```
+  - `missing` 非空且非预期（不是 head 这种本就要重训的层）→ **权重没真加载进去**，eval 数字不可信。
+  - 大量 `unexpected` → 多半是 `module.` 前缀（DataParallel 存的）/ 命名规范不一致，需要 key remap。
+  - **注意**：`strict=False` 本身、以及任何 key remap，都是**语义改动即停点**——停下问用户，别在工程执行区悄悄做。
+
+- **资源足迹**（顺带记）：smoke run 时记开发卡（1×A100）单 step 显存峰值（`torch.cuda.max_memory_allocated()`）和耗时，写进 setup.json 机读区（dev_card_footprint），判断够不够支撑 execution 迭代。
+
+## 命中红线怎么办
+
+- **NaN / 全零 / 梯度断**：是 bug，agent 进 debug 循环（不是停顿点）——查初始化、数据、device、计算图。
+- **checkpoint missing keys 异常 / 需要 remap**：**语义改动即停**，把 missing/unexpected 列给用户，解释"这样加载会有层是随机的"，问怎么处理。
+- **eval 假满分 / 恰好 0**：是危险信号，agent 自己先排查（数据路径、标签映射、是否评估了训练集），排查不出再上报。
+- **量级离谱但有限**：记进 report 的"语义风险"，提示下游 reproduction 重点核对——不一定是 setup 能定的（可能是 repo 本身的预期）。
+
+> 与 baseline-survey 的衔接：survey 的"社区复现"若提到有人报 key mismatch / 复现不出数字，
+> 这里的 checkpoint 完整性检查就是验证那个预判——实测 missing keys，把"传闻"坐实或推翻，写进 report。

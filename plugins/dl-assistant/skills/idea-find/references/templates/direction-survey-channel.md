@@ -1,24 +1,42 @@
-# 独立检索或分析记录
+# 模板：survey-channels/<channel>.json（Step 3 调研通道子 agent 落盘 · 机读）
 
-`survey-channels/<独立批次>.json` 保存每次来源记录，按实际任务命名，不固定三种通道、不覆盖旧文件。独立分析可提出新解释，不限于对既有候选做否定。
+> 流程见 `direction.md` Step 3；公共语言规范见 `output-contract.md`。
+
+一个通道一份（`fresh.json` / `closest.json` / `negative.json`），是子 agent 的**原始产出**——主会话只拿紧凑摘要，合并去重成 `literature.json`；原始件留着，合并时丢了什么、改判了什么才可审计。**写 json 不写散文**。字段值用中文，专有名词保留英文。
 
 ```json
 {
-  "schema_version": 2,
-  "task": null,
-  "problem_ids": [],
-  "requests": [],
-  "found": [],
-  "excluded": [],
-  "pending": [],
-  "observations": [],
-  "new_questions_or_explanations": [],
-  "limitations": []
+  "channel": "fresh | closest | negative",
+  "anchor": "{幸存 pitch 的核心机制一句话}",
+  "queries": ["{实际跑过的 query，留痕}"],
+  "scan_window": "{扫新窗口，如 2025-07 至 2026-07}",
+  "hf_checked": true,
+  "found": [
+    {
+      "title": "{标题}",
+      "arxiv": "{arXiv ID}",
+      "doi": null,
+      "url": null,
+      "year": 2026,
+      "published": "2026-03",
+      "one_liner": "{这篇干了啥，一句}",
+      "relation_to_anchor": "{跟哪个查询锚点（哪个 pitch）相关、什么关系}",
+      "anchor_status": "没人碰 | 粗糙 | 做得差 | solid解决 | 死路信号 | 跨域现成解法",
+      "maturity_note": "{仅 closest 通道：做得好不好——方法成熟度 / 效果 / 作者承认的 limitation}"
+    }
+  ],
+  "excluded": [
+    { "title": "...", "arxiv": "...", "reason": "离题 / 重复 / 质量存疑…" }
+  ],
+  "key_insights": ["{3 条最关键洞察，供主会话合并时抓重点}"]
 }
 ```
 
-requests记录来源、实际query、时间范围及日期口径、排序、limit、分页、是否截断、获取时间、原始结果路径、成功/部分/失败/未运行。合法空结果不同于没有执行。不存在固定平台必查或12个月保证，按问题选择来源；历史报告能否复用取决于内容与实际覆盖。
+**字段纪律**：
 
-found逐篇包含title、稳定arxiv/doi/url、作者、版本、来源、读取范围与位置、作者声明、已核查观察和对哪些假设的支持/反对/未知。无arXiv也可记录；仅标题未核实身份的保留待核查，不自动合并。
-
-observations写事实与条件，new_questions_or_explanations写新构想及推理，两者分开。排除与pending有理由，空搜索不推导“没人做”或“方向已死”。主agent核对原始记录与冲突后才更新累计索引。
+- 去重靠主会话合并时按 arXiv ID 归一化，所以 **`arxiv` / `doi` / `title` 三个至少填准一个**。
+- `anchor_status` 是本通道对"这个 pitch 现在还能不能做"的结论，每条 `found` 都要落到具体 pitch 上——游离于锚点之外的好文章也登记（`relation_to_anchor` 记「背景文献」），主会话合并时分组用。
+- `maturity_note` 只有 closest 通道必填（铁规 3：最接近的 3-5 篇读深浅）；其他通道留空。
+- negative 通道的 `found` 里，死路信号要写清**证据原文**（"we tried X but..."出自哪篇哪节），跨域解法写清哪个域、怎么解的。
+- 排除项也要留痕——它是覆盖度自检和"为什么没收这篇"的依据，比直接丢弃诚实。
+- `hf_checked` 记录有没有查 `hf papers` 日报/trending（铁规 1 的留痕）；false 要有理由。

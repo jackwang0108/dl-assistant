@@ -1,28 +1,43 @@
-# idea-seed.json：起点、目标与未知
+# 模板：idea-seed.json（Step 1 清晰化对话落盘 · 雏形卡 · 机读）
 
-建立当前共同背景，不要求用户先有 idea、独特资源或明确会议。示例是待填写结构，不代表已完成确认。
+> 流程见 `direction.md` Step 1；公共语言规范见 `output-contract.md`。
+
+清晰化对话的产出——产 pitch 之前必须有的**清晰锚点 + 筹码**。Step 2 的糙 pitch 从这张卡的种子 + wedge 长出来（pitch 的"武器"只能挂 wedge 里的筹码）；Step 3 的调研任务书从这张卡 + 幸存 pitch 推导。
 
 ```json
 {
-  "schema_version": 2,
-  "date": null,
-  "topic": null,
-  "starting_point": {"kind": "field", "content": null, "sources": []},
-  "problem": null,
-  "user_intuition": null,
-  "user_goal": null,
-  "familiarity": null,
-  "interests": [],
-  "resources": {"available": [], "potential": [], "unknown": []},
-  "time_budget": null,
-  "target_venue": null,
-  "seeds": [],
-  "open_questions": []
+  "date": "2026-07-30",
+  "topic": "{topic-slug}",
+  "anchor_type": "具体idea雏形 | 子问题域",
+  "problem": "{想解决的问题，一句话——纯找gap时填锚定的子问题域}",
+  "user_intuition": "{用户的直觉和动机：觉得现有方法哪里不够，不引证、记原话的意思}",
+  "wedge": {
+    "compute": "{算力筹码：量级 + 能训多大的东西}",
+    "tools": "{用户吃透的工具/方法——别人要用得现学的，如某套理论机器/框架}",
+    "insights": "{独特见解：刚读的论文里别人没注意的观察 / 亲历的失败}",
+    "data": "{独家数据/资源，无则留空}"
+  },
+  "sketch": "{脑子里的雏形，糙也行：换个组件？搬到别的任务？解释某个现象？纯找gap时留空}",
+  "seeds": [
+    {
+      "source": "paper-card | connections.md | ls | dt | 用户直给",
+      "ref": "{路径或 arXiv ID}",
+      "point": "{种子内容一句话}",
+      "kind": "{替换点 | 内向-方法上 | 内向-证据上 | 内向-边界上 | 内向-解释上 | 外向-搬思想 | 外向-推结论 | 外向-借工具 | 外向-当约束 | 无分类}"
+    }
+  ],
+  "open_questions": ["{还模糊、调研要特别回答的点}"],
+  "entry_track": "fast | divergent | red-light-exit",
+  "entry_track_reason": "{轨态判定依据一句话——fast = 用户带成型 idea（说得出用什么机制 / 解决什么 / 打谁），跳 Step 2 pitch 池；divergent = 模糊方向，走 Step 2 空场征集；边界默认 fast——糙 idea 由挑错和细化修，不由发散修}",
+  "target_venue": "{目标会议档次——硬门槛：必须具体值，不许'未定'（聊定工作假设也行）}",
+  "resources": "{算力/数据约束——硬门槛：必须具体值，不许'未知'}"
 }
 ```
 
-starting_point.kind 可为 field/paper/observation/hypothesis/prior_results。用户只给领域时 problem、user_intuition 可为空，agent仍需主动提出问题。潜在资源不能算已获资源，一般DL经验或看过调研不自动等于独占优势。
+**字段纪律**：
 
-seeds 每项写 source、ref（稳定论文标识/实际路径）、point、已核查范围和未知；来源可为用户、已有笔记、调研、方向跟踪或本次检索。用户信息与agent推测分开，不为凑字段替用户指定偏好或会议。
-
-已有 card 的研究线索只作为待检验素材；旧 worth_reading=false 不代表研究不可做。旧 wedge/entry_track 可保留为历史信息，不能据其缺失拒绝探索。
+- `wedge` 是 Step 2 每个 pitch 的"武器"字段的**唯一来源**——聊不出筹码时主会话要拿种子源提示（"你刚精读过 X，里面的 Y 你比大多数人熟，这算一张牌"）。四个子字段实在没有就留空，但全空 = 触发红灯出口（见 direction.md Step 1）。
+- `target_venue` / `resources` 是**硬门槛**——拿不到具体值不许进 Step 2；用户说"未定/不知道"就当场聊定一个工作假设记下来。没有约束的方向和路线会被设计成空中楼阁。
+- `seeds[]` 一律是**待验证假设**——照实记录来源和出处（`ref` 必填，可回溯），不在这里判断"还能不能做"（那是 Step 3 的活）。
+- `kind` 沿用 paper-card 的连接分类词汇（内向=方法上/证据上/边界上/解释上，外向=搬思想/推结论/借工具/当约束）；替换点记「替换点」；LS/DT/用户直给的种子没有分类就记「无分类」。
+- `open_questions` 是 Step 3 任务书里"调研要特别回答什么"的直接来源——别空着，对话里没聊透的都记这。

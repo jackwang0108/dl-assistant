@@ -1,41 +1,145 @@
-# 为解释问题取得必要观察
+# 诊断脚本 cookbook（code-reading）
 
-先明确当前未知是什么、观察会怎样改变解释，再选择方式；不以“能运行”作为必须执行的理由，也不把所有运行结果称为真值。无需运行即可确定的源码内容直接说明，条件不明的推断保留前提。
+> code-reading 读源码时，**「这个 tensor 运行时实际什么 shape」「registry 真 build 出哪个类」「BN 跑的什么统计」这类运行时事实，静态读看不到。**
+> 本手册管**写/跑 standalone 诊断脚本**这一路。纪律一句话：**能用脚本验的，就别凭脑子猜。** 猜一个运行时事实前，先走下面的决策——这事能不能脚本验、验它要什么环境。
+> 诊断脚本是一次性只读探针，不是交付物；写出来是为了讲清当前段，讲完即弃。
+>
+> **想交互式地在断点里看同样的真值**（A 模式默认）→ 见 `vscode-debugging.md`：在 VSCode debug console 的 REPL 里逐行敲，比脚本更顺手，且在真实运行上下文里看。本手册是它的补充——agent 自己要先验才能讲的事、或要隔离复现某段逻辑时，写脚本跑。
 
-## 观察方式与证据范围
+## 决策：要验一个运行时事实，先问「需要什么环境」
 
-| 方式 | 需要记录 | 能说明的范围 |
-| --- | --- | --- |
-| 静态阅读 | 实际源码版本/位置、配置和推理前提 | 定义、职责和条件性行为，不证明分支已执行 |
-| 重写/抽取教学例子 | 源片段、抽取/修改、输入和独立环境 | 该例子/抽取逻辑，不是原项目行为 |
-| 导入真实组件的局部调用 | 实际版本、构造过程、输入、状态、环境及遗漏上下文 | 此组件在所构造条件的观察，不证明真实入口完整条件已复现 |
-| 项目真实入口 | 命令/工作目录、代码/config/模型/数据、设备/精度/模式与实际范围 | 该次运行的实际观察，不认证所有条件或模型正确 |
-| 用户调试输出 | 用户报告/截图可见部分、断点/版本和运行条件、未取得的信息 | 实际收到内容所支持的判断；预测不是观测 |
+```
+我要确认的这件事……
+├─ 需要 repo 的专属环境（import repo 模块 / 用它的 build / dataloader / checkpoint / 配好的依赖）
+│     例：dataset.__getitem__ 真实吐什么 keys、registry 按 config 真 build 出哪个类、
+│         load_state_dict 后哪些 key 没对上、它的 model 真实 forward 的层输出 shape
+│   → 只有 A（精读，有 setup report 的环境）能跑。B 给不了，走最下面的 fallback。
+│
+├─ 只需通用 python+torch 环境（自包含、不依赖 repo 的专属依赖/数据/权重）
+│     例：一段 reshape/permute/view 的 shape 变换、einops rearrange、
+│         一个只用到 torch 标准层的自包含 nn.Module 的 forward、读 config 文件解析成什么 dict
+│   → 写独立小脚本验。A 和 B 都该做（只要机器上有个能跑 torch 的通用环境）。
+│
+└─ 什么都不用跑（讲代码结构 / 职责 / 意图 / 调用关系）
+      → 静态读，不写脚本。
+```
 
-通用环境可演示独立逻辑，但先核依赖/版本、合法输入和实际运行能力；没有setup报告不代表没有环境，有报告也不能保证本次可用。不得用重新写出的实现去验证原代码正确。复用已有结果前核条件是否相符。
+**两个常被误判的点：**
 
-## 运行前核影响与授权
+- **「环境没配」≠「什么都不能验」。** repo 专属环境没配，不代表通用 torch 环境也没有。自包含的 shape 逻辑、单个标准模块、算子行为，通用环境就能验——**B 模式遇到这类，照样写独立脚本，别臆想**。
+- **「能跑 repo」≠「什么都该跑脚本」。** 讲清结构、职责、意图靠读源码就够，别为了讲一个一眼能看懂的函数去起脚本。脚本只用在「静态读确实定不下来」的运行时事实上。
 
-阅读脚本也可能因导入、初始化、读取数据/迭代器、模型调用、模式切换、梯度、hook或日志产生状态/文件/网络/设备影响。不要用“不改源码”宣称只读，也不借外挂方式绕过实际授权。
+### B（静态读）跑不了时的 fallback——绝不把推断当实测
 
-说明要观察什么、真实输入/配置、是否改变状态/生成文件、预计范围/成本及恢复办法。已明确批准的范围不重复问；新源码修改、状态影响或资源超出范围时先讨论。科学测量/干预实验交研究设计与execution，环境/资产准备交setup，不自动下载或安装。
+某件事需要 repo 专属环境、而 B 没有时：
 
-优先使用合适隔离过程/模型副本或可核实的状态管理；改变了训练/推理、梯度、随机性或输入时说明其与真实入口的差异，不用简化模式证明训练状态。恢复仅涉及本次修改，不自动覆盖checkpoint/已有文件。
+- 把 shape/值明确标成 **「源码推断，待真跑确认」**，不写成观测到的事实。
+- 独立脚本验的是**「抽取出来的那段逻辑」**（把那段 reshape 拎出来用 dummy tensor 跑），要说清它验的不是「repo 真跑起来」——避免独立复现时自己把逻辑抄错了还当成实证。
 
-## 实施与留证
+## 两类诊断 × 手法
 
-- 先读实际接口/配置，用合法且必要的输入，不假设每个batch是dict、每个输出是单张量。
-- 只观察与问题相关的模块/变量；hook、取统计、读取属性等方法也核实际版本行为，不能默认绝无影响。
-- 操作需要时保存实际源码diff、命令/工作目录、环境/版本、配置和输入身份、模式/状态、日志/退出状态和必要结果；独立例子明确修改与遗漏。
-- 观察与预期不一致，先核条件和解释，不直接宣称bug；新证据足够时修订说明并保留依据。
-- 结束时解除本次添加的观察机制、核临时状态/源码实际恢复，保留支撑解释所需材料。无需的数据不大量保存，不能无条件删除全部diagnostics目录。
+### 类一：repo 集成诊断（A 专属，需 repo 配好的环境）
 
-产物默认放本次阅读目录diagnostics/，尊重指定位置，避免同名覆盖；实际未执行的脚本标未运行。用户明确不保存文件时尊重并说明无法依赖文件恢复哪些内容。
+import repo 的模块、用它的 build/dataloader/权重，看**真实**运行时值。下面三个手法写成脚本由 agent 跑；同样这些真值想交互式看，用 `vscode-debugging.md` 的 debug console。
 
-## 简短案例
+**手法 1 · import + 构造 + print 静态结构**（最常用，看 keys/shape/dtype/对象类型）
 
-只想解释形状转换：先从源码和输入约束推导，确有歧义才做小例子；小例子输出不能登记项目实测。
+```python
+"""
+Diagnostic: 验 dataset.__getitem__ 实际输出结构. [code-reading · <章节>]
+import 项目代码构造一个样本，打印 keys 和 shape，不改任何文件。
+"""
+import os, sys
+REPO_ROOT = "<repo 绝对路径>"          # 显式指定，别靠 __file__ 相对推算（脚本在 docs/code-reading/ 下）
+sys.path.insert(0, REPO_ROOT)
+os.environ["HF_HUB_OFFLINE"] = "1"     # 按需；其他 env 按 setup report（no_proxy / HF_ENDPOINT 等）
 
-要看指定配置构造的实际类：优先核构造入口及配置，已有授权内做相关观察；缺环境可静态给候选与待确认，不把类名猜测当实际对象。
+import torch
+# ... 用 repo 的 build/config 构造 dataset ...
 
-要看训练状态中的中间量：先核状态/随机性/梯度和输出影响，避免为简单观测改成推理状态后还称训练行为。一次结果只说明本次上下文。
+sample = dataset[0]
+for k, v in sample.items():
+    print(f"{k:20s} {tuple(v.shape) if torch.is_tensor(v) else type(v).__name__}")
+```
+
+**手法 2 · 非侵入 forward hook（看真实 forward 的层输入输出，不改源码）**
+
+要看「真跑起来某层是什么 shape / 什么模块」用这个。`register_forward_hook` 从**外部**挂钩子，**模型源码一行不动**，脚本结束钩子失效——这不算「改源码」，不需要审批。
+
+```python
+"""
+Diagnostic: hook <module 路径> 看真实 forward 的 in/out shape. [code-reading · <章节>]
+外挂 forward hook，不改模型源码；跑 1-2 个 batch 打印后即移除。
+"""
+import os, sys
+REPO_ROOT = "<repo 绝对路径>"
+sys.path.insert(0, REPO_ROOT)
+os.environ["HF_HUB_OFFLINE"] = "1"
+
+import torch
+# ... 用 repo 代码 build 出 model、拿一个真实 batch（复用 repo 的 build/dataloader，别自己造假数据）...
+
+records = []
+def make_hook(name):
+    def hook(module, inputs, output):          # inputs 是 tuple，output 是该模块返回值
+        def shape_of(x):
+            return tuple(x.shape) if torch.is_tensor(x) else type(x).__name__
+        records.append((name, type(module).__name__,
+                        [shape_of(i) for i in inputs], shape_of(output)))
+    return hook
+
+handles = []
+for name, module in model.named_modules():
+    if name in {"backbone.layer4", "neck", "bbox_head.cls"}:   # ← 换成这次要追的层
+        handles.append(module.register_forward_hook(make_hook(name)))
+
+model.eval()                                   # 追训练链行为时改 model.train()，BN/dropout 行为不同
+with torch.no_grad():
+    _ = model(batch)                           # 真实 forward，钩子自动触发
+
+for name, cls, ins, out in records:
+    print(f"{name:24s} {cls:18s} in={ins} -> out={out}")
+
+for h in handles:                              # 用完移除
+    h.remove()
+```
+
+要点：
+
+- **按名字精确挂**关心的几层，别 `for all modules` 全挂——输出爆炸又拖慢。先 `print([n for n,_ in model.named_modules()])` 找准名字。
+- 追**训练链**真值时 `model.train()` 跑——BN 走 batch 统计并更新 running stats、dropout 生效，和 eval 模式不同；这正是要看的（也是 reproduction 追训练链伪对齐时「眼见为实」要的）。
+- hook 里**只读不改**：只记录/打印，**不要改 output**（改了就是侵入式干预，要按 SKILL 约束 #5 审批）。
+
+**手法 3 · 读 buffer / backward hook（看权重、running stats、梯度）**
+
+- 看 BN 真实统计：直接读 `module.running_mean` / `running_var` / `momentum`，判它是 `SyncBatchNorm` 还是普通 `BatchNorm2d`。
+- 看梯度：`module.register_full_backward_hook(fn)`，在 `loss.backward()` 后拿 grad 的 shape/范数。
+
+### 类二：通用环境独立诊断（A/B 都可，只需通用 torch）
+
+不 import repo，把要验的**自包含逻辑抽出来**用 dummy tensor 跑。专治「B 没配 repo 环境，但这事其实通用环境就能验」。
+
+```python
+"""
+Diagnostic: 验 <某函数> 的 reshape 逻辑 shape 是否如源码推断. [code-reading · <章节>]
+独立复现源码里的那段形状变换，不 import repo。验的是「抽取的逻辑」，非 repo 真跑。
+"""
+import torch
+
+B, C, H, W = 2, 256, 32, 32
+x = torch.randn(B, C, H, W)
+# —— 照抄源码 line <N> 那段（标清来源）——
+out = x.flatten(2).transpose(1, 2)             # [B, C, H, W] -> [B, H*W, C]
+print(out.shape)                               # 对照源码注释/论文期望
+```
+
+## 通用原则（两类都遵守）
+
+- **只读 / 只打印，不改 repo 文件。** 改源码看变量要走 SKILL 约束 #5（审批 + 不改语义 + 删除）；优先用 hook 这类外挂手段绕开改源码。
+- **首次授权一次。** 本次阅读会话首次要写诊断脚本时，先说意图请用户批准，之后本会话内不再重复确认：
+  > 「我想写个小脚本验 dataset.__getitem__ 的实际输出结构，只 import 代码打印一个样本的 keys/shape，不改任何文件。可以吗？」
+- **运行前展示脚本，运行后直接用于讲解当前段。**
+- **环境**：类一用 setup report 里的 `conda run -n <env> ...`，不另选环境；类二用通用 torch 环境。
+- **产出位置**：脚本落 `docs/code-reading/diagnostics/`（不假设 `docs/` 存在，先确认/建/问用户）。`sys.path` 显式指 repo 绝对路径，别靠 `__file__` 相对推算。
+
+> 想用 VSCode 调试器（断点 + debug console REPL）交互式看这些真值，而不是跑 standalone 脚本 → `vscode-debugging.md`。launch.json 模板、单进程调试分布式训练，都在那。

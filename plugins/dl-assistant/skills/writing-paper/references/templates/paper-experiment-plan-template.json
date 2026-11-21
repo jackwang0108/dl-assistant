@@ -1,52 +1,38 @@
 {
-  "schema_version": 2,
   "_notes": {
-    "purpose": "plan-vN.json与同名md共同描述真实批准设计；空示例未批准，不直接开跑。",
-    "compatibility": "保留旧CPE字段；扩充设计和状态语义需与消费者核对。不支持纯分析或部分结果时不能伪填训练/成功。",
-    "expected_signal": "各种结果如何解释及依据，不是预计增益或保证阳性；探索可写尚无方向预测并给analysis_plan。",
-    "approval": "用户已批准范围与未决分开，实质变化保存新版。",
-    "execution_type": "实际操作training/evaluation/diagnostic/ablation/analysis/probe/theory；type可记论文用途，不能据main/comparison推断训练或多seed。",
-    "replicates": "expected_replicates按设计列{id,seed}，seed可null；没有随机重复可声明main一次操作，不凑固定seed。"
+    "是什么": "_draft/experiments/plan-vN.json 的 schema——实验计划包的机读区（code-paper-experiment 消费的唯一读取源）。人读区（验证覆盖矩阵/依赖拓扑/批次说明）在同名 plan-vN.md，两者由 op-4 一起产出。版本化递增：v1 只装长周期必做项（配置未冻结则配置选定批优先），写作中新增需求攒成 vN+1，plan_version 与文件名 N 对应。",
+    "config_frozen": "中期收口时配置是否已冻结；false → 本批必须先含 decides_config 实验（配置未冻结主表不开跑）",
+    "experiments[].type": "main | ablation | analysis | comparison | efficiency | qualitative",
+    "experiments[].priority": "must（必跑·正文核心）| should（可选·锦上添花）| appendix（进附录）。跟 blueprint 页数参考对齐——页数紧时 should/appendix 可挪可砍（压缩工序用户裁决），must 不能砍",
+    "experiments[].decides_config": "结果影响配置冻结（组件消融/超参选定）→ 必须先于主表跑完，配置冻结确认点（用户拍板）后主表批才开跑。一次实验多处消费：组件消融（全量+多 seed 正规协议）既是配置依据又是论文消融表；超参搜索进附录敏感性分析。test peeking 红线：配置决策只用 validation split",
+    "experiments[].depends_on": "拓扑依赖（其他 exp_id）——CPE 按它在多卡机器上排程：无依赖并行、有依赖等待。漏标 = 该并行的串行等，GPU-hours 白烧。定性实验 depends_on 主 run（用其 checkpoint）",
+    "experiments[].expected_signal": "预注册 success bar——什么结果支持 claim / 什么结果否定；bar 的依据写清（同类工作同类改动的典型幅度 + bar 与 claim 强度匹配）。防 post-hoc cherry-pick；否定信号触发回 blueprint 重审 contribution，不硬写",
+    "experiments[].fairness": "main/comparison 必填——baseline 公平条件（同数据/预处理/training budget/调参力度；baseline 用原文最佳超参不弱化；同期 SOTA 必比；官方报告数字 vs 自复现说清，自复现注明条件）。防 reviewer 头号攻击；进 CPE 契约",
+    "experiments[].output_to_paper": "数据回 writing-paper 后填哪（主表/消融表/附录敏感性/定性图位）——一处实验多处消费在这里体现"
   },
   "plan_version": 1,
-  "paper_repo": null,
-  "generated_at": null,
+  "paper_repo": "<writing-paper 的论文根路径（papers/<slug>/）>",
+  "generated_at": "YYYY-MM-DD",
   "storytelling_ref": "_draft/blueprint.md",
-  "research_assessment_ref": null,
-  "config_frozen": null,
-  "approval": {
-    "status": "pending",
-    "record_ref": null
-  },
+  "config_frozen": false,
   "experiments": [
     {
-      "exp_id": "exp-XXX",
-      "paper_claim": null,
-      "claim_cids": [],
+      "exp_id": "exp-ablation-A",
+      "paper_claim": "Contribution 1 的消融：模块 A 有效",
+      "claim_cids": ["C2", "C2a"],
       "priority": "must",
-      "type": "analysis",
-      "design_mode": "exploration",
-      "decides_config": false,
+      "type": "ablation",
+      "decides_config": true,
       "depends_on": [],
-      "config": null,
-      "condition_review_ref": null,
-      "purpose": null,
-      "expected_signal": null,
-      "analysis_plan": null,
-      "interpretation_plan": null,
+      "config": "<去掉模块 A / 换 baseline / 不同数据集 等（full config 基础上的变动）>",
+      "purpose": "证明模块 A 带来 X% 提升；同时作为配置冻结依据",
+      "expected_signal": "模块 A ≥2% 提升（依据：同类工作同类改动典型 2-4%）；<1% 则 claim 不成立 → 回 blueprint 重审",
       "fairness": {
-        "comparison_basis": null,
-        "known_differences": []
+        "same_as_ours": ["数据集", "预处理", "training budget", "调参力度"],
+        "notes": "baseline 用其原文最佳超参，不弱化；同期 SOTA 必比；自复现注明条件"
       },
-      "uncertainty_plan": null,
-      "required_artifacts": [],
-      "expected_cost": null,
-      "stop_conditions": [],
-      "output_to_paper": null,
-      "execution_type": "analysis",
-      "expected_replicates": [],
-      "resource_requirements": null,
-      "adjustment_bounds": null
+      "expected_cost": "~12 GPU-hours (4 seed × 3h)；deadline 倒推：须 M-D 前开跑",
+      "output_to_paper": "论文消融表 Table 3 第 2 行（+ 配置冻结依据）"
     }
   ]
 }

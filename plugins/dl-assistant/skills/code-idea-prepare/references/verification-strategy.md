@@ -1,55 +1,84 @@
-# 按变更与保留用途验证
+# 验证策略（coverage 收集 + smoke + 性能验证 + 失败回退）
 
-验证目标是每项改动对应的行为，不是统一训练分数。指标接近不是行为等价，有限检查也不证明所有输入/配置保持一致。
+> CIP 验证四件套：coverage 收集（识别核心路径 vs 未覆盖 + 热路径落盘）→ 每批 smoke（管道不崩）→ 性能验证（验证级别 = 迭代级别，严格相等 ±0.1%）→ 失败回退（循环定位 + 回滚）。
+> 契约：清理/优化后性能与 reproduction 基准**严格相等（±0.1%）**。
 
-## 1. 先固定比较对象与范围
+## 1. coverage 收集（三分类的基础 + 热路径地图）
 
-记录改前实际代码commit+未提交diff、环境/config、数据/模型/保存文件身份和当前保留用途。上游结果只有在条件对应、范围相关时复用；必要的改前检查缺失则取得合理对照，不把旧tag或报告存在当作对照。
+按 `reproduction.json` 的内容选 coverage 命令——目的是跑出核心路径分三类 + 产出热路径地图，**不是验性能**：
 
-每项变更明确保留/有意改变的行为和影响范围，包括数值计算、异常行为、输入输出、命令/配置接口、数据处理、参数命名及保存/恢复兼容。移除旧用途需明确是支持范围变化，不叫整体等价。
+| 情形 | coverage 命令 |
+|---|---|
+| 有 `reduced_setting`（要重训且 full 超迭代预算） | `reduced_setting.command`——**首选**：短，且覆盖训练 + 评测整条链 |
+| training-free（无训练链） | `ready_commands.eval`——eval 链就是全部核心路径 |
+| 无 reduced、有 `train_scaled`（分流 C 缩规模 b） | `ready_commands.train_scaled` |
+| 无 reduced、full 在迭代预算内 | `ready_commands.train`（覆盖到即可，可提前截断） |
 
-## 2. 调用/覆盖证据怎么用
+```bash
+python -m coverage run --source=<pkg> <上表选出的命令>
+python -m coverage report --show-missing    # 哪些代码没跑到
+```
 
-观察绑定实际命令、环境、代码/config、输入范围、执行状态和工具范围。覆盖信息仅说明观察到什么，不说明未命中就是无用、命中就是性能热点，也不代表未来所有任务都会经过。
+三分类：
 
-动态导入/注册、配置字符串/安装入口、命令行、文档和外部调用线索、导入副作用、序列化依赖都可能影响删除判断。源码检索/静态工具只提供候选；无法确认是否在保留范围中就保留并记未知，或者提出显式移除用途的决定。
+- **核心路径**（coverage 覆盖）→ CIP 可清理 + 优化（动完重验性能）
+- **未覆盖 + 静态无引用**（grep/import 图/动态 import 排查都无）→ 死代码，删
+- **未覆盖 + 有引用**（不确定）→ 潜伏区，记 uncovered 不动
+- **迭代设施例外**：`ready_commands` / `reduced_setting` 命令链触及的文件与缩放开关（模型大小档位 / 数据子集），即使未覆盖也按核心路径对待，不删不改（见 SKILL.md「迭代设施保护」）
 
-扩展算子、多进程/分布式等覆盖支持取决于工具和配置；先核本次实际采集范围，不声称所有Python覆盖工具一律统计不到某类代码。仅import记录不证明函数执行。性能热点需要另有实际计时/性能分析及条件，不能从行覆盖推出。
+**热路径落盘**：coverage 明细（模块/文件级覆盖报告）存到 cleanup 目录的 `coverage/`，并整理一份 `hot-path.md`——哪些模块在训练链上、大致在执行链的什么位置。execution 改模块前查它：在热路径上 = 每轮迭代都会执行到、验证便宜；不在 = 改动不会被迭代循环覆盖，要自己补验证。
 
-按需保存coverage/operation-paths.md：操作ID、命令/config/输入、实际观测路径、未观测/工具遗漏与可复用条件；沿用旧hot-path.md时明确旧名称不证明热点。覆盖不是每次清理的强制高成本步骤，也不默认启动训练采集。
+> **coverage 失真警示（非纯 Python 项目）**：C++/CUDA 扩展里的 kernel、多进程 dataloader 的子进程代码，Python coverage 统计不到——跑出来"未覆盖"可能是假阴性。此时改用 **import 级覆盖**（哪些模块真被 import 到）+ **人工标注不可覆盖区**（扩展算子、子进程路径逐个确认用途），别把假阴性当死代码删。
 
-## 3. 变更—行为—证据对应表
+## 2. smoke 分级（每批清理/优化后验管道不崩）
 
-| 变更 | 需要考虑的检查 | 不足以单独证明 |
-| --- | --- | --- |
-| 删除脚本/配置或入口 | 是否在保留范围、调用/文档/动态配置、实际相关入口 | 主入口--help不报错 |
-| 删除依赖 | 实际运行/安装/插件/间接用途，隔离环境中相关操作 | 源码没import，当前环境仍可运行 |
-| 重构函数或模块结构 | 对应输入输出、必要内部量、参数/状态命名、加载和接口 | 单指标相同，forward成功 |
-| 修改数据路径/变换 | 真实样本ID/数量/标签/单位/划分/顺序及对应关系 | loader非空 |
-| 修改训练相关实现 | 必要loss/梯度依赖/更新、相关随机性/保存恢复；按风险补实际结果 | 一次非零梯度、短训练不崩 |
-| 有意修复数值/错误处理 | 原问题证据、期望新行为、正常/相关边界的退化检查、旧结论适用性 | 增加校验或epsilon所以“不改逻辑” |
-| 修改文档/不影响计算的注释 | 实际引用/命令说明与代码对应、diff审阅 | 不必因此运行完整训练 |
+首选 `setup.json` 的 `ready_commands.train_smoke`（CPS 验过的分钟级冒烟命令）；命令不存在或粒度不够时，按下表现组：
 
-选择与实际变化相关、能发现具体退化的最低合理成本检查；必要时补完整评测或训练，不默认每批训练或把所有变化都压成一个batch。删除明显无关且已授权的材料可以以范围/引用审阅为主要证据，不为制造测试而扩大任务。
+| 改动类型 | smoke 粒度 | 耗时 |
+|---|---|---|
+| 删独立脚本 | 主入口 `--help`（无 ImportError） | 10s |
+| 删函数/类 | 跑到第一个 batch（forward + backward） | 1-3min |
+| 删依赖 | 重装 + import 检查 + 一个 batch | 5-10min |
+| 删模型组件 | 加载模型 + forward 一个 batch | 2-5min |
+| 质量优化（减抽象/健壮性） | 同"删函数/类"粒度 | 1-3min |
 
-## 4. 预期与数值比较
+**通过标准**：无 ImportError / AttributeError / NameError，能完成 forward + backward。**smoke 不验性能**（留给完整验证）。
+**失败**：回滚该批 + spec 标不可删/不可改。
 
-沿用setup的 [行为检查规则](../../code-project-setup/references/numeric-sanity.md)，核输入、条件、预期及来源。预期精确保持的离散身份/结构可做对应比较；数值比较按实际算法/精度/误差依据说明容差，不能给所有指标统一百分比。
+## 3. 性能验证（验证级别 = 迭代级别）
 
-随机过程或大规模指标变化要分开代码、环境/资产、抽样和运行随机性；同seed不保证一切相同。重复与分析按目标和预算安排，不用旧noise_floor或2×std直接裁决，不反复加seed直到接近。无足够依据时记验证不足，不把未显著当等价，也不以差值小掩盖关键行为改变。
+契约：**性能严格相等（±0.1%）**。execution 将在哪个配置上迭代，就在哪个配置上验——不是"reduced 验趋势 + full 抽验"，否则 execution 拿到的迭代起点本身没验过：
 
-检查记录需含改前/改后各自真实条件与执行证据、实际输出/行为、比较方法/依据、发现及未覆盖范围。旨在保持行为的变更若有差异，先调查；有意行为变更不能靠“新旧一致”验证修复，需核新行为是否满足批准的明确要求及相关保留行为。
+| 情形 | 验证配置 | 基准 | 噪声判断 |
+|---|---|---|---|
+| 有 `reduced_setting` | 同 reduced 配置、同 seed | `reduced_setting.baseline_result` | `reduced_setting.noise_floor` |
+| training-free | eval 链（official eval） | 冻结 `target` 块的 `eval_reproduced`（±`tolerance_band`） | eval 确定性即可（对照 `determinism`） |
+| 无 reduced、full 在迭代预算内 | full 训练 | 冻结 `target` 块的 `training_reproduced`（±`tolerance_band`） | `noise_floor`（跨 seed std） |
 
-## 5. 状态与后续行动
+- 同 seed/配置重跑（对照 `reproduction.json` 的 `determinism`：seeds / cudnn / worker seed）
+- 清理/优化后数字 vs 基准，全在 band 内 → 通过
+- 验证级别显式记进 `cleanup.json` 的 `performance.verification_level`（`reduced` / `eval` / `full`）；迭代命令 post-cleanup 可用且数字对齐 → `handoff.iteration_verified: true`
+- full / reduced 多 seed 是小时级长任务：tmux 托管，机制见 `dl-assistant/references/long-run-ops.md`（session 前缀 `cip-<repo>-`）
 
-进程执行状态与比较判断分开。comparison_result用no_difference_observed/difference_observed/insufficient_evidence/not_assessed/not_applicable：分别表示所查范围没发现差异、发现差异、证据不足、未判断、不适用。有意改行为则以behavior_assessment记录matches_expected/conflicts_with_expectation/investigate/not_checked/not_applicable及依据，不把预期修复成功叫行为等价。
+## 4. 失败回退（循环，直到通过或全退）
 
-退出0不认证检查符合预期；报告完整也不自动升级实际行为。no_difference_observed只限已查范围；不得由它推导所有配置等价或新方法有效。不能验证的修改可暂不采用，不能标已确认无影响。
+性能不符时，**循环**处理（不是一次走完）：
 
-## 6. 差异调查和局部撤销
+1. **排随机性**：对照 `determinism`（seed/cudnn）多 seed 跑，用 `noise_floor`（或 `reduced_setting.noise_floor`）判是不是噪声（单 seed ±band 内偏差可能只是噪声）
+2. **确认非噪声 → 二分定位罪魁**：逐 commit / 逐 batch，定位哪个清理/优化引入了偏差
+3. **回滚罪魁**：cleanup-spec / quality-spec 标"不可删/不可改"，重验
+4. **回循环**：重验还失败 → 继续二分定位下一个罪魁 → 回滚 → 重验（可多轮）
+5. **底线（退出条件）**：定位不到根因 / 回滚到 `baseline-reproduced` 仍失败 → **全退 `baseline-reproduced`**，CIP 本轮失败，不打 `baseline-prepared`，execution 从 `baseline-reproduced` 切
 
-核前后条件、输入/预期和工具记录，再比较局部改动、环境漂移或原证据是否失效。可在明确预算下按独立变更定位；不预设二分一定适合或必须查明根因。
+> 底线原则：**CIP 是锦上添花（清理+优化），不能破坏可信 baseline**。无法定位/修复 → 整轮回退。失败的代价是"没清理没优化"，不是"baseline 变差"。
 
-只撤销本次可识别改动，优先隔离分支/工作区或具体补丁保留用户原内容；无法安全分离就报告并讨论，不自动reset、clean或覆盖环境/数据。撤销后核状态及受影响检查，不因回到旧commit就宣称已恢复。
+### 常见失败根因
 
-改前也失败或来源条件改变，先返回setup/reproduction核前置或参考，不把旧实现继续认证为可信。记录未采用、撤销、部分保留与原因；无新信息、超预算或需改研究设计时允许停止，不循环到通过为止。
+| 症状 | 可能根因 | 处理 |
+|---|---|---|
+| 清理后 metric 偏 | 误删动态 import/registry 引用的代码 | 二分定位 + 回滚 + 标不可删 |
+| 优化后 metric 偏 | 鲁棒性优化（epsilon/clamp）改了数值 | 回滚该优化 + 标语义风险 |
+| 随机偏差（±band 内） | 单 seed 噪声 | 多 seed + noise_floor 确认，非真差不回滚 |
+| 精简依赖后崩 | 传递依赖（被删包间接提供的） | 恢复依赖 |
+| reduced 命令跑挂 | 误动迭代设施（数据子集开关 / reduced config） | 恢复 + 列入保护清单 |
+| 找不到根因 | 复杂交互 / 环境漂移 | 全退 baseline-reproduced |

@@ -1,88 +1,464 @@
 ---
 name: research-presentation
-description: 制作组会进展、论文分享、学术报告和技术项目汇报。根据听众、目标和时长组织内容，逐页规划并准备图片/图表/示意图，按解释需要加入交互、讲者备注和问答附录，制作可离线播放的 Reveal.js HTML 与经过核查的 PDF。支持修改已有汇报，不负责替用户确定尚无证据的研究结论。
+description: Create polished, professional reveal.js presentations (enhanced). Use when the user asks to create slides, a presentation, a deck, or a slideshow. Supports highlight.js/KaTeX/mermaid/d3/Chart.js/plotly, dynamic theme generation, component library, multi-column layouts, animations, speaker notes. Generates HTML + CSS with no build step required.
 ---
 
-# 科研与项目汇报
+# Reveal.js Presentations
 
-交付让听众理解问题、看懂依据并参与讨论的汇报。先组织内容与视觉表达，再制作页面；设计帮助解释，不能通过强化措辞、装饰图片或动画代替证据。默认使用 Reveal.js 实现，采用本地资源；名称和使用目标不绑定具体前端库。
+Create HTML presentations using reveal.js. No build step required - just open the HTML in a browser.
 
-全局与跨机器约定见 dl-assistant。已有论文、实验与研究判断按实际文件/版本核对，不强制用户先走完其他 skill。原版来源和实现说明见 [工程与离线交付](references/engineering.md)。
+## What You Create
 
-## 1. 明确汇报任务并读取材料
+A reveal.js presentation consists of:
 
-使用当前会话已知信息，核对场景、听众背景、希望回答的问题/获得的决定、讲述时长与问答安排、语言和用户指定格式。只有影响内容而无法从现有材料判断时才补问；不强制固定问卷。若用户只要求修改几页，保持授权范围和已有风格。
+1. **HTML file** - Contains slides and loads reveal.js from CDN
+2. **CSS file** - Custom styles for layouts, colors, typography, and components
 
-读取用户提供的论文、笔记、项目代码、真实截图、实验记录及当前判断。原文声明、项目实测、推理和待验证设想分别记录；缺图/缺数据主动查找或提出可执行的取材方式，不编造结果。需要取论文图时，按实际可用的 tex-mcp/pdf-mcp 接口取得原图和上下文，标版本、图号、裁剪/重绘及来源。文献和图表检索按用户授权与可用工具执行。
+## Design Principles
 
-场景组织见 [内容与讲述安排](references/content-planning.md)：组会呈现认识变化和需要讨论的问题；论文分享解释问题、方法、证据及评价；学术报告突出新增知识和适用范围；项目汇报对照目标/验收、实际能力和需要的决定。可以混合，不套固定成功故事。
+**CRITICAL**: Before creating any presentation, analyze the content and choose appropriate design elements:
 
-## 2. 组织内容，逐页规划视觉表达
+1. **Consider the subject matter**: What is this presentation about? What tone, industry, or mood does it suggest?
+2. **Check for branding**: If the user mentions a company/organization, consider their brand colors and identity
+3. **Match palette to content**: Select colors that reflect the subject
+4. **State your approach**: Explain your design choices before writing code
 
-先给简短的汇报安排，说明听众从哪些已有认识走到什么理解。主要材料放正文，推导细节、补充实验和常见问题按需要进附录；页数根据内容/讲述时间安排，不使用固定“一页一分钟”规则。重要取舍由用户决定，已经批准的安排直接继续，不每页都停顿。
+**Requirements**:
+- ✅ State your content-informed design approach BEFORE writing code
+- ✅ Use web-safe fonts (Arial, Helvetica, Georgia, Verdana, etc.) or Google Fonts via `@import` in CSS
+- ✅ Create clear visual hierarchy through size, weight, and color
+- ✅ Ensure readability: strong contrast, appropriately sized text, clean alignment
+- ✅ Be consistent: repeat patterns, spacing, and visual language across slides
+- ✅ **Always use `pt` (points) for font sizes** - slides are fixed-size, so `pt` is predictable and familiar (like PowerPoint/Keynote). Never use `em`, `rem`, or `px` for font sizes.
 
-新制作或较大改稿保存轻量 `talk.plan.json`，结构见 [规划示例](references/plan-example.json)。已有等价笔记可沿用，检查脚本需对应结构。每页记录：
+### Color Palette Selection
 
-- 要回答的问题、主要信息、证据来源、预计讲述时间、讲者备注/过渡。
-- **视觉方案**：需要什么图片、图表、示意图、样本、媒体或交互；它帮助听众理解什么；实际素材/来源和准备状态。
-- **静态表达**：交互、媒体、互斥显示或复杂动画在 PDF 和现场备用时如何保留关键解释。
+**Choosing colors creatively**:
+- **Think beyond defaults**: What colors genuinely match this specific topic? Avoid autopilot choices.
+- **Consider multiple angles**: Topic, industry, mood, energy level, target audience, brand identity (if mentioned)
+- **Be adventurous**: Try unexpected combinations - a healthcare presentation doesn't have to be green, finance doesn't have to be navy
+- **Build your palette**: Pick 3-5 colors that work together (dominant colors + supporting tones + accent)
+- **Ensure contrast**: Text must be clearly readable on backgrounds
 
-每页都做这个判断。agent 要主动落实有帮助的视觉材料，不能因找图麻烦直接退回文字列表。标题、简短结论或讨论问题可以纯文字，写明原因；图标、边框和卡片不自动算承担解释任务的图。**规划里写了图片还不算完成，必须取得或制作素材并放入页面。** 细则见 [图片与视觉表达](references/visual-planning.md)。
+**Example color palettes** (use these to spark creativity - choose one, adapt it, or create your own):
 
-## 3. 准备图像、数据与演示材料
+1. **Classic Blue**: Deep navy (#1C2833), slate gray (#2E4053), silver (#AAB7B8), off-white (#F4F6F6)
+2. **Teal & Coral**: Teal (#5EA8A7), deep teal (#277884), coral (#FE4447), white (#FFFFFF)
+3. **Bold Red**: Red (#C0392B), bright red (#E74C3C), orange (#F39C12), yellow (#F1C40F), green (#2ECC71)
+4. **Warm Blush**: Mauve (#A49393), blush (#EED6D3), rose (#E8B4B8), cream (#FAF7F2)
+5. **Burgundy Luxury**: Burgundy (#5D1D2E), crimson (#951233), rust (#C15937), gold (#997929)
+6. **Deep Purple & Emerald**: Purple (#B165FB), dark blue (#181B24), emerald (#40695B), white (#FFFFFF)
+7. **Cream & Forest Green**: Cream (#FFE1C7), forest green (#40695B), white (#FCFCFC)
+8. **Pink & Purple**: Pink (#F8275B), coral (#FF574A), rose (#FF737D), purple (#3D2F68)
+9. **Lime & Plum**: Lime (#C5DE82), plum (#7C3A5F), coral (#FD8C6E), blue-gray (#98ACB5)
+10. **Black & Gold**: Gold (#BF9A4A), black (#000000), cream (#F4F6F6)
+11. **Sage & Terracotta**: Sage (#87A96B), terracotta (#E07A5F), cream (#F4F1DE), charcoal (#2C2C2C)
+12. **Charcoal & Red**: Charcoal (#292929), red (#E33737), light gray (#CCCBCB)
+13. **Vibrant Orange**: Orange (#F96D00), light gray (#F2F2F2), charcoal (#222831)
+14. **Forest Green**: Black (#191A19), green (#4E9F3D), dark green (#1E5128), white (#FFFFFF)
+15. **Retro Rainbow**: Purple (#722880), pink (#D72D51), orange (#EB5C18), amber (#F08800), gold (#DEB600)
+16. **Vintage Earthy**: Mustard (#E3B448), sage (#CBD18F), forest green (#3A6B35), cream (#F4F1DE)
+17. **Coastal Rose**: Old rose (#AD7670), beaver (#B49886), eggshell (#F3ECDC), ash gray (#BFD5BE)
+18. **Orange & Turquoise**: Light orange (#FC993E), grayish turquoise (#667C6F), white (#FCFCFC)
 
-按当前任务选择：用户/项目已有素材、论文原图/局部、真实截图、真实数据绘图、可检查的自绘 SVG/流程图、合法来源图片，或适合的生成式概念插图。并非固定优先级：选择最能解释信息且来源可查的方式。生成工具可用时按对应工具/skill规则调用；不依赖已废弃的 image-gen MCP。
+### Slide Content Principles
 
-每项素材记录用途、本地文件、来源、必要的权限/署名与 alt，区分原图、裁剪、重绘、示意和生成。示意/生成图片不得冒充真实实验、模型输出、设备或数据。科学图表从实际数据生成，保留处理脚本、条件、坐标/单位、样本/重复、选择规则和不确定性；不要把平滑曲线当原始读数。
+**Diverse presentation is key.** Even when slides have similar content types, vary the visual presentation:
 
-取图或生成失败时记录已尝试方法和缺失，改用能准确表达的其他方案；不能偷偷省略重要证据。交付前仍缺关键图，明确未完成并说明影响。不得把截图中的小字原样缩成不可读图片，按需要重绘、放大或分步解释。
+- Use **different layouts** across slides: columns on one, stacked containers on another, styled cards on a third
+- Mix container styles: plain text, custom styled containers, blockquotes
+- Use **visual hierarchy**: `<strong>` for key terms, different colors to distinguish categories
+- Break up lists with other elements (quotes, styled containers, columns)
+- Don't repeat the same layout pattern on consecutive slides
 
-## 4. 按解释需要制作页面与交互
+**Keep it scannable:**
+- Short bullet points, not paragraphs
+- One main idea per slide when possible
+- Use icons (Font Awesome) to add visual interest
 
-安装/构建及脚本见 [工程与离线交付](references/engineering.md)。默认自包含本地资源目录，运行时不使用 CDN 或在线字体。优先使用稳定清楚的布局；比较页保持对应位置、颜色和尺度一致，不为了变化强制换布局。正文大小按实际投影检查，内容过密先拆分或移附录，不靠持续缩字。
+**When a slide has less content, make it bigger** - don't leave empty space with tiny text.
+
+## Workflow
+
+### Step 1: Plan the Structure
+
+Based on the user's content, determine:
+- How many slides are needed
+- Which slides should be section dividers (centered, larger text)
+- Where to use vertical slide stacks for drill-down content
+
+### Step 2: Generate the Scaffold
+
+Use the `create-presentation.js` script (located in the `scripts/` directory next to this SKILL.md file) to generate the HTML scaffold.
 
 ```bash
-node <skill目录>/scripts/create-presentation.js --plan talk.plan.json --title "本轮研究进展" --features charts,math,code --output talk.html
+node <path-to-skill>/scripts/create-presentation.js --structure 1,1,d,3,1,d,1 --title "My Presentation" --output presentation.html
 ```
 
-生成器只提供待填内容和视觉位置，不是完成的汇报。增量编辑实际 HTML/CSS/数据，保护已有改动。默认不覆盖输出；`--force` 会创建唯一备份。主题生成和布局见 [主题](references/theme-generation.md)、[布局](references/layout-patterns.md)、[组件](references/components.md)。
+**Finding the script path:** Use `scripts/create-presentation.js` relative to this SKILL.md. Resolve the installed plugin path before running it.
 
-除了动态图表，可按讲述需要使用：
+**Options:**
+- `--slides N` - Create N horizontal slides (simple mode)
+- `--structure <list>` - Mixed layout with comma-separated values:
+  - `1` = single horizontal slide
+  - `N` (where N > 1) = vertical stack of N slides
+  - `d` = section divider slide (centered, no content wrapper)
+- `--output <file>` - Output filename (default: presentation.html)
+- `--title <text>` - Presentation title
+- `--styles <file>` - Custom CSS filename (default: styles.css)
 
-| 解释任务 | 表达方式 | 手册 |
-| --- | --- | --- |
-| 方法结构、信息流或处理步骤 | SVG/流程图、逐步高亮、跨页状态变化 | [图解](references/diagrams.md) |
-| 推导、代码和计算结果 | 符号定义、公式局部高亮、代码行/输出对应 | [公式](references/math-formulas.md)、[代码](references/code-highlighting.md) |
-| 比较同一样本或观察细节 | 前后/左右对照、局部放大、标注、图片切换 | [图片](references/visual-planning.md)、[交互](references/interactions.md) |
-| 参数作用、几何或算法直觉 | 有明确范围与重置方式的滑块/交互教学示例 | [交互](references/interactions.md) |
-| 音频、视频、系统能力 | 本地播放器、波形/频谱/时间标记、项目演示 | [媒体](references/interactions.md) |
-| 实验结果、分布和误差 | 可核查的图表和分组/逐样本视图 | [图表](references/charts.md) |
+**Examples:**
+```bash
+# 10 horizontal slides
+node <path-to-skill>/scripts/create-presentation.js --slides 10 --output presentation.html
 
-交互需说明输入、输出和适用范围；教学模拟显式标示，不能当新实验。提供键盘/点击控制、可重复初始状态和静态替代。主报告不依赖现场登录、临时计算或外网 iframe；在线演示仅为额外材料。动画用于解释变化，避免循环动效争夺注意力。
+# Mixed structure: intro, 2 content slides, divider, 3-slide vertical stack, divider, closing
+node <path-to-skill>/scripts/create-presentation.js --structure 1,1,1,d,3,d,1 --title "Q4 Review" --output presentation.html
+```
 
-## 5. 内容自查与实际渲染
+### Step 3: Generate the Theme
 
-自查写进现有规划/核查记录，不额外增加逐项审批：
-
-1. **组织完成时**：听众是否有必要背景，主要问题是否清楚，证据/未知是否区分，讲述安排能否服务目标？
-2. **页面制作时**：视觉表达是否实际落实且与本页信息相关，来源/标注正确吗？只有文字的页是否经过选择？公式、图和代码是否按理解顺序解释？
-3. **交付前**：主张是否超证据，比较条件和图表是否可读，备注/过渡/时间是否可用，交互和 PDF 是否表达一致，缺失与未验证是否如实？
+Use `generate-theme.js` to generate `styles.css` — a complete theme (colors + fonts + callout + code-block colors) derived from a primary color you pick based on the content. See [references/theme-generation.md](references/theme-generation.md) for picking primary color / mode / font pairing.
 
 ```bash
-node <skill目录>/scripts/check-content.js --plan talk.plan.json --html talk.html --report content-check.json
-node <skill目录>/scripts/check-charts.js talk.html
-node <skill目录>/scripts/check-overflow.js talk.html --report layout-check.json
-node <skill目录>/scripts/render-deck.js --html talk.html --out render-round-1
+node <path-to-skill>/scripts/generate-theme.js --primary "#1C2833" --mode light --font-pairing academic --output styles.css
 ```
 
-内容检查核声明、页面对应、素材存在/放置和静态替代；**不证明科学真实、图像相关性、许可或现场可读性**。渲染检查禁外网并逐页/逐显示步骤检查，不因后台页没显示就认定无溢出。退出0为已执行检查通过；1为发现错误，3为不完整/运行条件不足（各脚本具体说明见工程手册），不可将 SKIP/未运行当通过。
+The script writes a three-layer token system (primitive → semantic → component) and validates WCAG contrast (auto-adjusts accent/secondary to ≥4.5:1). Also update the HTML's `<link id="highlight-theme">` href to match the mode (dark→monokai-sublime, light→github) per the script's output.
 
-必须实际查看每页截图，逐步显示/交互的重要状态及 PDF 静态页也看；修改受影响部分后重新检查。自动脚本不能发现全部遮挡、误导图示或讲述问题。无法截图/导出时可交明确标识的草稿，不声称视觉/离线/PDF已验证。
+The base file (`base-styles.css`, the scaffold baseline) defines CSS variables the script fills in:
 
-## 6. 演练与交付
+**Using Google Fonts:** Add an `@import` at the top of your CSS file:
+```css
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;600&display=swap');
 
-按页的预计时间走一遍讲述，复杂图表/演示实际操作；估计与真实排练分别记录。超时先删减主线重复或移附录，保留必要条件和核心证据。准备关键问题的简短回答，未知就明确未知。
+:root {
+  --heading-font: "Playfair Display", Georgia, serif;
+  --body-font: "Lato", Helvetica, sans-serif;
+  /* ... */
+}
+```
 
-按用户需求交付 HTML＋本地资源、PDF、讲者备注和必要来源/数据/规划。HTML能运行不证明 PDF 正确；检查 PDF 页数、关键内容、图表/公式/中文及静态替代，不能把空白截图/截断页当交付成功。说明当前验证范围、未完成项和启动方式。
+The base file includes:
 
-浏览器改文字为可选：`node <skill目录>/scripts/edit-html.js talk.html`。它只保存指定文字到源文件，备份并检查源版本；不保存图表渲染后的 DOM，公式/代码和结构直接改源码。浏览器修改后需重新内容/视觉/PDF核查，不沿用旧通过记录。无需每次结束都强制推荐编辑器。
+1. **CSS Variables** for easy customization:
+```css
+:root {
+  /* ===========================================
+     BACKGROUND COLOR - Set this first!
+     =========================================== */
+  --background-color: #ffffff;  /* Change for dark themes (e.g., #1a1a2e) */
+
+  /* Typography - ALWAYS use pt for font sizes */
+  --heading-font: "Source Sans Pro", Helvetica, sans-serif;
+  --body-font: "Source Sans Pro", Helvetica, sans-serif;
+  --base-font-size: 32px;  /* Only px value - sets reveal.js base */
+  --text-size: 16pt;       /* Base body text - intentionally small */
+  --h1-size: 48pt;
+  --h2-size: 36pt;
+  --h3-size: 24pt;
+
+  /* Colors - customize these for each presentation */
+  --primary-color: #2196F3;
+  --secondary-color: #ff9800;
+  --text-color: #222;       /* Use light color (e.g., #FAF7F2) for dark backgrounds */
+  --muted-color: #666;      /* Adjust for dark backgrounds too */
+}
+```
+
+2. **Override reveal.js styles** using `.reveal` prefix:
+```css
+.reveal {
+  font-family: var(--body-font);
+}
+
+.reveal h1, .reveal h2, .reveal h3 {
+  font-family: var(--heading-font);
+  text-transform: none;
+  color: var(--text-color);
+}
+
+.reveal p, .reveal li {
+  font-size: var(--text-size);
+  color: var(--text-color);
+}
+```
+
+3. **Slide layout styles** - control padding and positioning:
+```css
+.reveal .slides section {
+  padding: 40px 60px;
+  text-align: left;
+}
+```
+
+4. **Text size utilities** (use these to scale up text when slides have less content):
+```css
+/* Base text is 16pt - use these classes to increase size when needed */
+.text-lg { font-size: 18pt; }    /* Slightly larger */
+.text-xl { font-size: 20pt; }    /* Medium emphasis */
+.text-2xl { font-size: 24pt; }   /* Strong emphasis */
+.text-3xl { font-size: 28pt; }   /* Very large */
+.text-4xl { font-size: 32pt; }   /* Maximum body text */
+.text-muted { color: var(--muted-color); }
+.text-center { text-align: center; }
+```
+
+**Typography guidance:**
+- Base text (`--text-size: 16pt`) is intentionally small to fit more content
+- When a slide has less content, use `.text-lg`, `.text-xl`, etc. to fill space appropriately
+- This approach prevents overflow on content-heavy slides while allowing flexibility on lighter slides
+
+**Custom CSS classes for repeated patterns:**
+
+Use inline styles for layout (grids, flex containers) since those vary per slide. But when a visual pattern appears on multiple slides, create a dedicated CSS class in `styles.css` instead of repeating inline styles. This keeps the HTML clean and ensures consistency. Common examples: stat boxes (number + label), feature cards (icon + title + description), timeline/process steps, profile/bio cards. If an element repeats 3+ times, it should be a class.
+
+### Step 4: Fill in the HTML Content
+
+**IMPORTANT: Use the Edit tool to fill in slides incrementally** — one or a few slides at a time. Do NOT rewrite the entire HTML file with the Write tool. The scaffold generates unique placeholder text per slide (e.g., `Slide 2 Title Here`), so each section can be targeted with Edit. This is more token-efficient and less error-prone than generating the full file at once.
+
+Follow these patterns:
+
+**Standard slide structure:**
+```html
+<section id="unique-slide-id">
+  <h2>Slide Title</h2>
+  <div class="content">
+    <!-- Content here -->
+  </div>
+</section>
+```
+
+**Multi-column layouts** - always use inline CSS grid (do NOT create utility classes like `.grid-2`):
+```html
+<!-- Equal columns -->
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px;">
+  <div>Column 1</div>
+  <div>Column 2</div>
+</div>
+
+<!-- Three columns -->
+<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px;">
+  <div>Column 1</div>
+  <div>Column 2</div>
+  <div>Column 3</div>
+</div>
+
+<!-- Unequal columns -->
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px;">
+  <div>Narrow sidebar</div>
+  <div>Wide main content</div>
+</div>
+```
+
+Why inline styles for grids? Each slide's layout needs vary - column ratios, gaps, etc. Inline styles give you full control per-slide without creating dozens of utility classes.
+
+**Important HTML patterns:**
+- Every `<section>` should have a unique `id` attribute for stable identification
+- Use `class="section-divider"` for centered section title slides
+- Wrap main content in `<div class="content">` for consistent spacing. This is a flexbox container that fills the remaining vertical space below the title, ensuring content flows properly.
+- Use `<div class="footnote">` for attribution or source text at bottom
+- **All visible text must be inside a text element** (`<p>`, `<li>`, or `<h1>`–`<h6>`). These elements inherit the base font-size, color, and line-height from the CSS. Never put text directly in `<span>` or `<div>` — they won't pick up the base styles and will render at the wrong size. Use `<div>` only as a layout container (for grids, flexbox, etc.), with `<p>` elements inside it for the actual text.
+
+### Step 5: Check for Content Overflow
+
+Run the overflow checker to ensure no slides have content that extends beyond boundaries:
+
+```bash
+node scripts/check-overflow.js presentation.html
+```
+
+The script checks each slide for:
+- **Vertical overflow**: Content taller than slide height
+- **Horizontal overflow**: Content wider than slide width
+
+If overflow is detected, reduce content or adjust font sizes on affected slides.
+
+### Step 6: Visual Review with Screenshots
+
+**CRITICAL: You MUST review screenshots of EVERY SINGLE SLIDE.** Do not skip slides or review only a sample. Visual issues are common and can only be caught by examining each slide individually.
+
+Capture screenshots of all slides:
+
+```bash
+cd <presentation-directory>
+npx decktape reveal "presentation.html?export" output.pdf \
+  --screenshots \
+  --screenshots-directory "screenshots/$(date +%Y%m%d_%H%M%S)"
+```
+
+**Note:** The `?export` query parameter disables chart animations for cleaner PDF rendering. Charts will still animate when viewing the HTML directly in a browser.
+
+This creates a timestamped folder (e.g., `screenshots/20241210_143052/`) so you can track versions and compare before/after fixes.
+
+Then use the Read tool to examine each screenshot image file.
+
+#### What to Look For
+
+The overflow script catches most layout issues, but these problems require visual inspection:
+
+1. **Color inheritance in containers**: Text inside styled containers may inherit the wrong color from parent elements. If you have light text on a dark page background, text inside a light-colored container will be unreadable unless you explicitly set dark text color for that container.
+
+2. **Custom bullet/list styling**: If you override default list styles, bullets may not contrast well on all container backgrounds.
+
+3. **Icons not rendering**: If Font Awesome fails to load, you'll see empty squares or nothing where icons should be.
+
+4. **Overflow edge cases**: The script catches most overflow, but complex nested layouts occasionally slip through.
+
+5. **Unexpected text wrap**: Text that you expected to fit on one line actually overflows to two lines. This is especially common in column layouts, where the header of one column may wrap while the rest don't, making things uneven.
+
+**Re-capture specific slides after fixes:**
+```bash
+npx decktape reveal "presentation.html?export" output.pdf \
+  --screenshots \
+  --screenshots-directory "screenshots/$(date +%Y%m%d_%H%M%S)" \
+  --slides 2,5,7-9
+```
+
+Then re-examine the updated screenshots to verify fixes. The new timestamped folder makes it easy to compare with the previous version.
+
+### Step 7: Suggest Browser Editing
+
+After completing the presentation, let the user know they can edit text directly in the browser using the included editor script:
+
+```bash
+node <path-to-skill>/scripts/edit-html.js <presentation-directory>/presentation.html
+```
+
+This opens the presentation in a local server where they can click any text to edit it inline, then save changes back to the file. It's useful for wordsmithing, fixing typos, or tweaking copy without needing to edit raw HTML.
+
+**Always mention this at the end** of a presentation as a suggestion, e.g.:
+
+> To fine-tune the wording, you can edit text directly in the browser:
+> ```
+> node <resolved-path>/scripts/edit-html.js <presentation-directory>/presentation.html
+> ```
+> Click any text to edit, press Escape to deselect, then click Save. Press Ctrl+C to stop the server when done.
+
+## CSS Components Reference
+
+### Blockquotes
+```css
+.reveal blockquote {
+  border-left: 4px solid var(--primary-color);
+  padding-left: 20px;
+  margin: 20px 0;
+  font-style: italic;
+  background: none;
+  box-shadow: none;
+  width: 100%;
+}
+
+.reveal blockquote cite {
+  display: block;
+  margin-top: 10px;
+  font-style: normal;
+  color: var(--muted-color);
+}
+```
+
+### Icons (Font Awesome)
+
+Font Awesome is included in the scaffold. Usage:
+```html
+<i class="fa-solid fa-lightbulb"></i>
+<i class="fa-solid fa-check"></i>
+<i class="fa-solid fa-gears"></i>
+```
+
+## Advanced Features
+
+For fragments (progressive reveal), speaker notes, custom backgrounds, auto-animate, and transitions, see [references/advanced-features.md](references/advanced-features.md).
+
+## Reveal.js Configuration
+
+```javascript
+Reveal.initialize({
+  controls: true,          // Show navigation arrows
+  progress: true,          // Show progress bar
+  slideNumber: true,       // Show slide numbers
+  hash: true,              // Update URL hash for each slide
+  transition: 'slide',     // none/fade/slide/convex/concave/zoom
+  center: false,           // Vertical centering of slide content
+  autoSlide: 0,            // Auto-advance (ms), 0 to disable
+  loop: false,             // Loop presentation
+});
+```
+
+**Note on `center`:** Default is `false` (content aligns to top), which works best for content-heavy slides. Set to `true` for minimal/creative presentations where you want content vertically centered.
+
+## Built-in Reveal.js Classes
+
+Use these directly without custom CSS:
+
+- `r-fit-text` - Auto-size text to fill slide
+- `r-stretch` - Stretch element to fill remaining vertical space
+- `r-stack` - Layer elements on top of each other
+
+```html
+<h1 class="r-fit-text">BIG TEXT</h1>
+<img class="r-stretch" src="image.jpg">
+```
+
+## Adding Charts
+
+**IMPORTANT: Before adding ANY chart, you MUST read [references/charts.md](references/charts.md).** Charts require specific flexbox/grid patterns to size correctly and avoid overflow. Do not attempt to add charts without reading the full documentation first.
+
+The scaffold includes the Chart.js plugin for adding bar, line, pie, doughnut, and scatter charts to slides.
+
+**Required pattern** - charts need flexbox containers and `maintainAspectRatio: false`:
+
+```html
+<section style="display: flex; flex-direction: column; height: 100%;">
+  <h2>Chart Title</h2>
+  <div style="flex: 1; position: relative; min-height: 0;">
+    <canvas data-chart="bar">
+    <!--
+    {
+      "data": {
+        "labels": ["Q1", "Q2", "Q3", "Q4"],
+        "datasets": [{ "label": "Revenue", "data": [12, 19, 8, 15] }]
+      },
+      "options": {
+        "maintainAspectRatio": false
+      }
+    }
+    -->
+    </canvas>
+  </div>
+</section>
+```
+
+**[references/charts.md](references/charts.md) covers (required reading):**
+- Layout patterns: full slide, half (horizontal/vertical), quarter, unequal splits (1fr 2fr, 1fr 3fr)
+- Why the flexbox pattern is required (Chart.js aspect ratio behavior)
+- All chart types (bar, line, pie, doughnut, scatter, etc.)
+- Styling and color options
+- CSV data format (simpler alternative to JSON)
+
+## Dependencies
+
+Required for the scripts (installed in the skill's plugin root `node_modules`):
+- **Node.js** (for running scripts)
+- **Puppeteer** — `check-overflow.js` 和 decktape 都用它
+- **Decktape** for screenshots and PDF export. Use `npx decktape`. See [setup](references/engineering.md).
+
+**浏览器启动失败回退**：`check-overflow.js` 先试 full chrome，失败自动回退 `chrome-headless-shell`（puppeteer 的 full chrome 下载不完整是已知坑——`puppeteer browsers install` 幂等不校验完整性）。回退也失败时按提示跑 `npx puppeteer browsers install chrome-headless-shell`，或设 `PUPPETEER_EXECUTABLE_PATH` 环境变量指向可用 chrome。decktape 调用同理。
+
+**全局库**（scaffold 自动引）：reveal.js / Chart.js / Font Awesome / highlight.js / KaTeX / mermaid / qrcode.js
+**按需库**（用到的 slide 才引，见各 reference）：d3 / iconify / plotly / diff2html / rough.js / leaflet / anime.js / countUp.js / medium-zoom
+
+## References 速查
+
+| 想做什么 | 查这个 |
+|---|---|
+| 生成主题（配色/字体派生）| references/theme-generation.md |
+| 用组件（callout/stat/card/timeline/badge/compare/quote）| references/components.md |
+| 布局（多列/图文/代码+输出）| references/layout-patterns.md |
+| 代码高亮/diff/复制按钮| references/code-highlighting.md |
+| 数学公式/推导 fragment| references/math-formulas.md |
+| 图（mermaid/d3/rough.js/leaflet）| references/diagrams.md |
+| 图表（Chart.js/plotly）| references/charts.md |
+| 交互动效（fragment/details/zoom/anime/countUp）| references/interactions.md |
+| 二维码/图标| references/utilities.md |
+| reveal 高级（fragment/auto-animate/r-fit-text/CSS 动画）| references/advanced-features.md |

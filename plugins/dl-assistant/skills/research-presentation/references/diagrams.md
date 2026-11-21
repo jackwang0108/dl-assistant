@@ -1,30 +1,47 @@
-# 图解方法、关系和变化
+# 图 (mermaid + d3 + rough.js + leaflet)
 
-先画听众需要理解的对象和关系：输入/输出、模块、数据/状态流、时序、依赖或竞争解释。箭头含义明确，数据流、先后、关联和因果不能混用；尚未验证的机制用“假设/待验证”标注。
-
-优先用可编辑SVG或本地Mermaid；需要复杂几何/网络/3D时才引入额外实现。图的节点、名称和连接要能对应原文/实际代码；不是把名词随机装进框中。
-
-## 分步解释
-
-先显示整体任务与输入输出，再按需要突出当前部分；其他部分保留足够上下文。可用fragments高亮相应SVG元素，或相邻页用相同data-id配合data-auto-animate，让听众看到原对象怎样变化。不要一开始隐藏所有对象导致没有方向感。
-
-Reveal原生支持 [逐步显示](https://revealjs.com/fragments/) 和 [Auto-Animate](https://revealjs.com/auto-animate/)。具体版本已固定，新增API需核对所装版本，不照搬新版示例而不测试。
-
-## Mermaid
-
-生成时启用--features mermaid，在页面使用：
-
+## mermaid（全局已引，流程/架构/时序/类图）
+在 slide 里放 `<div class="mermaid">`，写 mermaid 语法，slidechanged 时自动渲染当前页。
 ```html
-<div class="mermaid" data-asset-id="pipeline">
-flowchart LR
-  A[音频输入] --> B[编码]
-  B --> C[聚合]
-  C --> D[预测]
+<div class="mermaid">
+graph LR
+  A[输入] --> B[处理]
+  B --> C{判断}
+  C -->|是| D[输出]
+  C -->|否| E[重试]
 </div>
 ```
+支持：graph/flowchart（流程）、sequenceDiagram（时序）、classDiagram（类图）、stateDiagram（状态）、gitGraph 等。语法见 mermaid 文档。
 
-runtime会等待渲染完成，不预先伪造data-processed标记。语法/渲染错误必须报告；复杂图排不清时重绘SVG或拆解，不不断缩小字号。标签仅示语法，实际图按材料重建。
+## d3（按需引，复杂网络/力导向图）
+用 d3 的 slide 按需引：
+```html
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+```
+d3 灵活但代码多、LLM 生成易错。**mermaid 画不了的网络/力导向图才用 d3**。decktape 截图前确保渲染完（等 simulation.tick 结束）。
 
-## 图形交互
+## rough.js（按需引，手绘风图）
+手绘风矩形/圆/线，区别于 mermaid 的规整图，画概念图/草图很 fancy：
+```html
+<script src="https://cdn.jsdelivr.net/npm/roughjs@4/bundled/rough.js"></script>
+<canvas id="rough" width="400" height="200"></canvas>
+<script>
+  const rc = rough.canvas(document.getElementById('rough'));
+  rc.rectangle(20, 20, 160, 100, { roughness: 2, fill: 'var(--color-primary)' });
+  rc.circle(280, 70, 80, { roughness: 1.5 });
+</script>
+```
 
-可通过SVG高亮/描边、局部放大、相邻状态变换、路径/时间标记解释算法。复杂D3/Plotly/WebGL需额外固定版本、本地打包和专门测试，当前生成器不会自动提供这些库；不要写CDN链接就称离线支持。交互应有真实问题、可检查计算和静态替代，3D不是默认优先方案。
+## leaflet（按需引，地图）
+用地图的 slide 按需引 CSS+JS：
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9/dist/leaflet.css">
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9/dist/leaflet.js"></script>
+<div id="map" style="height:400px"></div>
+<script>
+  const map = L.map('map').setView([39.9, 116.4], 10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  L.marker([39.9, 116.4]).addTo(map).bindPopup('北京');
+</script>
+```
+decktape 截图前等 tile 加载完（networkidle0 通常够，必要时加 setTimeout）。

@@ -1,59 +1,281 @@
 #!/usr/bin/env node
-'use strict';
-const fs = require('node:fs');
-const path = require('node:path');
-const { args, integer, escape, write, digest } = require('./lib');
-const { prepare } = require('./prepare-assets');
-function structure(value) {
-  return value.split(',').map(s => s === 'd' ? 'd' : integer(s, 'Structure', 1, 100));
-}
-function main(argv = process.argv.slice(2)) {
-  const o = args(argv, ['slides', 'structure', 'output', 'title', 'styles', 'features', 'plan', 'lang'], ['help', 'force']);
-  if (o.help) { console.log('node create-presentation.js --output talk.html [--plan talk-plan.json | --slides N | --structure 1,d,2] [--features charts,math,code,mermaid] [--force]'); return; }
-  if ([o.plan, o.slides, o.structure].filter(x => x !== undefined).length > 1) throw new Error('Choose one of --plan, --slides, --structure');
-  const dest = path.resolve(o.output || 'presentation.html');
-  if (fs.existsSync(dest) && !o.force) throw new Error('Output exists; choose a new path or --force (creates backup)');
-  const style = o.styles || 'styles.css';
-  if (path.basename(style) !== style || !style.endsWith('.css')) throw new Error('--styles must be a local CSS filename');
-  let plan = null;
-  if (o.plan) { plan = JSON.parse(fs.readFileSync(o.plan, 'utf8')); if (!Array.isArray(plan.slides) || !plan.slides.length) throw new Error('Plan needs nonempty slides'); }
-  const features = (o.features || '').split(',').filter(Boolean);
-  for (const f of features) if (!['charts', 'math', 'code', 'mermaid'].includes(f)) throw new Error(`Unsupported feature: ${f}`);
-  const groups = plan ? plan.slides.map(s => [s]) : (o.structure ? structure(o.structure) : Array(integer(o.slides || 5, 'slides')).fill(1)).map((n, h) =>
-    n === 'd' ? [{ id: `section-${h + 1}`, title: '章节标题', role: 'divider' }] : Array.from({ length: n }, (_, v) => ({ id: n === 1 ? `slide-${h + 1}` : `slide-${h + 1}-${v + 1}`, title: h === 0 ? (o.title || '汇报标题') : '本页要回答的问题' })));
-  const ids = new Set();
-  for (const s of groups.flat()) {
-    if (!/^[A-Za-z][\w-]*$/.test(s.id) || ids.has(s.id)) throw new Error('Slide IDs must be unique, starting with a letter');
-    ids.add(s.id);
+
+/**
+ * Creates a reveal.js presentation scaffold with the specified options.
+ * Usage: node create-presentation.js [options]
+ *
+ * revealjs-pro: scaffold 全局引入 highlight.js / KaTeX / mermaid / qrcode.js
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const BASE_STYLES_PATH = path.join(__dirname, '..', 'references', 'base-styles.css');
+
+function parseArgs(args) {
+  const options = {
+    slides: null,
+    structure: null,
+    output: 'presentation.html',
+    title: 'Presentation',
+    stylesFile: 'styles.css',
+  };
+
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg === '--slides' || arg === '-s') {
+      options.slides = parseInt(args[++i], 10);
+    } else if (arg === '--structure') {
+      options.structure = args[++i].split(',').map(n => n === 'd' ? 'd' : parseInt(n, 10));
+    } else if (arg === '--output' || arg === '-o') {
+      options.output = args[++i];
+    } else if (arg === '--title') {
+      options.title = args[++i];
+    } else if (arg === '--styles') {
+      options.stylesFile = args[++i];
+    } else if (arg === '--help' || arg === '-h') {
+      printHelp();
+      process.exit(0);
+    }
   }
-  const asset = prepare(path.dirname(dest), features);
-  const cssFile = path.join(path.dirname(dest), style);
-  if (!fs.existsSync(cssFile)) write(cssFile, fs.readFileSync(path.join(__dirname, '../references/base-styles.css')));
-  const slides = groups.map(group => {
-    const html = group.map(s => `<section id="${escape(s.id)}"${s.role === 'divider' ? ' class="section-divider"' : ''}>
-  <h2>${escape(s.title)}</h2>
-  <div class="content" data-placeholder="content">
-    <div class="visual-slot" data-placeholder="visual">需要落实的视觉表达：${escape(s.visual?.purpose || '按本页信息选择图片、图表、示意图或其他表达')}</div>
-    <p>${escape(s.message || '根据真实材料补充本页主要信息；不得将此占位交付。')}</p>
+
+  return options;
+}
+
+function printHelp() {
+  console.log(`
+create-presentation.js - Generate a reveal.js presentation scaffold (revealjs-pro)
+
+Usage: node create-presentation.js [options]
+
+Options:
+  --slides, -s <num>    Number of horizontal slides (simple mode)
+  --structure <list>    Mixed layout: comma-separated values (e.g., "1,1,d,3,1,d,1")
+  --output, -o <file>   Output HTML filename (default: presentation.html)
+  --title <text>        Presentation title (default: Presentation)
+  --styles <file>       Custom CSS filename (default: styles.css)
+  --help, -h            Show this help message
+
+Scaffold 全局引入: reveal.js / Chart.js / Font Awesome / highlight.js / KaTeX / mermaid / qrcode.js
+按需库（d3/iconify/plotly/diff2html/rough.js/leaflet/anime.js/countUp.js/medium-zoom）不全局引，
+用时在该页 <script> 引，见对应 reference 文档。
+`);
+}
+
+function generateSlides(structure) {
+  let slides = '';
+  let hIndex = 1;
+  let dividerCount = 1;
+
+  for (let colIndex = 0; colIndex < structure.length; colIndex++) {
+    const item = structure[colIndex];
+
+    if (item === 'd') {
+      slides += `
+      <section id="divider-${dividerCount}" class="section-divider" data-state="is-section-divider">
+        <h1>Section ${dividerCount} Title</h1>
+      </section>
+`;
+      dividerCount++;
+      hIndex++;
+    } else if (item === 1) {
+      if (hIndex === 1) {
+        slides += `
+      <section id="title" class="section-divider" data-state="is-section-divider">
+        <h1>Presentation Title</h1>
+      </section>
+`;
+      } else {
+        slides += `
+      <section id="slide-${hIndex}">
+        <h2>Slide ${hIndex} Title Here</h2>
+      </section>
+`;
+      }
+      hIndex++;
+    } else {
+      slides += `
+      <section>
+`;
+      for (let vIndex = 1; vIndex <= item; vIndex++) {
+        slides += `        <section id="slide-${hIndex}-${vIndex}">
+          <h2>Slide ${hIndex}.${vIndex} Title Here</h2>
+        </section>
+`;
+      }
+      slides += `      </section>
+`;
+      hIndex++;
+    }
+  }
+
+  return slides;
+}
+
+function generateHTML(options) {
+  const slidesContent = generateSlides(options.structure);
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${options.title}</title>
+
+  <!-- Reveal.js core -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Custom styles -->
+  <link rel="stylesheet" href="${options.stylesFile}">
+
+  <!-- Chart.js for data visualization -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- highlight.js 代码高亮（主题由 generate-theme.js 按 mode 切换 #highlight-theme href）-->
+  <link rel="stylesheet" id="highlight-theme" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+
+  <!-- KaTeX 数学公式 -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- mermaid 图 -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <!-- qrcode 二维码 -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+${slidesContent}
+    </div>
   </div>
-  <aside class="notes">${escape(s.notes || '补充解释顺序、条件、过渡和预计时间。')}</aside>
-</section>`).join('\n');
-    return group.length > 1 ? `<section>\n${html}\n</section>` : html;
-  }).join('\n');
-  const head = [`<link rel="stylesheet" href="${asset.base}/reveal/dist/reset.css">`, `<link rel="stylesheet" href="${asset.base}/reveal/dist/reveal.css">`, `<link rel="stylesheet" href="${escape(style)}">`];
-  const scripts = [`<script src="${asset.base}/reveal/dist/reveal.js"></script>`, `<script src="${asset.base}/reveal/dist/plugin/notes.js"></script>`];
-  if (features.includes('code')) { head.push(`<link rel="stylesheet" href="${asset.base}/reveal/dist/plugin/highlight/monokai.css">`); scripts.push(`<script src="${asset.base}/reveal/dist/plugin/highlight.js"></script>`); }
-  if (features.includes('charts')) scripts.push(`<script src="${asset.base}/chart/chart.umd.js"></script>`);
-  if (features.includes('math')) { head.push(`<link rel="stylesheet" href="${asset.base}/katex/katex.min.css">`); scripts.push(`<script src="${asset.base}/katex/katex.min.js"></script>`, `<script src="${asset.base}/katex/contrib/auto-render.min.js"></script>`); }
-  if (features.includes('mermaid')) scripts.push(`<script src="${asset.base}/mermaid/mermaid.min.js"></script>`);
-  scripts.push(`<script src="${asset.base}/runtime.js"></script>`);
-  const html = `<!doctype html>\n<html lang="${escape(o.lang || 'zh-CN')}"><head><meta charset="utf-8"><link rel="icon" href="data:,"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escape(o.title || plan?.title || '科研汇报')}</title>\n${head.join('\n')}\n</head><body><div class="reveal"><div class="slides">\n${slides}\n</div></div>\n${scripts.join('\n')}\n<script>Presentation.start({ plugins: [RevealNotes${features.includes('code') ? ', RevealHighlight' : ''}] });</script>\n</body></html>\n`;
-  write(dest, html, o.force);
-  if (plan) {
-    const copy = path.join(path.dirname(dest), `${path.basename(dest, path.extname(dest))}.plan.json`);
-    if (path.resolve(o.plan) !== copy) write(copy, JSON.stringify(plan, null, 2) + '\n', o.force);
-  }
-  console.log(JSON.stringify({ html: dest, slides: ids.size, assets: asset.base, manifest_sha256: digest(JSON.stringify(asset.manifest)), placeholders: true }));
+
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js-plugins@latest/chart/plugin.js"></script>
+  <script>
+    // mermaid 初始化（不自动启动，slidechanged 时按需渲染当前页）
+    mermaid.initialize({ startOnLoad: false, theme: 'default' });
+
+    // KaTeX 渲染辅助：渲染指定 root 内的 $...$ / $$...$$
+    function renderMath(root) {
+      if (window.renderMathInElement) {
+        renderMathInElement(root, {
+          delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false},
+          ],
+          throwOnError: false
+        });
+      }
+    }
+
+    // mermaid 渲染：预渲染所有页的 .mermaid 块（decktape 截图时异步渲染会漏，ready 时全渲染）
+    function renderAllMermaid() {
+      const nodes = document.querySelectorAll('.mermaid:not([data-processed])');
+      nodes.forEach(el => el.setAttribute('data-processed', 'true'));
+      if (nodes.length) try { mermaid.run({ nodes: Array.from(nodes) }); } catch(e) {}
+    }
+    function renderMermaid(slide) {
+      if (!slide) return;
+      const nodes = slide.querySelectorAll('.mermaid:not([data-processed])');
+      nodes.forEach(el => el.setAttribute('data-processed', 'true'));
+      if (nodes.length) try { mermaid.run({ nodes: Array.from(nodes) }); } catch(e) {}
+    }
+
+    Reveal.initialize({
+      width: 1280,
+      height: 720,
+      margin: 0,
+      controls: true,
+      progress: true,
+      slideNumber: false,
+      hash: true,
+      transition: 'slide',
+      center: false,
+      plugins: [ RevealChart, RevealHighlight ],
+      chart: {
+        defaults: Object.assign({
+          color: 'rgba(0, 0, 0, 0.8)',
+          borderColor: 'rgba(0, 0, 0, 0.8)',
+          devicePixelRatio: 2
+        }, window.location.search.includes('export') ? { animation: false } : {})
+      }
+    });
+
+    // 渲染公式 + mermaid（ready 时全渲染，slidechanged 时渲染当前页）
+    Reveal.on('ready', () => {
+      renderMath(document.body);
+      renderAllMermaid();
+    });
+    Reveal.on('slidechanged', (e) => {
+      renderMath(e.currentSlide); renderMermaid(e.currentSlide);
+    });
+  </script>
+</body>
+</html>
+`;
 }
-if (require.main === module) { try { main(); } catch (e) { console.error(e.message); process.exitCode = 1; } }
-module.exports = { main, structure };
+
+function main() {
+  const args = process.argv.slice(2);
+  const options = parseArgs(args);
+
+  if (options.slides !== null && options.structure !== null) {
+    console.error('Error: Cannot use both --slides and --structure. Choose one.');
+    process.exit(1);
+  }
+
+  if (options.slides === null && options.structure === null) {
+    options.structure = [1, 1, 1, 1, 1];
+  } else if (options.slides !== null) {
+    if (options.slides < 1 || isNaN(options.slides)) {
+      console.error('Error: Slide count must be at least 1.');
+      process.exit(1);
+    }
+    options.structure = Array(options.slides).fill(1);
+  } else {
+    if (options.structure.some(n => n !== 'd' && (n < 1 || isNaN(n)))) {
+      console.error('Error: Structure values must be positive integers or "d" for dividers.');
+      process.exit(1);
+    }
+  }
+
+  const totalSlides = options.structure.reduce((a, b) => a + (b === 'd' ? 1 : b), 0);
+  const outputDir = path.dirname(options.output);
+
+  if (outputDir && outputDir !== '.') {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  const html = generateHTML(options);
+  fs.writeFileSync(options.output, html);
+  console.log(`Created ${options.output}`);
+
+  const stylesOutputPath = outputDir && outputDir !== '.'
+    ? path.join(outputDir, options.stylesFile)
+    : options.stylesFile;
+
+  if (!fs.existsSync(stylesOutputPath)) {
+    if (fs.existsSync(BASE_STYLES_PATH)) {
+      fs.copyFileSync(BASE_STYLES_PATH, stylesOutputPath);
+      console.log(`Copied base-styles.css to ${stylesOutputPath}`);
+    } else {
+      console.warn(`Warning: Could not find ${BASE_STYLES_PATH}`);
+    }
+  } else {
+    console.log(`${stylesOutputPath} already exists, skipping`);
+  }
+
+  console.log(`\nPresentation created with ${totalSlides} slides (structure: ${options.structure.join(',')}).`);
+  console.log(`Run generate-theme.js to generate styles.css, then open ${options.output} in a browser.`);
+}
+
+main();

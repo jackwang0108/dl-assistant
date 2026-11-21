@@ -1,15 +1,40 @@
-# 主题与可读性
+# 主题生成 (generate-theme.js)
 
-先服从用户/机构已有规范；否则选一套稳定、安静的颜色和系统字体。浅色或深色按现场投影、图表和材料选择，不根据“科技应当蓝色”推断。跨页同一颜色表示同一对象或含义。
+agent 每次基于 slide 内容**动态生成一整套主题**（配色+字体+callout+代码块配色），不预设固定主题。实现层与内容层无关——规则通用，不绑场景。
 
+## 工作流
+1. 分析 slide 内容 → 定主色 hex + mode + 字体配对
+2. 调 `generate-theme.js` 生成 styles.css（三层 token + 组件 token + 对比度校验）
+3. 改 HTML 的 `<link id="highlight-theme">` href 匹配 mode
+
+## 从内容定主色（通用规则）
+- 从主题/情绪/品牌色提取主色（如环保→绿、科技→蓝、暖→橙；用户提品牌就用品牌色）
+- 避免 autopilot 默认蓝；主色为锚，派生辅色/强调色
+- 给主色 hex（如 `#1C2833`）
+
+## 定 mode
+- `light`：白底，内容多/正式
+- `dark`：深底，code 多/炫/护眼
+
+## 字体配对（3 套，`--font-pairing` 参数）
+- `academic`：衬线标题(Source Serif Pro) + 无衬线正文，正式
+- `modern`：无衬线(Source Sans Pro)，通用
+- `mono-heavy`：等宽标题(JetBrains Mono) + 无衬线正文，代码多
+- Google Fonts `@import` 加在 styles.css 顶部
+
+## 调脚本
 ```bash
-node <skill目录>/scripts/generate-theme.js --primary "#24577a" --mode light --font-pairing modern --output styles.css
+node scripts/generate-theme.js --primary "#1C2833" --mode light --font-pairing academic --output styles.css
 ```
 
-mode为light/dark；font-pairing为modern（系统无衬线）、academic（系统衬线标题）、mono-heavy（等宽标题）。没有在线字体依赖，中文通过本机字体回退。主题参数无效直接失败；已有文件需明确--force并备份。
+## 校验报告
+脚本输出 WCAG 对比度，text vs background 应 ≥ 4.5:1。不过的调主色或换 mode。accent/辅色已自动调到过 4.5（保留色相）。
 
-脚本为正文、次要文字、强调色和提示框提供对比度核对，必要时调整主色到可读的近似色。品牌原色有其他用途时单独保留，不假称所有颜色都可做小字。对比度只是部分检查，不能保证远处投影、色觉差异或细线可辨。
+## highlight 主题联动
+脚本按 mode 推荐 highlight.js 主题（dark→monokai-sublime，light→github）。改 HTML `<link id="highlight-theme">` 的 href 到推荐主题。
 
-默认正文21pt，标题按层级区分；这是起点，不是所有报告的固定正确字号。字太小先减少本页任务/拆页，再按实际距离检查。不要通过缩字和密集卡片让过多内容“塞得下”。代码/坐标轴/图例和来源也需检查，来源可简写并链接完整记录。
-
-base-styles.css给出布局和颜色变量，脚本替换root变量并保留布局规则。--primary-color/--color-primary等别名一致，组件随主题变化；不强制只用某种CSS单位或只准行内grid。
+## 三层 token（generate-theme.js 产出）
+- primitive：raw hex（--color-primary/secondary/accent）
+- semantic：用途别名（--text-color/--background-color/--box-bg）
+- component：组件级（--callout-bg/--stat-card-bg/--code-bg）
+组件类只引用 semantic/component token，换主题只改 :root，组件自动联动。

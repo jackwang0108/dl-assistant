@@ -1,9 +1,34 @@
-# 公式与推导
+# 数学公式 (KaTeX)
 
-先用普通话说明量/关系及其用途，再引入符号；新符号在同页或此前已说明。只显示理解方法/结论所需推导，长证明放附录。公式与实现、条件的对应不能靠外形相似推断。
+KaTeX 全局已引，auto-render 已注册。写 LaTeX 即可，`$...$` 行内、`$$...$$` 行间。slidechanged 时自动渲染当前页。
 
-生成时启用--features math，使用$...$行内或$$...$$展示公式。runtime等待本地KaTeX渲染，错误会影响检查，不能静默交付红字/原始LaTeX。
+## 行内
+```html
+<p>能量 $E = mc^2$ 关系</p>
+```
 
-分步解释可在邻页保留整体公式、突出当前变化项，或用fragments显现说明。颜色对应含义，不能仅靠颜色解释；PDF应保留完整关系和必要步骤。不要把每个字母都加动画，增加操作却没有解释价值。
+## 行间
+```html
+<p>$$\int_0^\infty e^{-x^2} dx = \frac{\sqrt{\pi}}{2}$$</p>
+```
 
-实际查看上标/下标、矩阵、对齐、长公式、中文与符号说明；没溢出不表示投影可读。图/公式必须能够由真实材料核查，不能先写想要的结论再补推导。
+## 常用语法
+- 分数：`\frac{a}{b}`
+- 求和：`\sum_{i=1}^{n}`
+- 积分：`\int_a^b`
+- 矩阵：`\begin{bmatrix}a&b\\c&d\end{bmatrix}`
+- 上下标：`x^2`、`x_i`
+- 希腊字母：`\alpha \beta \gamma \theta \omega`
+
+## 推导 fragment（逐步显示推导步骤）
+配合 reveal fragment，每步一个 fragment，演讲时按方向键逐步显示：
+```html
+<div class="content">
+  <p>$$a^2 + b^2$$</p>
+  <p class="fragment">$$= c^2$$</p>
+  <p class="fragment">$$\Rightarrow c = \sqrt{a^2 + b^2}$$</p>
+</div>
+```
+
+## decktape 截图
+`?export` 模式公式已渲染（无动画），截图无问题。

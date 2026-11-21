@@ -1,16 +1,53 @@
 {
   "_notes": {
-    "是什么": "图表索引：每项登记实际来源、可编辑源/脚本、输出、版本、所回答问题及状态；与对应设计记录和实际文件核对，不作为独立事实来源。",
-    "id": "稳定资产ID，不随正文图号重排而改名。",
-    "class": "schematic表示真实方法或明确标注的概念，dataviz表示真实数据；混合资产逐部分注明。",
+    "是什么": "_draft/visuals/manifest.json 的 schema——图表资产台账。每个图表资产（示意图/数据可视化，图或表）一条，是 make-visual / ingest-results 遍历的唯一读取源；与每个资产的 spec（_draft/visuals/<id>.md，人读设计记录——write-section ⑥ 只填意图字段，详细设计字段产出时刻补）保持一致。paper-state.json 只管节状态与 palette 锁，图表粒度状态全在这里。",
+    "id": "资产名，全文唯一。惯例：fig-N（图）/ tab-N（表），N 按正文出现顺序。",
+    "class": "schematic（示意图：内容从设计意图画出来的）| dataviz（数据可视化：内容从数据里长出来的，图或表）。判据只看内容来源，不看长相。",
     "subtype": "示意图：concept（概念）| flow（流程/pipeline）| architecture（模型架构）| principle（原理阐述）| comparison（机制对比）。数据可视化：figure | table。",
-    "production": "实际可编辑源或生成方式，如svg/html/tikz/matplotlib；不强制用户PPT终稿。",
-    "spec": "图表设计记录的实际路径，包含问题、来源、方法/数据版本、编码、处理、尺寸和核查。",
-    "status": "intent/designed/draft/final据实际完成状态记录；agent可产终稿，final需内容与显示检查，不能预填。",
+    "production": "schematic=html（HTML+CSS+SVG 手绘，agent 产草稿、用户 PPT 产终稿）| dataviz=matplotlib（seaborn/matplotlib 脚本，绝不用生成式 AI）。",
+    "spec": "该资产的 spec 路径，相对 _draft/，如 visuals/fig-1.md。意图字段见 visual-design.md「意图登记」；详细设计字段（布局/编码/表结构/exemplar 参照）产出时刻补进同一文档。",
+    "status": "intent（意图登记+轻占位，write-section ⑥：figure=通用方框+caption 初稿+label，table=注释占位不锁结构）→ designed（详细设计+预览图，用户看图拍板，make-visual / ingest-results）→ draft（落地正文：占位替换/填真完成）→ final（终稿替换，finalize——示意图用户 PPT 终稿导出 PDF）。",
     "label": "LaTeX label：fig:<id> 或 tab:<id>。占位与正文 \\ref 都用它，禁止手写裸编号。",
     "section": "归属节（paper-state.json 里 sections 的 key）。",
-    "data_ref": "数据来源实际文件、实验/分析版本；示意内容注明方法版本，不能用空指针代表已核实。",
+    "data_ref": "仅 dataviz：数据来源——指向实验批（experiments.batches 的 version / exp_id）、数据文件或文献来源。示意图为 null。",
     "version": "该资产的改动版本号，整数递增；详细设计大改、数据重填都 +1。"
   },
-  "visuals": []
+  "visuals": [
+    {
+      "id": "fig-1",
+      "class": "schematic",
+      "subtype": "concept",
+      "production": "html",
+      "spec": "visuals/fig-1.md",
+      "status": "intent",
+      "label": "fig:fig-1",
+      "section": "introduction",
+      "data_ref": null,
+      "version": 1
+    },
+    {
+      "id": "fig-2",
+      "class": "schematic",
+      "subtype": "architecture",
+      "production": "html",
+      "spec": "visuals/fig-2.md",
+      "status": "intent",
+      "label": "fig:fig-2",
+      "section": "method",
+      "data_ref": null,
+      "version": 1
+    },
+    {
+      "id": "tab-1",
+      "class": "dataviz",
+      "subtype": "table",
+      "production": "matplotlib",
+      "spec": "visuals/tab-1.md",
+      "status": "intent",
+      "label": "tab:tab-1",
+      "section": "experiments",
+      "data_ref": "batch:1/exp-main",
+      "version": 1
+    }
+  ]
 }

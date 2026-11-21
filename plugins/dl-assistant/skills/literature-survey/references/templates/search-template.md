@@ -1,41 +1,38 @@
-# search 文件：原始查询与筛选记录
+# search/<query组-slug>.json 模板（Step 2 检索子 agent 落盘 · 机读）
 
-每批独立 JSON 文件，文件名不覆盖旧批次。以下为格式版本 2；请求字段如未知用 null，不能捏造完成情况。
+检索阶段的零损耗留痕——主会话只拿紧凑清单，跑 `scripts/merge_pool.py` 合并去重成 `pool.json`；要看摘要 / 核查取舍就读这里。**写 json 不写散文**：合并去重由脚本做，json 才喂得进脚本。字段全用中文值，专有名词保留英文。
 
 ```json
 {
-  "schema_version": 2,
-  "query_group": "核心问题组",
-  "requests": [
+  "query_group": "核心概念组",
+  "sources": ["semantic_scholar", "arxiv", "hf-papers"],
+  "included": [
     {
-      "source": "arxiv",
-      "query": "实际执行的查询",
-      "requested_range": null,
-      "date_basis": null,
-      "sort": null,
-      "limit": 100,
-      "pages_fetched": [],
-      "status": "not_run",
-      "complete": false,
-      "truncated": null,
-      "returned_count": 0,
-      "fetched_at": null,
-      "raw_path": null,
-      "error": null
+      "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
+      "arxiv": "2112.10752",
+      "doi": null,
+      "url": null,
+      "year": 2022,
+      "venue": "CVPR",
+      "citations": 12000,
+      "published": "2021-12",
+      "role": "里程碑",
+      "approach": "在 latent 空间做扩散，降算力",
+      "reason": "为何纳入（一句）",
+      "abstract_notes": "摘要要点（中文转述或摘录，供主会话定轴探针 / 核查用）"
     }
   ],
-  "included": [],
-  "excluded": [],
-  "pending": []
+  "excluded": [
+    { "title": "...", "arxiv": "...", "reason": "离题 / 重复 / 质量存疑…" }
+  ]
 }
 ```
 
-请求 status 使用 not_run/success/partial/failed，合法空结果为 success 且 returned_count=0；失败或没执行不能改称空结果。complete 只描述请求范围完成情况，truncated 与分页未知时不保证完整。
+**字段纪律**：
 
-每篇条目包含实际已有的 title、authors、arxiv、doi、url（具体论文页）、版本、year、published、source、observed_at、reason、approach、abstract_notes、reading_level 和 evidence_locations。身份未知时 null，至少一个标识或标题可用；作者、版本和相关字段保留用于核对，不按标题直接合并。
-
-`citations` 可为已取得数值，必须带 source 与 observed_at；多个来源观测保留为多条输入记录，合并脚本不会取最大值。原始字段和版本冲突保留在 pool 的 observations/field_conflicts。
-
-included 指按范围纳入候选，不等于证据充分；excluded 必须有实质纳排理由；pending 为边界、资料不足或尚未完成评估。不能把跨查询重复当作内容排除理由。相同身份在不同组结论冲突时脚本放入 pending，主 agent 核查后更正输入并记录依据。
-
-reading_level 使用 metadata/abstract/partial_text/detailed，evidence_locations 记录来源版本与实际章节或页码。`published` 使用明确日期或年月，区分预印本首发和正式发表；最新日期不是覆盖证明。
+- 去重靠脚本三级键（arXiv ID → DOI → 归一化标题），所以 **`arxiv` / `doi` / `title` 三个至少填准一个**；都没有的条目脚本不去重、原样保留。
+- `published` 填 `YYYY-MM`（有就填，hf 源天然带）——脚本的扫新覆盖统计靠它，没有它扫新覆盖行只能报「未知」。
+- `role` 用固定枚举：奠基 / 里程碑 / 近期前沿（拿不准留 null）。
+- `approach` 是「走什么路子」的技术路线短标签（如「基于 {某机制}」「{某范式} 的变体」），粒度到方法家族、不泛泛说「很相关」——这是 Step3 定轴的关键便宜信号。
+- 排除项也要留痕——它是覆盖度自检和「为什么没收这篇」的依据，比直接丢弃诚实。
+- 同一工作多版本（arXiv 预印本 vs 正式版）：合并为一条，venue 优先记正式版，arXiv ID 保留（下游 bibtex-on-the-fly 和读 PDF 都要用）。

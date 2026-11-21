@@ -1,145 +1,289 @@
 ---
 name: code-project-setup
-description: 将选定的代码、模型和数据准备到能执行本轮所需操作的状态，按任务检查环境、资产、组件和真实入口，记录运行证据、改动与未验证范围。搭环境、准备数据/权重、排查入口或接收选型实测任务时使用；不以短检查认证复现性能或研究结论。
+description: Baseline repo 就绪（中期第一关）：在 GPU 服务器上把选定 baseline 备到可读、可调、可复现——环境/镜像/数据集/checkpoint/入口 + 数值 sanity，产 setup 目录。当 repo 跑不起来、要搭环境备数据时使用。
 ---
 
-# 按本轮需求准备环境与验证入口
+# Code Project Setup
 
-根据选定组件和本轮操作，准备实际环境、模型与数据，提供可追溯的运行证据。**命令执行结束、组件符合预期、整体实现正确和研究假设成立分别判断**；不把“能运行”概括为“可信基准”。部分完成也可交接，但必须明确支持哪些操作、哪些仍未知或受阻。
+## 这个 skill 解决什么问题
 
-通常在实际实验机器工作，按任务选择CPU、GPU或其他设备，不默认单卡训练。可以独立接收用户指定目标，不强制先补survey文件或新研究假设。需要重新选型返回baseline-survey；研究设计变动返回idea-find/iterate；批准的科学实验由execution实施。大规模是否属于中期研究或论文补充实验按目的判断，不由卡数/时长决定。
+科研项目中期的第一道坎：手上有一个选定的 baseline repo，但它**还跑不了 / 跑不对**。环境装不上（尤其编译型算子）、数据权重没就绪、官方命令跑不通、或者跑通了但输出是 NaN——这些都得在动自己的 idea 代码之前清掉。
 
-## W&B 内网记录准备
+本 skill 是 DL 代码工作流的第一层**就绪关卡**：把 repo 准备到下游 `code-paper-reproduction` / `code-reading` / `code-idea-execution` 可直接消费的状态。它**不**逐段讲源码、**不**验证论文性能、**不**碰实验语义——只负责"让这个 baseline 可读、可调、可信地跑起来"。
 
-新增代码实验默认按 [wandb skill](../wandb/SKILL.md) 接入用户自托管实例，详细规则见 [部署与内网验证](../wandb/references/deployment.md)。先检查已有服务和仓库集成，复用实际 logger，不重复初始化；新部署先核固定镜像/架构/授权与持久存储，Kubernetes 不是前置条件。项目非敏感配置写 `docs/wandb/tracking.json`，setup.json 保存 tracking_ref；密钥仅通过私有配置注入，不写报告或命令参数。
+> **「跑通」≠「跑对」。** 这是本 skill 区别于"装完包就完事"的核心。环境装好、命令不报错只是底线；还要一道**数值 sanity**（输出不是 NaN / 全零、loss 量级合理、权重真加载进去了）才算"可信"。静默错误（`strict=False` 加载了一半 key、device map 错、预处理用错）比报错更危险——它拖到 reproduction 才暴露就晚了。
 
-把最小 SDK 写入、独立 API/MCP 读回、产物校验、重启保留和禁外网检查列入现有 operations/checks；分别记录实际证据，不因某一侧成功就标集成通过。检查指标定义/step、解析后配置、分布式主进程记录、必要上传范围，以及断连后的本地保留/补同步。logger 改动纳入代码/行为检查，不能改训练或评估语义。受阻时明确本地记录方案和下一步，不静默用云端；状态、同步与科学有效性分别记录，交接前自查核对应范围。
+## 边界：本 skill 做什么、不做什么
 
-## 准备和改配置时保护研究条件
+**做**：
+- 吃上游 `baseline-survey` 报告（`baseline-survey.json`），继承执行链 / 依赖 / 风险，不从零重查
+- spec → plan 两阶段动手前对齐，用户审过才执行
+- 环境配置（含编译型依赖处置，conda 或官方 docker）、网络镜像策略、数据 & checkpoint 就绪
+- 三层验证（import → synthetic smoke → 官方命令 smoke run），每层加数值 sanity
+- 摸清 repo 随机性来源（可复现性基线）、实测开发卡资源足迹
+- 产出 setup 目录（spec + plan + 机读交接 + 人读报告 + 数据集速览 + smoke 脚本 + 环境导出），交给下游
 
-按 [研究条件记录](../dl-assistant/references/research-conditions.md) 接收目标与本轮条件，将必须保留项对应到实际配置、数据和入口。准备/执行前自查核对实际差异；小输入、短步数的链路检查单独标为调试，不能替代保留关键条件的研究实验。OOM 等问题需要改输入、batch、精度或调度时先评估科学影响，影响关键条件则返回研究讨论。交接记录实际保留证据和未知，不用“能跑”证明配置适合筛选方法。
+**不做**（交给相邻 skill）：
 
-## 在系统中的位置
+| 场景 | 用 |
+| ---- | -- |
+| 选哪个 baseline repo / 权重 / 数据集 | `baseline-survey`（前期，本地跑） |
+| 逐段精读源码、讲调用链给人听 | `code-reading`（中期） |
+| 验证这个 baseline 能否复现论文报的性能 | `code-paper-reproduction`（中期） |
+| 实现 idea、设计实验矩阵、跑消融 | `code-idea-execution`（中期核心） |
+| 多机 / 多卡跑消融种子（full 规模铺开实验） | `code-paper-experiment`（运行服务器，论文实验阶段；`code-paper-release` 只做开源发行版，不铺实验） |
+
+> **运行位置**：本 skill 在 **GPU 服务器**（开发卡，通常单卡）上跑。资源实测的基准是"这张开发卡够不够支撑 execution 迭代开发"，**不是**"复现得起原文的多卡规模"——后者（多卡跑 full 规模消融 / 种子）是运行服务器上的事，归 `code-paper-experiment`（论文实验阶段）。
+
+## 指标契约：本 skill 在指标链上的位置
+
+中期一切实验对比都建在一个**冻结的指标 + 评估协议**上（指标不定死，keep/discard 就是空话）。指标契约按链传递，各环节职责钉死：
+
+| 环节 | 对指标契约的职责 |
+| --- | --- |
+| `baseline-survey` | **提出**：从论文摘 `paper_metrics`（论文报的主指标 + 目标表格行） |
+| `code-project-setup`（本 skill） | **传递 + 保证能跑**：`paper_metrics` 原样继承进 `setup.json`，**不打开论文、不核对 metric 语义**；同时保证 eval 命令能从头跑到尾、出的数机械上合理——中期一切比较都建在这条命令能跑上 |
+| `code-paper-reproduction` | **冻结**：读源码钉死 metric 精确定义 + 评测协议 + official 数 + 复现数 + 容差 band——自此这是 ground truth，下游不许改口径 |
+| `code-idea-execution` | **消费**：keep/discard 判据；评估协议只读，改协议 = 语义改动即停 |
+
+**与 code-paper-reproduction 的一句话边界**：CPS 回答"每条链能不能产出机械上合理的结果"，CPR 回答"这些结果能不能当科学结论的标尺"。CPS 的 eval 是 smoke 性质——评估链能跑完、metric 非 0 非假满分、权重真加载，**不对照论文数字、不查 metric 语义**；对照论文是 CPR 第一次打开论文做的事。
+
+> **命名约定**：分钟级的链路冒烟在本 skill 叫 **smoke run**；小时级的迭代代理配置叫 **reduced setting**，归 `code-paper-reproduction`——两个词不混用。
+
+## 在系统里的位置（局部）
+
+本 skill 是 `dl-assistant` 配套 skill 之一，角色是中期的 **baseline 就绪关卡**——把选定的 baseline repo 在 GPU 服务器上准备到可信可跑，产出 setup 目录。上游吃 `baseline-survey` 的选型报告（`baseline-survey.json`）或用户独立触发；下游主线是 `code-paper-reproduction`（验证能否复现），`code-reading` 也会直接读 `setup.json` 拿就绪入口。
 
 ```mermaid
 flowchart LR
-    BS[baseline-survey] -.->|选型决定、需求与首批实测任务| CPS[code-project-setup]
-    USER[用户已指定组件和准备目标] --> CPS
-    CPS -->|准备记录、操作证据与未决项| CPR[code-paper-reproduction]
-    CPS -.->|setup.json：环境、源码和已检查入口| CR[code-reading]
+    BS[baseline-survey] -.->|baseline-survey.json| CPS
+    USER(["用户独立触发<br/>手上已选定 repo"]) --> CPS
+    CPS["code-project-setup<br/>baseline 就绪关卡·setup 目录"]
+    CPS -->|setup 目录| CPR[code-paper-reproduction]
+    CPS -.->|setup.json（就绪入口/路径）| CR
+    CPR -->|reproduction 目录| CIP[code-idea-prepare]
+    CPR -.->|分诊跳过 CIP（记录理由）| CR
+    CIP -->|cleanup 目录| CR[code-reading]
+    CR -->|读懂 baseline 再动手| EX[code-idea-execution]
 ```
 
-全局关系见dl-assistant。setup不替用户完成code-reading，不因短检查通过就跳过相应复现可信度核查或代码阅读。这里的检查不替代完整评测/训练复现，也不设计新研究方法。
+> 整体架构、全局怎么连，看 `dl-assistant` 的「全局 skill 流向图」；本 skill 的局部图画全与自己相关的交接。
 
-## 输入、上游接收与实际目标
+## 产出与保存：setup 目录
 
-优先读用户指定的survey/准备记录和研究说明；已知目标与授权直接使用。未指定时在当前项目约定目录定位，不按日期自动选择最新文件；有歧义才澄清。没有survey时从实际代码/配置/原文建立当前准备需求。
+setup 的核心产物是一个**目录**（和前期 skill 的目录产出一致），**固定落 `docs/code-project-setup/<repo>-<日期>/`**，不问用户、不接受另行指定：
 
-新版 `baseline-survey.json` 接收规则：
-- 检查schema、decision.status及实际用户决定，不把recommendation当已选定；未决定可以只读调查，不擅自下载、安装候选或悄悄选择替代。
-- 读取decision.components的全部候选/版本/角色、requirements、research_fit、validation_targets、verification_tasks、来源和组合条件，不能只读decision.repo或repo_role。
-- 把setup负责的实测任务映射到具体操作和检查；reproduction/execution或research_discussion任务保留并交对应责任，不替下游宣称完成。
-- 执行前核对真实代码commit/diff、配置、模型与数据身份；源码预判不等于本机结果。版本变化先确认影响，不直接复用旧调查的适配结论。
-- 旧报告仅作线索，缺字段保留未知，按实际需求补齐；不批量迁移历史项目。多组件不可静默压缩成单仓库。
+```
+docs/code-project-setup/<repo>-<日期>/
+├── setup-spec.md              # 准备规格（确认点 1）
+├── setup-plan.md              # 分任务执行计划（确认点 2）
+├── setup.json                 # 机读交接区（下游 agent 直接消费，单一真相源）
+├── setup-report.md            # 人读正文（任务台账·执行中动态更新 + 就绪结论）
+├── <repo>-datasets-intro.md   # 数据集速览（是什么 + 真实样本）
+├── smoke.py                   # Layer 2 smoke script（多个脚本用 smoke/ 目录）
+├── env/                       # 环境导出五件套
+│   ├── environment.yml / requirements.txt / uv.lock / poetry.lock / pyproject.toml
+└── images/                    # 数据集样本图（datasets-intro 相对路径引用）
+```
 
-先列本轮需要的操作，如评测、训练入口检查、中间量读取、数据转换或组合接口验证，并关联R需求。缺少核心科学比较或需要重建方法时先讨论；允许只准备已明确部分，不称研究已就绪。
+- **机读区单一真相源**：`setup.json` 是下游 agent 的入口（conda_env / ready_commands / data / checkpoint / blocked / dev_card_footprint / reproducibility / paper_metrics / repo_role / dataset_report / env_export / smoke），人读材料分散在目录其他文件。两者描述同一事实，别打架。
+- **跨机器交接**：产出是跨机器交接物（本地读 setup-report.md / datasets-intro、服务器上跑）——横切规范见 `dl-assistant` SKILL.md「横切规范」。
 
-## 准备时必须理解的含义
+模板：`setup-spec-template.md` / `setup-plan-template.md` / `setup-report-template.md`（含 setup.json 字段）/ `dataset-report-template.md`。
 
-setup要检查自己正在操作的数据、配置和接口：对象/标签/单位/划分、预处理/转换、模型与权重对应、入口输入输出、指标定义/参数及实际必要依赖。需要时读论文、源码、配置和原测试，不能以“不负责复现”为由忽略协议差异。
+## 核心纪律
 
-| 阶段 | 责任 |
+### 两个确认点（spec 审 + plan 审，必停）
+
+setup 里真正需要人参与的是**动手前对齐**（spec / plan）和**影响实验语义的改动**（语义改动即停）。其余（装环境、跑 smoke、数据就绪、修路径）是 agent 该自主连跑的工程活。
+
+- **Spec 审阅**：读完 baseline-survey + 扫完 repo 后，产出 `setup-spec.md` 给人 review——repo 介绍、环境决策（含资源判断）、数据 & 权重清单、验证标准、预判地雷 + 语义改动预警。这是"动手前对齐方案"，有问题改到确认。
+- **Plan 审阅**：spec 确认后，转成 `setup-plan.md`（分任务执行计划 T1-T8）给人 review。有问题改到确认，才进工程执行区。
+
+> spec 定 what / why（做什么、为什么、风险、标准），plan 定 how（分任务执行）。两阶段都过用户，比单 plan 把"对齐"和"分解"混在一起清晰。模板见 `setup-spec-template.md` / `setup-plan-template.md`。
+
+**全程用户在场**：agent 连跑工程活，只在两个确认点 + 语义改动时停；长任务（大下载 / 偏长 smoke run）托管期间用户可离开，那本质是"等命令跑完"，不需要 agent 替你做决策。
+
+### 报告动态更新（活文档）
+
+`setup-report.md` 的任务台账**随执行逐节回填**——工程执行区每完成一个任务，当场写下「实际结果（实测值，不是"通过了"）+ 是否成功」，不留到最后一次性补写。产物即真相：回忆录式的报告会丢细节、美化失败，恢复续跑时也没法靠它定位断点。「就绪结论」节在 T7 收尾时定稿。模板见 `setup-report-template.md`。
+
+### 语义改动即停（触发式，贯穿工程执行区）
+
+不在流程固定位置。一旦要做下面这些"可能影响实验语义"的改动，**立刻停下、汇报为什么要改 + 建议怎么改、等用户拍板**：
+- checkpoint `strict=False` 或 key remapping
+- dataset annotation 转换、label map 修正
+- metric 调用参数变化
+- 修改默认 config 中与实验结果相关的值
+
+用户有疑问 → 继续解释；同意 → 按方案改、回命中层重验。
+
+### 长任务托管 + 恢复续跑
+
+**亮线规则**：预计 >5 分钟 / 会话断开重跑代价高的命令 → 一律 tmux detach（拿不准时长就当长任务），首选封装脚本 `dl-assistant/scripts/run-long.sh`；禁止 `run_in_background`、禁止前台干等。setup 会遇到长任务（几十 GB 数据 / 权重下载、偏长 smoke run）和中断（网络断、去手动下数据、换机器）。**机制见 `dl-assistant/references/long-run-ops.md`**（tmux detach + sentinel + 只读三连 + 扫产物恢复）。本 skill 的 session 前缀 `setup-dl-<slug>`、长任务以下载为主、恢复时扫 conda env / 数据 / checkpoint 落地 + 读 setup.json。
+
+核心：**恢复靠扫真实产物，不靠状态文件**——重连后扫 conda env 在不在、数据目录到位没、checkpoint 在不在、上次 setup.json 写到哪，零额外状态文件。
+
+### git 工作流：code/project-setup 分支
+
+所有 setup fix 在 **`code/project-setup` 分支**上进行，不动主分支。完成后**向用户汇报做了哪些修复**，用户同意才 merge 回主分支；有疑问就停在分支继续修 / 解释，不 merge。这样下游 `code-paper-reproduction` / `code-idea-execution` 拿到的是干净可回溯的 setup 完成态。
+
+```mermaid
+gitGraph
+    commit id: "选定 baseline repo"
+    branch project-setup
+    checkout project-setup
+    commit id: "环境就绪（conda env）"
+    commit id: "数据/权重 config 修正"
+    commit id: "setup fixes + 三层验证"
+    checkout main
+    merge project-setup id: "用户同意·merge 回主分支"
+    commit id: "setup 完成 → 交棒 CPR"
+```
+
+> 图里分支名简称 `project-setup`（gitGraph 分支名带 `/` 易渲染出问题，实际分支名 `code/project-setup`）。条件循环不在图里画（gitgraph 是确定拓扑）：汇报后用户有疑问 → 停在分支继续 commit 修订、不 merge，直到同意才 merge。
+
+## 上游接缝：baseline-survey.json 字段用法
+
+启动先扫固定目录 `docs/baseline-survey/` 找 `baseline-survey.json`（多个夹子歧义问用户；扫不到问用户要——跨机器交接横切规范见 `dl-assistant` SKILL.md「横切规范」）。用户指认选定的 repo（或读 `decision.repo`），读对应 `candidate` 的下列字段，不解析散文。有就继承，不重查：
+
+| survey 里的 | setup 怎么用 |
 | --- | --- |
-| survey | 静态核查选型依据、条件与剩余实测任务 |
-| setup | 检查准备操作是否符合约定，指定操作在什么条件下实际执行到哪里 |
-| reproduction | 在明确协议下评估对应评测或训练结果的复现可信范围 |
-| iterate | 根据证据更新研究认识、价值和下一步 |
+| 执行链骨架（训练链 / eval 链 / 数据链，`文件:函数`级） | Layer 2/3 验证时知道该调哪条链，不从零摸入口 |
+| 环境依赖分析（含不常见库 / 编译地雷预判） | 直接进 Spec「环境决策」的已知地雷，重点处置 |
+| 关键风险与坑（权重失效 / 数据对不上 / 复现失败潮） | 进 Spec「预判地雷」，setup 重点提防 + 实测核验 |
+| 改造成本 / 血缘（现成 repo 还是近亲改造） | 知道接手疼不疼、要不要从祖先 repo 改起 |
+| 论文报告主指标（`paper_metrics`） | 原样带进 `setup.json`——指标契约的传递带，reproduction 的验收基准初稿随链传递，不用回头翻 survey |
+| repo 角色（`decision.repo_role`：对打 baseline / 实验基座） | 原样透传进 `setup.json`——CPR 据此定复现目标（论文表格行 vs 基座自报参考数字） |
 
-可以用有出处的已知答案或参考结果做检查，但不为追论文数自动调参；小样例正确不能推出完整性能正确。参考指标保留身份、条件和核查范围，不按baseline/substrate旧角色自动挑一个数字当基准。
+> survey 是**远程读文件的预判**，setup 是**真实机器的实测**——继承不等于照单全收。survey 说"权重直链可下"，setup 要真下下来验加载；survey 预判"mmcv 可能编译难"，setup 真去编译验证。**冲突时以 setup 实测为准**，并在 report 记一笔"survey 预判 X，实测为 Y"。
 
-## 工作流程
+**没有 survey 报告也能独立跑**：退回从零探索（README → docs → scripts → configs → 依赖文件 → source imports → paper / 项目页），自己建立入口表和地雷清单。软依赖，不强制。
 
-### 1. 保护现场并核对已有状态
+## 运行流程总览
 
-读取项目约定，核对工作区、分支、未提交改动、当前代码和已有环境/资产/进程。保护用户改动；只有确实影响后续操作时才澄清，不自动stash、重置或覆盖。按项目规则使用当前授权分支或隔离分支，不强制固定名字、不假设主分支叫main、不要求最终merge才算完成。
+```mermaid
+flowchart TD
+    START(["开始 setup"]) --> S1["Step 1 开工检查<br/>工作区保护·吃 baseline-survey.json·机器信息"]
+    S1 --> S2["Step 2 探索 + 写 Setup Spec<br/>repo介绍/环境/数据/验证标准/地雷+语义预警"]
+    S2 --> G1{"Spec 审阅·用户确认"}
+    G1 -->|有问题·修改| S2
+    G1 -->|确认| S3["Step 3 Spec 转 Setup Plan<br/>分任务执行计划 T1-T8"]
+    S3 --> G2{"Plan 审阅·用户确认"}
+    G2 -->|有问题·修改| S3
+    G2 -->|确认| S4
 
-恢复时结合版本/配置、环境实际状态、文件完整性、检查日志、退出状态及进程核实。文件/目录/环境存在不等于已完成；旧结果只可复用到相同且相关的条件。先定位运行中任务，不重复启动下载/训练；状态未知就保留未知。
+    subgraph EXEC["工程执行区（Step 4-9）·纪律：任意步命中语义改动即停（汇报→拍板→改完重验）·按 Plan 的 T1-T8 开 tasklist 跟踪"]
+        S4["Step 4 网络镜像就绪"] --> S5["Step 5 环境配置（含编译型依赖）<br/>+ Layer 1 import·数值 sanity"]
+        S5 --> S6["Step 6 数据 & checkpoint 就绪·全自动优先<br/>大下载 tmux 托管·产数据集速览"]
+        S6 --> S7["Step 7 Layer 2 synthetic smoke<br/>数值 sanity 主战场"]
+        S7 --> S8["Step 8 Layer 3 官方命令 smoke run<br/>数值 sanity + 实测开发卡足迹"]
+        S8 --> S9["Step 9 可复现性基线<br/>摸清随机性·只摸不强改"]
+    end
 
-### 2. 写好 spec 和 plan，提交用户审阅
+    S9 --> S10["Step 10 产出 setup 目录<br/>setup.json + setup-report.md + datasets-intro + smoke + env/ + images/"]
+    S10 --> S11["Step 11 git 汇报 → 用户同意 merge → 交棒 CPR"]
+```
 
-按 [规格模板](references/setup-spec-template.md) 写 `setup-spec.md`，说明操作、组件、环境/资产需求、检查依据、允许调整与预算。按 [计划模板](references/setup-plan-template.md) 写 `setup-plan.md`，列实际任务和依赖。简单任务也保留两份文件，可以简写并相互引用。
+进工程执行区后，agent 按 Plan 的 T1-T8 **开 tasklist 逐项跟踪**。普通工程活（pip / conda 装包、import 报错、config 路径、symlink、device map、batch / num_workers 调参、wrapper 命令修正）agent 自己 debug，**只有反复修不动的死结才上报**。
 
-**执行前自查**直接写在spec/plan：
-- 目标：每项操作对应什么需求和组件？必要入口/观察是否遗漏？
-- 依据：输入条件、预期行为及来源是否明确？是否又用了“输出必须非零、几步loss必降”等无依据标准？
-- 改动与授权：将改变数据、加载、计算或比较的哪些部分？如何验证、是否在已批准范围？
-- 任务范围：哪些检查需要真实数据/设备，哪些不适用？成本和运行条件哪些仍未知？
+各 Step 的详细执行要点见文末「运行流程详情」。
 
-逐项记录判断、证据/版本、未知和行动影响。clear 表示自查已通过；limited 说明限制为何不妨碍当前准备；needs_revision 先修正或讨论。自查结果用于审阅，不新增单独自查 JSON 或脚本。
+## references 文件列表
 
-**执行门槛**：写完并自查后，向用户同时提供两份文件的路径，提示审阅范围、改动、成本和待决事项，明确请用户确认 spec 和 plan。一次回复可以确认两份。只有用户明确批准当前两份内容后，才能进入第 3 步。只批准其中一份时，继续等待另一份。确认前可以只读核对现场、查资料和完善文档；安装依赖、下载资产、修改项目代码或配置、运行验证任务都等两份获批后再开始。既有选型决定、资源授权和自查通过可作为审阅依据，仍需核实用户已明确确认当前两份文件。
+| reference | 讲什么 | 什么时候读 |
+| --- | --- | --- |
+| `setup-spec-template.md` | setup-spec.md 模板（动手前对齐方案） | 写 spec 时 |
+| `setup-plan-template.md` | setup-plan.md 模板（分任务执行计划） | spec 转 plan 时 |
+| `dataset-prep.md` | 数据集就绪 8 类坑 + 自动化处置 + 样本挑取 | 数据就绪时 |
+| `dataset-report-template.md` | 数据集速览模板（`<repo>-datasets-intro.md`） | 写数据集速览时 |
+| `compile-deps.md` | 编译型依赖版本对齐 + fallback 链 | 遇编译型依赖时 |
+| `numeric-sanity.md` | 三层验证的数值 sanity 判据 | 做 Layer 1/2/3 时 |
+| `setup-report-template.md` | setup-report.md + setup.json 模板 | 写报告时 |
+| *（跨 skill 共享）* `dl-assistant/references/long-run-ops.md` / `network-mirror.md` | 长任务托管 / 网络镜像通用机制 | 跑长任务 / 配网络时 |
 
-记录确认所对应的文件版本及授权范围。恢复任务时先查该记录；两份文件已有明确批准且内容仍在批准范围内时继续执行。范围、成本或研究条件有实质变化时，更新受影响的文件并提交用户重新审阅，获批后再执行变更。
+## 常见错误
 
-### 3. 准备环境与资产，按实际影响处理改动
+- 不要只装包 / 跑 import 就宣称 done —— 三层验证 + 数值 sanity 才算就绪。
+- 不要把"命令不报错"当"跑对了" —— NaN / 全零输出、`strict=False` 丢 key 是静默炸弹。
+- 不要把 smoke run 跑出的 metric 拿去对照论文数字 —— CPS 只保证评估链能跑、数机械上合理；对照论文是 code-paper-reproduction 的事。
+- 不要把 smoke run（分钟级链路冒烟）和 reproduction 的 reduced setting（小时级迭代代理）混为一谈。
+- 不要从零重查 README —— 有 `baseline-survey.json` 先吃进来继承。
+- 不要对编译型依赖反复盲试 —— 走 `compile-deps.md` 的版本对齐 + fallback 链。
+- 不要在编译型依赖重的 repo 上死磕 conda —— spec 环境决策先看 repo 有没有官方维护的 docker 镜像。
+- 不要擅自 `strict=False` / 改 label map / 改 metric 参数 —— 那是语义改动即停点，停下问用户。
+- 不要强制改 deterministic / seed —— 可复现性基线只摸清不强改（强改是实验语义，归 execution）。
+- 不要用 `run_in_background` 跑长下载 / 长 run —— 会话退即被杀，走 tmux detach（见 `dl-assistant/references/long-run-ops.md`）。
+- 不要在主分支上直接改 setup fix —— 进 `code/project-setup` 分支，汇报同意再 merge。
+- 不要在开发卡上去对标 repo 声称的多卡规模 —— setup 实测的是"开发卡够不够迭代"，full 规模是运行服务器的事。
+- 不要为 agent 单设状态文件 —— setup.json 兼恢复入口，扫产物自恢复。
+- 不要写完 smoke script 就跑完丢弃 —— 落进产出目录，下游复验 / 回归要重用。
+- 不要最后一次性补写 setup-report.md —— 任务台账随执行逐节回填（实际结果写实测值 + 成败），回忆录式报告丢真相、也没法当恢复断点的依据。
+- 不要在会话里用 `$...$` LaTeX——会话符号用 Unicode（横切规范见 `dl-assistant` SKILL.md「横切规范」）。
 
-**长任务启动规则**。预计超过 5 分钟或中断后重跑代价高的命令，单机或 SSH 直连机器上用 `dl-assistant/scripts/run-long.sh` 在实际执行机器上通过 tmux detach 启动。通过集群调度器提交的任务走调度器。启动和恢复细节见 [共享长任务说明](../dl-assistant/references/long-run-ops.md)。
+## 运行流程详情（Step 1 - Step 11）
 
-确认当前 spec 和 plan 均已获用户批准后，按方案选择项目适用的隔离环境/容器，不把容器标识塞进conda_env。依赖版本与安装办法按实际项目和官方说明核对，记录来源、环境导出和日志；编译扩展处理见 [依赖规则](references/compile-deps.md)。网络/镜像设置尽量限于任务进程或项目环境，不擅改系统设置，见 [网络参考](../dl-assistant/references/network-mirror.md)。
+### Step 1 开工检查
 
-数据/权重下载、完整性、转换和读取见 [资产准备](references/dataset-prep.md)。不覆盖原始数据，不为让loader运行擅自删除样本、改标签或换split。格式适配需有规则和对应检查；检查发现与选型条件不符时按相同版本/条件核对，保留新证据和原调查。
+- **工作区保护**：`git status --short` / `git branch --show-current`——不在 `main` 上改代码，建 / 切到 `code/project-setup` 分支（见「核心纪律 · git 工作流」）；有用户未提交改动先说明来源、问怎么处理。
+- **吃上游报告**：按「上游接缝」扫 `docs/baseline-survey/` 吃 `baseline-survey.json`；没有 survey 就退回从零探索。
+- **机器信息采集**：`conda info --envs` / `python --version` / `nvidia-smi` / `nvcc --version` / `gcc --version`——环境决策和编译型依赖对齐都靠这几个真值。
 
-**每次修复按影响判断，而不是参数名**：
-1. 已授权且可确认不改变计算/数据含义的路径等修复：自主执行并记录。
-2. 旨在保持含义但需验证的转换/名称映射：先明确规则、授权与对应检查；在批准范围内执行，不能只说“格式变化”等价。
-3. 改变含义或影响不明：如忽略关键权重、换核心算子/精度策略、改标签定义、batch或训练/评测条件，说明具体影响与建议，返回确认；科学设计变动交idea-find/iterate，批准后才实施。
+### Step 2 探索 + 写 Setup Spec（用户确认）
 
-`strict=False`/key映射并非自动正确或自动错误；检查实际使用、遗漏、额外参数及有意初始化部分。batch、worker、device和依赖替换也不自动归为普通工程调整。既有批准不重复询问，新的未决影响不能凭“只是工程”跳过。
+扫 repo（README / docs / scripts / configs / 依赖文件），结合 survey 继承的地雷清单，产出 `setup-spec.md`：repo 介绍、环境决策（含资源判断、conda vs docker 选择）、数据 & 权重清单、验证标准（"setup 完成"的定义）、预判地雷 + 语义改动预警。写完**停下给用户审**，确认才转 Plan。模板见 `setup-spec-template.md`。
 
-### 4. 按操作组合验证，保留可重复的最小检查
+### Step 3 Spec 转 Plan（用户确认）
 
-按 [行为与数值检查](references/numeric-sanity.md) 在适用处检查三层：环境/配置、必要组件行为、真实输入与实际入口。不是每个任务都必须GPU、合成输入、训练或官方命令全部执行。
+把确认的 spec 分解成 `setup-plan.md`（T1-T8，每个任务一个可验证产出、可追溯到 spec 某一节）。写完**停下给用户审**，确认才进工程执行区。进工程执行区后按 Plan **开 tasklist 逐项跟踪**。模板见 `setup-plan-template.md`。
 
-每检查先明确：**对象 → 输入/条件 → 预期行为及依据 → 实际结果 → 能说明/不能说明什么**。预期无依据就记观察和待调查，不补任意阈值；没有异常也不认证整体实现。
+### Step 4 网络镜像就绪
 
-| 本轮操作 | 验证重点 |
-| --- | --- |
-| 纯评测/推理 | 权重/配置、真实输入、预测与指标/保存；不强制backward |
-| 需要训练 | 相关数据/目标计算、预期参数依赖与更新，及本轮需要的保存/恢复行为；不要求几步loss单调下降 |
-| 中间量读取/测量接口 | 指定状态量实际可取、样本对应、形状/单位与保存；新科学测量实验另交execution |
-| 数据处理 | 转换、数量/身份/标签/划分和输出可读；不强制模型/GPU |
-| 多组件组合 | 各自必要检查及接口、单位、样本身份、预处理与版本一致性 |
+进环境配置前先明确下载策略，避免后续反复失败。**通用网络策略（探网络 / 配代理 / 镜像 / 直连失败交接）见 `dl-assistant/references/network-mirror.md`**；本 skill 在 setup-report.md 记录本次采用的策略值。
 
-合成输入只有满足实际输入要求时才使用；否则选可追溯的真实小样本。小样本用于检查读取与执行，不代表全量分布、泛化或训练性能。只改小样本/步数等检查条件时另存配置，检查结论限于该条件，不覆盖正式配置。
+### Step 5 环境配置（含编译型依赖处置）+ Layer 1
 
-最小脚本/命令保存在 `checks/`（已有smoke.py可沿用），调用真实组件并绑定来源代码/配置、输入样本与预期依据。保留日志/退出状态、观察、未覆盖部分和再运行方式，供后续重复使用；只写脚本未运行不能标已检查。
+基于项目文件 + Step 1 采集的机器信息落实 spec 的环境决策：conda env 名、Python 版本、PyTorch/TF/JAX × CUDA 组合、安装顺序、是否 editable install；或按 spec 决定走 repo 官方 docker。
 
-按观测需要记录资源：机器/设备、模型、输入尺寸/长度、batch、精度、训练或推理、预热/测量范围和方式。区分实际测量与估计；短检查不推算为完整训练成本，异步设备计时需说明同步等测量条件，不把一次峰值概括为全规模能力。
+> **编译型依赖是 DL setup 最高频的阻塞点**（mmcv-full / detectron2 / flash-attn / apex / deformable attention / 自定义 CUDA 算子），对 `torch × CUDA × gcc × nvcc` 四方绑死。遇到走 **`compile-deps.md`**——版本对齐表、常见算子已知装法、编译失败诊断顺序、何时 fallback 到预编译 wheel / 降版本 / 官方 docker。
 
-### 5. 持续记录、排错与恢复
+装完做 **Layer 1 import 验证**：framework + 项目 package + config 系统加载；**数值 sanity（轻）**——没有 silent 的 CUDA 版本不匹配警告（`torch.cuda.is_available()` 为真、算子编译版本和运行 CUDA 对得上）。判据见 `numeric-sanity.md`。
 
-任务执行即更新setup-report和setup.json，记录具体结果、失败/阻塞、全部相关尝试和修改，不到最后凭回忆补写。结合日志、进程与退出码核实任务状态。不把缺退出码视为仍运行，或把退出0视为检查符合预期。
+### Step 6 数据 & checkpoint 就绪（全自动优先）+ 产数据集速览
 
-需要调查的异常先读输入、配置和实际证据，按预算排查。重复无新信息、将超预算、资产/权限缺失或需改科学设计时报告已试方案、证据、限制和建议，不要求尝遍所有安装方式才上报，不无限调参追求通过。
+**基调：自动化优先**——agent 自己查版本对齐、配代理、下、转格式、改硬编码路径、造 subset、验证 loader，**只在必须人工时停**（Kaggle / 网盘账号、license 需点击同意条款、内网、链接失效）。详细坑 + 自动化处置见 **`dataset-prep.md`**（8 类坑：格式转换 / repo 预处理脚本 / split / 路径硬编码 / 下载校验 / loader 隐式假设 / 版本一致性 / subset 造法）。
 
-访问失败先区分认证/限流/网络/源不可用，按已有授权查找合法替代；用户介入确有必要时一次说明缺什么及影响，不要求在对话里粘贴秘密。修改随机性、确定性、划分和训练条件按上述影响规则处理，不擅自增强“可复现性”。
+就绪后**产数据集速览**（`<repo>-datasets-intro.md` + `images/`）：给每个数据集挑 3-5 个真实样本 + 介绍（是什么 / 规模 / 格式 / 版本对齐），解决"不知道这些数据集都是啥"的痛。模板见 `dataset-report-template.md`。
 
-### 6. 交接前自查与逐项结论
+大下载走 tmux detach 托管（**见 `dl-assistant/references/long-run-ops.md`**），不用 `run_in_background`。完成后验证：目录结构存在、loader 能读真实 sample、checkpoint 能 load（这一步触发数值 sanity：strict 加载、key 是否全中——`strict=False` 是语义改动即停点）。
 
-按 [报告和JSON模板](references/setup-report-template.md) 保存每项操作和检查的真实状态。部分完成可交待解决问题，不能伪造成功；无关操作可not_applicable并说明，不为凑三层检查启动不需要的训练。
+### Step 7 Layer 2 synthetic smoke
 
-**交接前自查**写在现有报告：
-- 证据：每项“已检查”是否有实际命令/工作目录/环境、代码commit+diff、配置/资产版本、输入范围、日志/退出状态与结果？
-- 范围：是否把组件检查、极小样本结果或一次加载夸大为整体正确/可复现/研究支持？
-- 改动：转换/加载/依赖适配是否按批准规则验证，原数据与未解决影响是否保留？
-- 需求与责任：survey实测任务逐项回应了吗？多组件是否遗漏？未解决事项是否明确归setup、reproduction、研究讨论或execution？
+用 agent 写的极小 smoke script 调 repo **真实** model / loss / transform / collate / trainer 组件（允许 fake tensor / dummy batch，但只调真实组件，不伪造数据集、不改算法逻辑）。**数值 sanity（关键）**：forward 输出不是 NaN / 全零、形状对、loss 是有限正数量级合理、backward 梯度非全零。判据见 `numeric-sanity.md`。
 
-needs_revision不交“已就绪”结论；仍可如实交部分结果和受阻事项。操作通过仅支持声明范围；未受影响操作可继续，不因单个问题判整个项目失败。没有实际运行或用户授权依据不能标已验证/已批准。自查不替用户关键代码审阅或独立科学核查。
+**smoke script 落盘**：写好的 smoke script 存进产出目录（`smoke.py`，多个脚本用 `smoke/`），在 setup-report.md 记一笔——下游 reproduction 复验、execution 改代码后回归都能直接重用。
 
-## 保存、版本与下游
+### Step 8 Layer 3 官方命令 smoke run
 
-默认 `docs/code-project-setup/<实际日期>-<slug>/`，尊重指定路径；继续旧任务先核对记录，新任务目录冲突加唯一标识，不覆盖历史。保留setup-spec.md、setup-plan.md、setup-report.md、setup.json、必要检查与环境记录；按实际需要生成 [数据速览](references/dataset-report-template.md) 和样本文件，不要求每次有images/或全部仓库数据。
+枚举官方 train / eval / inference / demo / preprocess 命令，逐个判断 ready / blocked / 超出范围。能轻量跑的做 smoke 验证（`--help` / dry-run → tiny subset eval → 1-5 iter train），不能跑的记 blocker。**不自动启动 full training / 多 GPU 长任务**。
 
-按项目约定提交本次授权内容，不默认merge/push、不覆盖用户分支。就绪入口绑定实际代码/config/环境/数据；git改动后哪些检查需要重跑按影响判断。报告与JSON保持一致，敏感值不写进命令/环境导出。
+- **数值 sanity（强）**：loss 趋势对、eval metric > 0 且不离谱、`strict=False` 报告丢了哪些 key。判据见 `numeric-sanity.md`。
+- **指标契约职责**：这一步保证 eval 命令能从头跑到尾、出的数机械上合理——**不对照论文数字**（那是 reproduction 的事）。
+- **资源实测**：记录开发卡单 step 显存 / 耗时，判断够不够支撑 execution 迭代。
 
-交reproduction的是验证目标、已检查操作和剩余可信度问题；给code-reading提供环境、源码与入口。研究执行仍需相应前置核查和用户代码阅读。schema_version=2的多组件与检查语义须明确；reproduction、prepare与code-reading已按实际操作/目标/行为证据接收；后期skills按实际来源与验证范围接收；历史项目记录仍须核对，不能以旧“✓”或repo_role推算可信度。
+### Step 9 可复现性基线
+
+数据 / 权重就绪后，**摸清 repo 随机性从哪来**（seed 设了几处、`cudnn.deterministic` / `benchmark`、dataloader shuffle / worker seed），给下游 execution 的可比性审计打底。**只摸清不强改**（强制 deterministic 可能改实验语义，归 execution）。结果进 `setup.json` 的 `reproducibility` 块（机读）+ setup-report.md 记一节（人读叙事）。
+
+### Step 10 产出 setup 目录
+
+report 的任务台账已随执行动态成型，本步做**收尾定稿**：写「就绪结论」节、`setup.json` 全字段填齐（值要真：验证过才填 ✓，没验证标状态，查不到标 unknown）、按「产出与保存」节的目录树核对产物齐（setup-spec.md / setup-plan.md / setup.json / setup-report.md / `<repo>-datasets-intro.md` / smoke.py / env/ / images/）。机读区和人读正文描述同一事实，别打架——改了路径两边都改。
+
+### Step 11 git 汇报 → merge → 交棒
+
+按「核心纪律 · git 工作流」汇报修复、用户同意后 merge 回主分支。merge 后向用户总结：
+- 哪些入口 ready / 哪些资源仍 blocked
+- setup 目录保存路径
+- 建议下一步：主线是 `code-paper-reproduction`（验证能否复现论文性能）→ 之后 `code-idea-prepare`（分诊）→ `code-reading`（读懂源码）→ `code-idea-execution`（实现 idea）
+
+如果用户接着进下游 skill，明确提醒把 **setup 目录路径**给下游——它读 `setup.json` 机读交接区就能继承本次配置。Layer 3 smoke run 的 loss 趋势 / metric 量级已打底，`code-paper-reproduction` 在此基础上往上靠论文数字。

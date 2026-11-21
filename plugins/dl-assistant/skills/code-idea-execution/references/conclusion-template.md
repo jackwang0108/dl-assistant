@@ -1,60 +1,127 @@
-# 本轮证据与研究判断交接
+# Conclusion 模板（code-idea-execution · 04-conclusion.md + conclusion.json）
 
-保存 `04-conclusion.md` 和 `conclusion.json`。不把阳性当执行成功，也不把部分完成、阻塞或无显著结果写成证伪。字段定义为schema_version=2，旧消费者需核对后再使用。
+> 由 **code-idea-execution** 产出。本 plan 的**结果 + 诊断 + 事实裁决 + 版本结论**。
+> `04-conclusion.md` 是人读叙事；`conclusion.json` 是机读交接（iterate / release / writing-paper 读）。
+> 记事实 + 验收裁决（子论点级）；**研究方向（下版做什么）不写这，交 iterate 的 from-previous**。
+> claim 裁决从 `claims.json` 渲染，不手抄。
 
-## 人读报告
+---
 
-```markdown
-# {版本} 实验交接
-- 当前研究问题、假设及批准计划版本。
-- 原来相信什么：先验与本轮未知，本项目原有数据与文献分开。
-- 实际观察到什么：执行完成数、失败/阻塞/取消、数据与具体来源。
-- 观察支持到哪一步：逐命题证据、条件、替代解释与不确定性。
-- 哪些仍未知：资料、数据有效性、设计识别和未完成实验分别说明。
-- 计划偏差与全部尝试：改动、批准范围及其影响，探索/事后解释标明。
-- 意外观察与建议：有依据的技术诊断和待研究解释，不宣布根因或自动改题。
-- 可复现与审阅：代码/模型/数据/配置/命令、设计快照、review与用户代码审阅。
-- 自查：pre_run/handoff记录路径、对应输入、剩余缺陷和对交接的影响；不代替独立review。
-- 下一轮待决定：修订假设、补取证、重评价值或停止的理由；决定归iterate与用户。
-```
+````markdown
+# Conclusion · v<N>-<slug>
 
-## conclusion.json
+## 执行摘要
+
+- **版本**：v<N>-<slug> ｜ **攻的子论点**：C_x ｜ **实验完成度**：X / Y
+- **主要发现**：[一句话]
+- **版本结论**：成功（C_x supported）/ 失败（refuted）/ 部分成功（mixed）
+- **tag**：成功节点打 `claim-C<id>`（锁 method）/ 失败·分析节点无 tag
+
+## §1 实验结果（按实验 / 问题维度，每个：目的 → 数字 → 诊断 → 判决）
+
+> 本节按 plan 的实验、或跑出来的问题维度展开，每个写完整的「**回扣目的 → 数字表 → 诊断（为什么/根因）→ 判决（支撑/部分/证伪 + trade-off 诚实）**」。
+> 诊断深度是本节核心：量级诊断（L2 norm 占比）/ 三角验证（统计 + per-image + viz）/ fail-win 对称分析。描述性为主（「数据显示 X」），判断归 iterate。
+> 每个实验的 keep/discard 对照 meta.json 预登记的 `decision_rule` 写——按预登记规则判的，还是事后补的解释（后者要标出来）。
+
+### [维度 1：如「Run1 fusion vs R2 主性能」/「select_layer ablation」/「P2' 跨块治愈」]
+
+- **目的**：回答什么（回扣子论点 C_x / 哪个判据）
+- **结果**（数字表）：
+
+    | 配置 | metric | 值  | vs 锚点 | 超 noise_floor? |
+    | ---- | ------ | --- | ------- | ---------------- |
+
+- **诊断**（为什么是这个结果 / 根因）：[机制结论。例：「不是 RGB 高频不够强，是 F_high residual（norm 25.87）淹没了它」]
+- **判决**：支撑 / 部分 / 证伪 C_x —— **trade-off 诚实**（例：「治了 A 但引入 B，净 +X 但 miss +Y」）
+
+### [维度 2：如「abs_hf 高频分析」/「case study 6 图」/「fail-win 对称」]
+
+[同上结构——目的 / 数字表 / 诊断 / 判决]
+
+### 未跑 / 未完成的实验
+
+| 计划实验 | 为什么未完成 | 影响 |
+| -------- | ------------ | ---- |
+
+### scale-risk 清单（有则写）
+
+机制上可能和容量/数据规模交互的变体（reduced 上成立、full 上可能消失或反转），逐个列：变体 + 一句话理由。CPE 跑 full-scale 时优先验这些。
+
+## §2 claim 裁决（从 claims.json 渲染，不手抄）
+
+> claim 裁决（supported / plausible / insufficient_evidence / contradicted，枚举以 `claims-template.json` 为准）由验收子 agent 写进 claims.json。本表从那渲染；完整裁决 + 证据指针读 claims.json。**contradicted ≠ 死刑**——它是「证据与预测相反」的事实描述，claim 的 status 变化（refuted）归 iterate 验尸后拍板。
+
+| Claim（子论点） | verdict                     | evidence          | is_innovation |
+| --------------- | --------------------------- | ----------------- | ------------- |
+| C_x             | supported / contradicted / … | exp-001: [metric] | true / false  |
+
+## §3 版本结论（成功 / 失败 / 部分 + trade-off 诚实）
+
+- **本 plan overall**：成功 / 失败 / 部分成功
+- **trade-off 诚实**：[数据级证实，不单向改善。例：「救 R2 失败 16/20 但丢 R2 胜利 10/20——fusion 是重分配非单向改善，净 cIoU 升但 miss 升」]
+- **对总论点的影响**（陈述事实，演化判断归 iterate）：[这版结果让总论点更稳 / 更悬 / 待定]
+
+## §4 可复现信息
+
+- **git**：commit `<sha>` ｜ branch `idea/v<N>-<slug>` ｜ tag `claim-C<id>`（成功节点）/ 无（失败·分析）
+- **命令**：见 plan 机读交接区
+- **产物**：`experiments/<exp>/runs/` + `analysis/` + 台账 `experiments/index.json`
+- **机器**：[跑在哪——文件不在找用户要，不绑传输]
+````
+
+---
+
+## conclusion.json（机读交接区，供 iterate / release / writing-paper 读）
 
 ```json
 {
-  "schema_version": 2,
-  "version": null,
-  "status": "partial",
-  "data_validity": "unassessed",
-  "outcome": "pending",
-  "node_type": "research_round",
+  "version": "v<N>-<slug>",
+  "status": "completed | abandoned",
+  "outcome": "supported | partially_refuted | refuted | inconclusive",
+  "node_type": "success | failure",
+
   "claims_json": "claims.json",
-  "self_checks": [],
-  "review_path": null,
-  "review_status": "not_reviewed",
-  "method_tag": null,
-  "round_record": {"prior_beliefs": [], "observations": [], "evidence_updates": [], "unknowns": []},
-  "experiment_counts": {"planned": 0, "completed": 0, "failed": 0, "blocked": 0, "cancelled": 0, "unfinished": 0},
-  "deviations": [],
-  "unexpected_observations": [],
-  "key_insights": [],
-  "scale_risks": [],
-  "evidence_quality_issues": [],
-  "golden_metrics": [],
-  "remaining_tasks": [],
-  "recommendations": [],
-  "handoff": {"next": "iterate", "design_change_approval_required": true}
+  "method_tag": "claim-C<id>[-v<k>] | null",
+
+  "golden_metrics": [
+    {
+      "claim_id": "C_x",
+      "metric": "...",
+      "value": 0,
+      "experiment_id": "exp-XXX",
+      "git_tag": "claim-C<id>"
+    }
+  ],
+
+  "key_insights": [
+    { "summary": "...", "impact": "..." }
+  ],
+
+  "scale_risks": [
+    { "variant": "exp-XXX 的什么改动", "reason": "为什么可能容量/规模敏感" }
+  ],
+
+  "evidence_quality_issues": [
+    {
+      "issue": "...",
+      "severity": "critical | moderate | minor",
+      "affected_claims": ["C_x"]
+    }
+  ],
+
+  "handoff": { "next": "iterate" }
 }
 ```
 
-status=completed/partial/blocked/failed/cancelled，只表示本轮执行；有效阴性且计划全部执行可为completed，部分未跑为partial，不写partially_refuted代替。data_validity=unassessed/valid/limited/invalid，聚合时列影响范围，不能将局部坏数据推广全部。
+---
 
-outcome=pending/supported/contradicted/mixed/insufficient_evidence/not_identifiable/invalid_data，表示本轮已核查命题的证据概览，不替代逐项claims，也不自动修改总假设研究状态。执行完成但无法区分解释可以completed+not_identifiable。
+## 模板使用说明
 
-round_record逐项引用原始路径、实验ID和条件；evidence_updates记录本轮证据评价，不预先替iterate决定新方向。review_status=not_reviewed/partial/completed，不可由文件存在推断完成。
-
-golden_metrics保留旧字段名但默认空，仅在之后明确选择论文/发行版结果时填写含完整来源的条目；supported不自动选入。method_tag可沿用历史定位，版本追踪不依赖它。旧success/failure节点不自动映射新版科学结果；未知项保留，不补猜。
-
-## 研究条件核对（与本轮用途有关时）
-
-引用条件记录的路径和版本，写明目标与实际条件、必须保留项的代码/配置/数据位置及检查证据、未知/偏差、所查范围和不能外推的内容。记录下一次目标条件验证的触发点或不适用理由。按本 skill 职责分别说明静态调查、准备、阅读或实际运行，不能将尚待检查项写成已落实；条件或假设变化后重新核对。
+- **`status` 枚举对齐 idea_tree 节点**：`completed`（跑完）/ `abandoned`（中途放弃）——部分完成不写 status，用 `outcome: partially_refuted` + 执行摘要的实验完成度表达。
+- **`outcome: refuted` 是版本级事实描述**（核心子论点未获支持 / 实验结果不利），不写进 claims.json、不改任何 claim 的 `status`——claim 生死归 iterate 验尸后拍板。
+- **`claims_json` 是裁决真相源**：这里只放指针，不重抄裁决。
+- **`method_tag`**：成功节点打的 git tag（锁 method 代码）；失败/分析为 null。`node_type: success` 才有 tag。
+- **`golden_metrics`**：release 用——每个 supported 子论点的关键数字 + 出处实验 + 锁它的 tag。
+- **`key_insights`**：iterate 用（粗种子，iterate 深化）。
+- **`scale_risks`**：reduced 迭代的系统性风险出口——CPE full-scale 优先验清单；没有则空数组。
+- **`evidence_quality_issues`**：跨 claim 共性问题（execution 汇总验收结果后写），单 claim 的问题在 claims.json 各自的 `evidence_quality.issues` 里。

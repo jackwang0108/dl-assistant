@@ -1,80 +1,85 @@
 {
-  "schema_version": 2,
   "experiment_id": "exp-XXX-name",
-  "type": "analysis",
-  "design_mode": "exploration",
+  "type": "training",
   "status": "not_started",
-  "status_reason": null,
-  "registered_at": null,
-  "started_at": null,
-  "completed_at": null,
-  "plan_phase": null,
-  "plan_task": null,
-  "research_question_ids": [],
-  "hypothesis_ids": [],
-  "claim_cids": [],
-  "purpose": null,
-  "prior_beliefs": [],
-  "unknowns": [],
-  "alternative_explanations": [],
-  "git_branch": null,
-  "git_commit": null,
-  "code_dirty": false,
-  "code_diff_path": null,
-  "design_record": {
-    "path": "design.json",
-    "recorded_at": null,
-    "git_commit": null
+
+  "started_at": "2026-01-01 10:00:00",
+  "completed_at": "",
+
+  "plan_phase": "Phase-1",
+  "plan_task": "实验 1.1",
+  "claim_cids": ["C1"],
+
+  "git_branch": "idea/v<N>-<slug>",
+  "git_commit": "abc123def",
+  "script": "experiments/exp-001-<name>/scripts/run.sh",
+
+  "purpose": "简短描述这个实验要回答什么问题",
+
+  "anchor_run": "exp-000-baseline | reproduction.json reduced_setting.baseline_result | claim-C<id> tag 对应的 run",
+  "decision_rule": "预登记的 keep/discard 判据，例：val cIoU > 锚点 + 2×noise_floor.std 才 keep，否则 discard",
+  "decision_rule_rationale": {
+    "tests": "判据三问①验什么：裁决哪个假设 + 机制链（假设不成立 → 为什么这个量会呈现这个信号）",
+    "threshold_origin": "判据三问②阈值来历：noise_floor 的几倍 / 论文消融幅度 / 量级估算——允许粗，不许没出处",
+    "on_hit": "判据三问③命中意味着什么 + 后路：方案死 / 子论点死 / 可能只是实现差，命中后往哪退"
   },
-  "anchor_run": null,
-  "comparison_basis": null,
-  "decision_rule": null,
-  "interpretation_plan": null,
-  "analysis_plan": null,
-  "adjustment_bounds": null,
-  "budget": null,
-  "model_sources": [],
-  "data_sources": [],
-  "configuration_paths": [],
-  "script": null,
-  "required_artifacts": [],
-  "attempts": [],
-  "deviations": [],
-  "unexpected_observations": [],
-  "results": {},
-  "data_validity": "unassessed",
-  "inference_status": "pending",
-  "inference_limits": [],
-  "scale_risk": null,
+  "scale_risk": "机制上可能容量/规模敏感时填一句话理由；否则 null",
+
+  "training": {
+    "seeds": [42],
+    "dataset": "refcoco",
+    "split": "val",
+    "epochs": 10,
+    "batch_size": 32,
+    "learning_rate": 0.0001
+  },
+
+  "diagnostic": {
+    "method": "FFT high-frequency analysis",
+    "checkpoint": "path/to/checkpoint.pth"
+  },
+
+  "outputs": {
+    "runs_dir": "runs/",
+    "analysis_dir": "analysis/"
+  },
+
+  "results": {
+    "primary_metric": "refcoco val cIoU",
+    "primary_value": 78.71,
+    "anchor_value": 77.49,
+    "noise_floor_std": 0.15,
+    "mem_peak": "18GB/40GB",
+    "secondary_metrics": [
+      { "metric": "gIoU", "value": 75.16 }
+    ]
+  },
+
+  "verdict_local": "keep | discard | pending",
+
+  "issues": [
+    {
+      "type": "OOM",
+      "description": "batch_size 64 OOM，降到 32 后正常",
+      "resolved": true,
+      "solution": "调整 batch_size"
+    }
+  ],
+
   "notes": "",
+
   "_notes": {
-    "type": "training/evaluation/diagnostic/ablation/analysis/probe/theory；类型不决定必须有train.log",
-    "design_mode": "exploration/confirmation；探索也有问题、分析范围和预算，但不强制keep判据",
-    "status": "not_started/in_progress/completed/failed/blocked/cancelled；非completed原因必写status_reason，not_started和in_progress可暂不写",
-    "data_validity": "unassessed/valid/limited/invalid，和执行状态分别记录，文件检查不能确认valid",
-    "inference_status": "pending/supported/contradicted/insufficient_evidence/not_identifiable/invalid_data/not_applicable；非科学前置任务可not_applicable",
-    "design_record": "path为实验目录内的批准设计不可变副本；时间/commit需真实，运行前保存不能事后伪填。脚本只能检查引用和可解析性，不证明时间或批准真实",
-    "interpretation_plan": "confirmation必填：预测、支持/反对/不足/无法区分的解释规则与界限依据；decision_rule保留旧字段但不强制填写",
-    "analysis_plan": "exploration必填：观察/测量范围、对照、读数/分析与未知；必要时独立数据确认，不能运行后回写原假设",
-    "required_artifacts": "每项{path,format,required_for}；path为实验目录内相对文件；format=json/text/file；required_for为需要该文件的执行状态数组；每个completed实验至少有一项该状态必需产物。失败日志可单独required_for=[failed]",
-    "attempts": "每项至少有唯一attempt_id、replicate_id、status、实际command或script、exit_code或null及resume_from。已完成代码操作退出码须为0；人工理论核查exit_code=null且有manual_record_ref。实际commit/diff、配置/模型/数据版本、设备、时间、日志与结果路径按操作保存，不能只留空对象或最佳尝试。",
-    "code_dirty": "实际执行时存在未提交代码须附code_diff_path并保存，不能只记HEAD；后续代码审阅和复现沿实际commit+diff定位",
-    "deviations": "计划与实际差异、时间、原因、批准范围和对解释影响，不能只存最终最佳配置",
-    "results": "真实读数及分母/单位/不确定性和来源，未运行为空，不以示例数据占位",
-    "legacy": "旧keep/discard仅历史资源处置记录，不转成假设支持或创新性；旧schema不自动伪装新版预登记",
-    "condition_review_ref": "运行前条件记录的路径/版本，绑定当前问题和假设；适用时必须填写，不以scale_risk概括代替。无缩减核实际目标条件，不相关则在condition_check说明理由。",
-    "condition_check": "status=not_checked/matches_review/deviates/unknown/not_applicable；实际配置/数据/实现引用、关键条件核查证据和未知、推断范围。matches_review仅指本轮条件核对，不认证跨规模收益；变更后重新核查，旧attempt保留原记录。文件检查器不认证此判断。",
-    "tracking": "启用W&B的新代码实验填写共同tracking与逐attempt的wandb身份/同步记录，见wandb/references/experiment-records.md；旧项目null不表示W&B验证通过；不保存凭证。",
-    "configuration_ref": "W&B启用时填写实际解析配置副本{path,sha256}，相对实验目录；attempt可显式覆盖并保留来源调整记录，不与run ID形成递归hash。"
-  },
-  "condition_review_ref": null,
-  "condition_check": {
-    "status": "not_checked",
-    "actual_condition_refs": [],
-    "evidence_refs": [],
-    "unknowns": [],
-    "interpretation_scope": null
-  },
-  "tracking": null,
-  "configuration_ref": null
+    "这是什么": "实验元信息。每个实验目录下的 meta.json。agent 在实验开始时创建、完成后更新。",
+    "experiment_id": "实验 ID，与目录名对应",
+    "type/status": "type: training / diagnostic / ablation / analysis；status: not_started / in_progress / completed / failed",
+    "plan_phase/plan_task/claim_cids": "对应 plan 里的哪个 Phase / 任务；claim_cids 是这个实验验证哪些【子论点】（C1 等，见 claims.json 的 claims[]；不是总论点 P1）",
+    "anchor_run": "对比锚点——本实验的数和谁比（锚点纪律：同一锚点切的变体才可比）",
+    "decision_rule": "开跑前预登记的 keep/discard 判据——跑完按它判，不移动球门；验收子 agent 会核对实验是不是按预登记规则判的。判据里把复杂度权衡写明白（提升要抵得过引入的复杂度；删代码能持平也是赢）",
+    "decision_rule_rationale": "判据三问（tests / threshold_origin / on_hit）必填——光写判据不讲推导，用户没法审；三问随判据落盘，可审计",
+    "scale_risk": "机制可能容量/数据规模敏感（reduced 成立、full 可能消失或反转）时填理由，conclusion.json 汇总进 scale_risks，CPE full-scale 优先验",
+    "seeds": "迭代期固定 seed 对比（减方差省钱）；delta 接近 noise_floor（< 2×std）才加 seed，加了在这列全",
+    "results": "完成后填；anchor_value + noise_floor_std 一并写，keep/discard 判断可审计；mem_peak 记显存峰值（OOM 余量判断 + 对照 reproduction.json 的 dev_card_footprint）",
+    "verdict_local": "本实验自己的 keep/discard（按 decision_rule 判）——claim 级裁决归验收子 agent，不在这写",
+    "issues.type": "OOM / convergence / data / environment / other"
+  }
 }

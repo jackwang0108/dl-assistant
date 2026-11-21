@@ -1,20 +1,79 @@
 {
-  "schema_version": 2,
+  "_comment": "idea 版本树（链表结构）。由 code-idea-execution 和 code-idea-iterate 维护。真相源是 git 分支/tag；本文件是结构化索引 + 快速导航入口。git 跟 plan 走：一个 plan = 一个版本节点；tag 只在成功节点打（claim-C<id>，锁该子论点的 method 代码）。",
+
   "meta": {
-    "project": null,
-    "current": null,
-    "updated": null
+    "project": "<项目名，如 CA-VTR>",
+    "current": "<当前版本号，如 v5>",
+    "updated": "YYYY-MM-DD"
   },
+
   "status": "active",
-  "versions": [],
+
+  "versions": [
+    {
+      "version": "v1",
+      "slug": "<plan 语义名，如 attention-refill>",
+      "from_previous": null,
+      "node_type": "success",
+      "status": "completed",
+      "outcome": "supported",
+      "attack_claim": "C1",
+      "hypothesis": "<本 plan 的核心假设，一句话>",
+      "git_branch": "idea/v1-<slug>",
+      "git_tag": "claim-C1",
+      "key_experiments": ["exp-001-<name>", "exp-002-<name>"],
+      "key_findings": ["<关键发现 1>", "<关键发现 2>"],
+      "refuted_parts": [],
+      "insights": ["<本 plan 产生的洞察>"],
+      "conclusion": "<本 plan 总结论，一句话>",
+      "next": "v2"
+    },
+
+    {
+      "version": "v2",
+      "slug": "<slug>",
+      "from_previous": "<为什么从 v1 走到 v2，一句话>",
+      "node_type": "failure",
+      "status": "completed",
+      "outcome": "refuted",
+      "attack_claim": "C2",
+      "hypothesis": "<本 plan 核心假设>",
+      "git_branch": "idea/v2-<slug>",
+      "git_tag": "",
+      "key_experiments": ["..."],
+      "key_findings": ["..."],
+      "refuted_parts": ["<被证伪的假设>"],
+      "insights": ["..."],
+      "conclusion": "...",
+      "next": "v3"
+    },
+
+    {
+      "version": "v3",
+      "slug": "<slug>",
+      "from_previous": "<为什么从 v2 走到 v3>",
+      "node_type": "active",
+      "status": "active",
+      "outcome": "pending",
+      "attack_claim": "C3",
+      "hypothesis": "<本 plan 核心假设>",
+      "git_branch": "idea/v3-<slug>",
+      "git_tag": "",
+      "key_experiments": [],
+      "key_findings": [],
+      "conclusion": "",
+      "next": null
+    }
+  ],
+
   "_notes": {
-    "round": "每轮版本对应批准的取证设计，可为方法、探索、分析或诊断，不限阳性方法节点。版本号递增，保留中止/部分/反证记录。",
-    "fields": "每项保留version、slug、from_previous、node_type=research_round、status、outcome、data_validity、attack_claim（兼容旧名，可null）、research_question_ids、hypothesis_ids、git_branch、git_commit、code_diff_path、git_tag、key_experiments、key_findings、conclusion、next。",
-    "status": "not_started/active/completed/partial/blocked/failed/cancelled指执行状态；顶层active/paused/converged/stopped为研究进度，由用户与iterate决定。 converged仅兼容表示当前决定准备写作，不代表科学结论永远稳定；暂停或停止不自动具备写作条件。",
-    "outcome": "pending/supported/contradicted/mixed/insufficient_evidence/not_identifiable/invalid_data概括本轮证据，不能由执行状态推算。data_validity=unassessed/valid/limited/invalid。",
-    "git": "每轮明确commit及未提交diff和结果来源，不依赖阳性tag。可用round-vN完成/暂停定位，tag不代表科学成功或发行。",
-    "next": "按时间追加，next为下一版本或null；起始实现若来自历史版本，另记录implementation_parent_commit，不假设必须从失败的最新实现继续。",
-    "legacy": "旧success/failure/active仅历史标记，不能据其选择创新点/论文或丢弃负结果。消费者先核对schema_version和状态语义；缺字段为未知，不自动迁移历史。",
-    "decisions": "无新实验的研究判断另存decisions，不虚建版本。后期返回可恢复active并引用原写作判断/新证据，不覆盖旧结果；工作版本进度与具体执行status分开。"
+    "顶层 status": "active（链还在迭代）/ converged（iterate 收口，产收口包交 writing + CPE）；故事讲不通回来迭代时改回 active",
+    "node_type": "success（子论点 supported，打 tag）/ failure（refuted，不打）/ active（正在跑）。诊断/验尸不形成节点——iterate Step 5 会话内就地完成，结论落该版 autopsy.md",
+    "status": "completed（已跑完）/ active（正在跑）/ abandoned（中途放弃）",
+    "outcome": "supported / partially_refuted / refuted / pending",
+    "attack_claim": "本 plan 攻的核心子论点 ID",
+    "next": "指向下一个版本号，或 null（当前最新）",
+    "git 映射": "分支名 = idea/v<N>-<slug>；tag = claim-C<id>[-v<k>]（只在 success 节点打，锁 method 代码；failure/active 为空）",
+    "链表结构": "versions 数组按时间顺序，next 字段串联"
   }
 }

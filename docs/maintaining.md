@@ -14,10 +14,10 @@ uv sync --locked --extra dev --python 3.12
 uv run --locked --extra dev pytest -q -m 'not live'
 ```
 
-各服务的联网测试以及 Docling、Overleaf、W&B 的真实服务验证，按各自说明显式开启。跨 skill 文件交接测试：
+各服务的联网测试以及 Docling、Overleaf、W&B 的真实服务验证，按各自说明显式开启。arXiv 每日简报的离线脚本测试：
 
 ```bash
-python3 -m unittest discover -s plugins/dl-assistant/skills/dl-assistant/scripts -p 'test_*.py'
+uv run plugins/dl-assistant/skills/arxiv-daily-paper/scripts/test_fetch_arxiv_daily.py
 ```
 
 ## GitHub 发布
