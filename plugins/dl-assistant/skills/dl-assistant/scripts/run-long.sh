@@ -23,7 +23,7 @@ mkdir -p "$LOGDIR"
 LOGDIR_ABS="$(cd "$LOGDIR" && pwd)"
 
 if tmux has-session -t "$SESSION" 2>/dev/null; then
-  echo "session '$SESSION' 已存在（还在跑？）——换个名字，或先只读三连查状态" >&2
+  echo "session '$SESSION' 已存在（还在跑？）——换个名字，或先查看会话、日志和退出码" >&2
   exit 1
 fi
 

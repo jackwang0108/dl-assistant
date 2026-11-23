@@ -5,14 +5,14 @@
 
 ## 四节小结
 
-session 开头先从盘上把上下文灌回来，吐这四节给用户：
+新会话开始时，读取已保存的项目文件，向用户汇报以下四项。
 
-1. **我们在干啥**：项目要解决什么、baseline 是啥（读 `PROJECT_CONTEXT.md`）。
-2. **我们在哪**：当前版本 + claim 树地图。读 `claims.json` 渲染**两层**：
+1. **项目背景**：项目要解决的问题和使用的基线（读 `PROJECT_CONTEXT.md`）。
+2. **当前进度**：当前版本与论点状态。用 `claims.json` 说明**两类信息**：
    - 总论点 claim 的 verdict（paper 总主张目前稳不稳）
    - 子论点 status 分布（active / refuted / pending 各几个）+ 已成立子论点数（= 创新点数）+ 关键裁决
-3. **代码现在长这样**：读 spec 附录（代码锚点概览）+ plan 的代码指引，**实际 cat 当前代码**，小结关键模块 + plan 的接入点在哪。
-4. **准备干啥**：当前 plan（idea-find/iterate 给的）的下一步 / `00-from-previous`（v2+）给的方向。execution 不提方案，只确认 plan 可执行 + 接着跑。
+3. **当前代码**：读 spec 附录和 plan 的代码指引，再打开当前代码，说明关键模块及计划中要修改的位置。
+4. **下一步计划**：当前 plan（idea-find/iterate 给的）的下一步 / `00-from-previous`（v2+）给的方向。execution 不提方案，只确认 plan 可执行 + 接着跑。
 
 ## 硬规矩
 
@@ -31,8 +31,8 @@ session 开头先从盘上把上下文灌回来，吐这四节给用户：
 
 | 层 | 是啥 | 啥时候读 |
 |---|---|---|
-| `claims.json`（每版） | 进展地图（**两层 claim**：总论点 verdict + 子论点 status/裁决） | 每次 session 开头，渲染"我们在哪" |
+| `claims.json`（每版） | 进展地图（**两层 claim**：总论点 verdict + 子论点 status/裁决） | 每次 session 开头，汇报「当前进度」 |
 | `PROJECT_CONTEXT.md`（项目根） | 稳定导航：研究框架 + baseline 身份 + 指针（setup/repro/cleanup report）+ docs 索引 | 每次 session 开头读（凝练） |
-| `docs/`（深背景全文） | literature-survey、idea-find、baseline-survey 等 | 按需——遇深问题才派子 agent 读对应那篇返回摘要 |
+| `docs/`（详细调研资料） | literature-survey、idea-find、baseline-survey 等 | 按需——遇到需要进一步查证的问题时，才请子 agent 阅读相关文档并返回摘要 |
 
-**不每次 session 都扫 `docs/`**（贵且大多当次用不上）——PROJECT_CONTEXT 的 docs 索引让 agent 知道"深背景在哪、要时翻哪篇"，需要时再派子 agent 精读返回摘要。
+每次恢复会话时只查阅 PROJECT_CONTEXT 中的文档索引。有需要时，再请子 agent 阅读对应文档并返回摘要。

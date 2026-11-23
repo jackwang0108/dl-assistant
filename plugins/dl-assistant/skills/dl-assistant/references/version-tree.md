@@ -8,12 +8,12 @@ idea 的代码演进是一条**线性链表**：plan-1 → plan-2 → … → pl
 
 ### git 跟 plan（不是 spec）
 - **spec 是稳定层**（总论点 claim + Roadmap + 当前子论点 + 文献 + novelty），跨 plan 沿用，**不是 git 节点**。
-- **一个 plan = 一个 git 节点**（一个版本 v<N>）。`code-idea-execution` 吃一个 plan（方法已由 idea-find/iterate 设计好）→ 实现 + 实验 → conclusion。
+- **一个 plan = 一个 git 节点**（一个版本 v<N>）。`code-idea-execution` 根据一份 plan 执行（方法已由 idea-find/iterate 设计好）→ 实现 + 实验 → conclusion。
 - 一个 plan 节点两种结局：
   - **成功**：核心子论点 supported（升格创新点）→ 打 tag
   - **失败**：核心子论点 refuted / 效果不好 → 不打 tag
 
-> 诊断（验尸 / probe）不形成独立版本节点——它在 iterate Step 5 会话内就地完成，结论落 `autopsy.md`；版本节点只对应验 claim 的方法版（改进 method / 新创新点 / 演化）。
+> 诊断（分析未达预期的原因或进行探查实验）不形成独立版本节点——它在 iterate Step 5 会话内就地完成，结论落 `autopsy.md`；版本节点只对应验 claim 的方法版（改进 method / 新创新点 / 演化）。
 
 ### claim 两层 + 创新点
 - **总论点 claim**：paper 的总主张（1 个，稳定）。如「我们的方法提升 X」。
@@ -51,7 +51,7 @@ plan-1 → plan-2 → plan-3 → … → plan-N（当前最新）
 
 ## 分支怎么切（从最新 commit，不靠 tag）
 
-- **v1**：从 baseline repo 的可信 baseline tag 切——`code-idea-prepare` 成功时打的 `baseline-prepared`（CIP 全退或被分诊跳过则 `baseline-reproduced`）。
+- **v1**：从 baseline repo 的可信 baseline tag 切——`code-idea-prepare` 成功时打的 `baseline-prepared`（CIP 全退或经评估后被跳过则 `baseline-reproduced`）。
   ```bash
   git checkout -b idea/v1-<slug> baseline-prepared
   ```
@@ -61,7 +61,7 @@ plan-1 → plan-2 → plan-3 → … → plan-N（当前最新）
   ```
 - 失败节点虽无 tag，commit 在链上，下版照常从它切。
 
-> `baseline-prepared` 由 `code-idea-prepare` 打（CIP 成功 merge 时）。CIP 全退或被分诊跳过则用 `code-paper-reproduction` 的 `baseline-reproduced`。execution 上来要问 cleanup 目录在不在，确认从哪个 tag 切。
+> `baseline-prepared` 由 `code-idea-prepare` 打（CIP 成功 merge 时）。CIP 全退或经评估后被跳过则用 `code-paper-reproduction` 的 `baseline-reproduced`。execution 上来要问 cleanup 目录在不在，确认从哪个 tag 切。
 
 ## tag 规矩（只在成功节点打）
 
@@ -102,7 +102,7 @@ git 历史、method 代码、conclusion 三方对齐，任何一处能追溯另�
 ideas/
 ├── PROJECT_CONTEXT.md                # 项目级稳定背景（session 开头读）
 ├── idea_tree.json                    # 版本链表机读索引（所有节点：成功/失败）
-├── paper-package.md                  # iterate 产（仅收口时）：收口包（总论点+创新点+故事线），交 writing + CPE
+├── paper-package.md                  # iterate 在决定进入论文阶段时生成，记录总论点、创新点和论证顺序，交给写作和论文实验技能
 └── v<N>-<slug>/                      # 一个 plan 节点（一个版本）
     ├── 00-from-previous-version.md   # iterate 产（仅 v2+）：上版→这版叙事链
     ├── 01-idea-spec.md               # 稳定层：总论点+Roadmap+当前子论点+文献+novelty
@@ -132,9 +132,9 @@ ideas/
 | `03-claim-code-map.md` | execution | claim×代码×验证逻辑地图（叙述关填；plan 只读，地图落这里） |
 | `04-conclusion.md` | execution | 本 plan 结果：发现 + claim 裁决（从 claims.json 渲染）+ 版本结论 + 可复现 |
 | `conclusion.json` | execution | 机读交接（status/outcome/golden_metrics/key_insights/scale_risks/evidence_quality_issues） |
-| `claims.json` | execution（建 v1 + 验收购裁决）/ iterate（演化） | 两层 claim 快照（总论点 + 子论点），贯穿全流程脊柱 |
+| `claims.json` | execution（建 v1 + 验收后记录判断）/ iterate（演化） | 记录本轮的总论点和子论点，供各阶段查阅 |
 
-> spec/plan/from-previous 归 idea-find/iterate 产（方法设计是研究决策，execution 只读）；conclusion + claim-code-map + claims 裁决归 execution（纯执行引擎）。execution 吃 spec+plan → 跑 → conclusion。编号固定不重排——下游 skill（iterate/release/writing）按编号找文件。
+> spec/plan/from-previous 归 idea-find/iterate 产（方法设计是研究决策，execution 只读）；conclusion + claim-code-map + claims 裁决归 execution（纯执行引擎）。execution 按 spec 和 plan 执行，并记录 conclusion。编号固定不重排——下游 skill（iterate/release/writing）按编号找文件。
 
 ### experiments/ 与 checkpoint（不进 git）
 - `experiments/index.json` 是版本级**实验台账**：每轮一行（实验 ID / claim / 锚点 / 关键数字 / keep 还是 discard / 一句话原因），execution 维护，验收/iterate 读。

@@ -46,21 +46,21 @@
     "version/parent_version": "version=本版本号；snapshot_date=本快照定格时间；parent_version=上一版（链表），v1 为 null，v2+ 填 v<N-1>-<slug>",
     "重要规矩": [
       "完整快照，非增量（每版含项目启动以来所有 claim）",
-      "claim ID 一旦分配永不变义；要改含义 = 另起新 ID + 血缘",
+      "claim ID 一旦分配永不变义；要改含义 = 使用新 ID 并记录与旧论点的关系",
       "证伪的 claim 保留 ID（status: refuted），不删——留历史 / rebuttal / Related Work",
       "创新点 = supported 的子论点（is_innovation: true），非 supported 不算",
       "总论点 claim = paper 总主张，由若干 supported 子论点撑起来（supported_by）",
-      "终版存活 claim（writing-paper / release 消费）= 总论点 + 所有 supported 子论点 = 论文骨架",
-      "verdict 与 status 分工（v9 起）：verdict = 证据事实描述（数据说了什么，验收子 agent 可写 supported / plausible / insufficient_evidence / contradicted）；status = claim 生死（active / refuted / superseded），是研究判断，只归 iterate-v<N> / human 写，且 refuted 必须先验尸死因归层——只有归到「机制前提」层才可判死（执行层 → 修完重验；设计选择层 → 改进 method 重试）。验收写 contradicted 时 status 保持 active：『证据不利』≠『claim 死』，一次实现没产生效应只证明这次实现没产生效应"
+      "writing-paper 和 release 使用总论点及所有标为 supported 的子论点，作为论文的论证基础",
+      "verdict 与 status 分工（v9 起）：verdict = 证据事实描述（数据说了什么，验收子 agent 可写 supported / plausible / insufficient_evidence / contradicted）；status = 论点状态（active / refuted / superseded），是研究判断，只归 iterate-v<N> / human 写。在标为 refuted 前，先分析实验未达预期的原因。确认原因属于机制前提时才可标为 refuted。属于执行问题时修正后复验，属于设计选择时改进方法后重试。验收写 contradicted 时 status 保持 active。一次实现未观察到预期效应，结论只适用于这次实现"
     ],
-    "paper_claim": "paper 总主张，1 个，稳定。status: active / superseded；verdict: supported / plausible / insufficient_evidence / contradicted / pending；verdict_source: iterate-v<N> / human（总论点裁决归 iterate+用户，不归验收子 agent；子论点死刑同此——status: refuted 的 verdict_source 只会是 iterate-v<N> / human，绝不会是 acceptance-v<N>）；supported_by: 哪些子论点撑它（[C1, C2, ...]），子论点 supported 才算真撑住；lineage.derived_from: 演化版改写总论点时填旧总论点 ID（留血缘，未演化过为 null）",
+    "paper_claim": "paper 总主张，1 个，稳定。status: active / superseded；verdict: supported / plausible / insufficient_evidence / contradicted / pending；verdict_source: iterate-v<N> / human（总论点裁决归 iterate+用户，不归验收子 agent；子论点的证伪判断也由这两方负责——status: refuted 的 verdict_source 只会是 iterate-v<N> / human，绝不会是 acceptance-v<N>）；supported_by: 哪些子论点撑它（[C1, C2, ...]），子论点 supported 才算真撑住；lineage.derived_from: 演化版改写总论点时填旧总论点 ID（记录与旧论点的关系，未改写过时为 null）",
     "claims[] 字段": {
       "id": "稳定 ID，永不变义（改含义 = 另起 ID）",
       "statement": "一句话命题：要让实验信什么",
       "type": "hypothesis（核心假设）/ mechanism（机制）/ performance（性能）",
-      "status": "active / refuted（证伪，保留 ID；只归 iterate-v<N> / human 写，且必先验尸死因归层——验收子 agent 永远不动 status）/ superseded（被细化取代）",
+      "status": "active / refuted（证伪，保留 ID；只归 iterate-v<N> / human 写，且须先分析原因属于执行、设计选择还是机制前提——验收子 agent 永远不动 status）/ superseded（被细化取代）",
       "verdict": "supported / plausible / insufficient_evidence / contradicted / pending",
-      "verdict_source": "谁裁的：acceptance-v<N> / iterate-v<N> / human（acceptance 只写 verdict 和证据字段，永远不动 status——contradicted 是『证据与预测相反』的事实描述，触发 iterate 验尸，不等于 claim 死）",
+      "verdict_source": "谁裁的：acceptance-v<N> / iterate-v<N> / human（acceptance 只写 verdict 和证据字段，永远不动 status——contradicted 是『证据与预测相反』的事实描述，触发 iterate 分析原因，论点状态保持原值）",
       "is_innovation": "supported → true（升格创新点，进 paper method；refuted/mixed → false）",
       "method_tag": "成立时打的 git tag（claim-C1 / claim-C1-v2），锁 method 代码；未成立则空",
       "evidence_strength": "strong / medium / weak / none（写论文时判正文 / appendix 用）",
@@ -68,8 +68,8 @@
       "evidence_quality": "可比性 / 数据质量（验收填）：comparable=这个 claim 的证据是否公平可比；issues 例：[\"baseline 用了论文数，不是复现值\"]",
       "lineage": "derived_from=拆分自哪个 claim（如 C2a derived_from C2）；emerged_from=从哪冒出来（exp-002 / reviewer-2-Q3 / v2-insight）；superseded_by=被哪个新 claim 取代"
     },
-    "证伪示例": "{ id: C3, status: refuted, verdict: contradicted, verdict_source: iterate-v4, is_innovation: false, method_tag: \"\", lineage: { superseded_by: [C3a] }, notes: \"v4 验收写 contradicted（status 保持 active），iterate 验尸归层为机制前提不成立后才判 refuted，v5 拆成 C3a\" }",
-    "拆分示例": "新 ID + 血缘：{ id: C3a, statement: \"C3 的细化……\", status: active, verdict: pending, lineage: { derived_from: C3 } }",
+    "证伪示例": "{ id: C3, status: refuted, verdict: contradicted, verdict_source: iterate-v4, is_innovation: false, method_tag: \"\", lineage: { superseded_by: [C3a] }, notes: \"v4 验收写 contradicted（status 保持 active），iterate 分析确认机制前提不成立后才标为 refuted，v5 拆成 C3a\" }",
+    "拆分示例": "使用新 ID 并记录与旧论点的关系：{ id: C3a, statement: \"C3 的细化……\", status: active, verdict: pending, lineage: { derived_from: C3 } }",
     "method 迭代示例": "子论点 C1 已 supported（tag claim-C1），method 改进后：同 ID（命题不变）只更新 method_tag + evidence——{ id: C1, verdict: supported, is_innovation: true, method_tag: claim-C1-v2, notes: \"method-v2 改进，vs claim-C1 +X%\" }；对比基线 = claim-C1（上一版 method）。method 迭代不新增 claim ID"
   }
 }

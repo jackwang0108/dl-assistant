@@ -24,7 +24,7 @@
 ```bash
 bash <skills根>/dl-assistant/scripts/run-long.sh <前缀>-<task> <logdir> '<cmd>'
 # 产物: <logdir>/<session名>.log + <logdir>/<session名>.EXIT_CODE
-# 脚本输出即只读三连命令；命令在调用者当前目录执行，要换目录把 cd 写进 <cmd>
+# 脚本会输出查看会话、日志和退出码的命令；命令在调用者当前目录执行，要换目录把 cd 写进 <cmd>
 ```
 
 手写模板（理解机制 / 脚本不在手边时；`<task>` = 任务 slug，`<cmd>` = 要跑的命令，`<logdir>` = log 落地目录）：
@@ -53,7 +53,7 @@ tmux new-session -d -s <前缀>-<task> \
 
 一句话：**`EXIT_CODE` 文件在不在 = 任务还在不在跑。**
 
-## 查状态：只读三连（任何一轮对话都能跑）
+## 查看会话、日志和退出码（任何一轮对话均可执行）
 
 ```bash
 tmux has-session -t <前缀>-<task> 2>/dev/null && echo RUNNING || echo GONE   # session 还活着吗
@@ -84,7 +84,7 @@ cat <logdir>/<task>.EXIT_CODE 2>/dev/null                                       
 
 3. **判别异常死亡**（长任务最常见的中断）：某任务 tmux session 已 GONE 但 `EXIT_CODE` 不存在
    = 被 kill / OOM-killer / 节点重启杀掉，sentinel 没来得及写。**别当"还在跑"干等**——
-   读它 log 末尾定位死因（OOM？NCCL？被抢占？no space？），按下一步续跑或改配置重跑，
+   读它 log 末尾确认任务中断的原因（OOM？NCCL？被抢占？no space？），按下一步续跑或改配置重跑，
    **不把半截结果当数据**。
 
 4. **定位断点 + 只补未完成的**：对照本 skill 的阶段（setup 的三层验证 / reproduction 的分流 /
@@ -111,15 +111,15 @@ tail -F <logdir>/<task>.log \
 `tail -F`（大写）survives 日志轮转 / 重建；正则覆盖进展里程碑 + 成功终态 + 崩溃 / 中止终态，三者齐全。
 
 Monitor 是 **session-bound**：会话退出瞬间就被杀，`--resume` 不恢复。所以它是"此刻想实时弹通知"的
-**临时便利，绝不是跨 session 基础设施**。跨 session 恢复永远靠只读三连。
+**临时便利，绝不是跨 session 基础设施**。跨会话恢复时，仍通过会话列表、日志和退出码核对状态。
 
 > 可用性限制：需 Claude Code v2.1.98+；Bedrock / Vertex / Foundry 不可用；禁遥测
 > （`DISABLE_TELEMETRY` / `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC`）时不可用。命中就退回纯文件轮询，
 > 不影响恢复。
 >
-> **平台注记**：Monitor 是 Claude Code 专属工具；其他宿主（如 Kimi Code）无 Monitor——等价物是**定时轮询**（cron / 手动只读三连）。`run_in_background` 类会话内后台任务在各宿主都是 session-bound，同样不能用于长任务。主机制（tmux detach + sentinel + 只读三连）平台无关，不受影响。
+> **平台注记**：Monitor 是 Claude Code 专属工具；其他宿主（如 Kimi Code）无 Monitor——等价物是**定时轮询**（cron / 手动查看会话、日志和退出码）。`run_in_background` 类会话内后台任务在各宿主都是 session-bound，同样不能用于长任务。主机制（tmux 后台会话、退出码文件和上述状态检查）平台无关，不受影响。
 
-## 磁盘防爆（长任务高频踩）
+## 估算和管理长任务的磁盘空间
 
 下载 / 训练前**必估磁盘**：
 
@@ -140,10 +140,10 @@ df -h <target_partition>     # 目标盘剩多少
 | skill | session 前缀 | 长任务典型类型 | 恢复重点（扫什么） | 半截怎么续 |
 | --- | --- | --- | --- | --- |
 | **code-project-setup** | `setup-dl-<slug>` | 大数据 / 权重下载、偏长 smoke run | conda env 在不在、数据 / checkpoint 落地没、上次 Report 写到哪 | 下载断点续传（aria2c / hf-cli） |
-| **code-paper-reproduction** | `repro-<repo>-<run>` | 大 test set eval、缩规模 full 训练、short-schedule（常多并行） | 各 run 的 sentinel + log、eval / 训练双轨数字、checkpoint 血缘 | 训练从 checkpoint resume；eval 分片续算 |
+| **code-paper-reproduction** | `repro-<repo>-<run>` | 大 test set eval、缩规模 full 训练、short-schedule（常多并行） | 各 run 的 sentinel + log、eval / 训练双轨数字、检查点的来源与恢复记录 | 训练从 checkpoint resume；eval 分片续算 |
 | **code-idea-prepare** | `cip-<repo>-` | 分批清理/优化后的 smoke、完整性能验证（full / reduced 多 seed） | `cleanup.json` + report 任务台账、里程碑 tag（`code-pruned` / `quality-improved`）、性能验证 log | 失败回退循环（二分定位 → 回滚该批 → 重验），底线全退 `baseline-reproduced` |
 | **code-idea-execution** | `ex-<slug>-<exp>` | 几小时长训练（多 seed） | 实验目录的 train.log / EXIT_CODE、各 seed checkpoint、metrics.json + `experiments/index.json` 台账 | 从 checkpoint `--resume` 续训 |
 | **code-paper-experiment** | `cpe-<exp_id>-` | full-scale 多 seed 训练（贵、长） | 各 exp 的 `meta.json` 状态、包级 `results.json` 增量、runs/seed-* 的 log + checkpoint | 按续跑协议：已完成不重跑、中断的按重连规则恢复、恢复不了重跑该 seed 并记 deviation |
 
 > 各 skill 在自己 SKILL 里只需声明：本 skill 的 session 前缀、长任务类型、恢复时扫什么——
-> 通用机制（detach / sentinel / 只读三连 / 扫产物恢复 / Monitor / 防爆）全看本份。
+> 本文件说明如何后台启动任务、记录退出码、查询状态、利用已有文件恢复任务、使用 Monitor，以及管理磁盘空间。

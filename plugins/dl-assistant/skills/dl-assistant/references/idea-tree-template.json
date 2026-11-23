@@ -67,11 +67,11 @@
   ],
 
   "_notes": {
-    "顶层 status": "active（链还在迭代）/ converged（iterate 收口，产收口包交 writing + CPE）；故事讲不通回来迭代时改回 active",
-    "node_type": "success（子论点 supported，打 tag）/ failure（refuted，不打）/ active（正在跑）。诊断/验尸不形成节点——iterate Step 5 会话内就地完成，结论落该版 autopsy.md",
+    "顶层 status": "active（仍在迭代）/ converged（iterate 决定进入论文阶段，生成 paper-package.md 交给写作和论文实验技能）。论文的论证思路有问题、需要继续迭代时改回 active",
+    "node_type": "success（子论点 supported，打 tag）/ failure（refuted，不打）/ active（正在跑）。诊断和未达预期的原因分析不形成节点——iterate Step 5 会话内就地完成，结论落该版 autopsy.md",
     "status": "completed（已跑完）/ active（正在跑）/ abandoned（中途放弃）",
     "outcome": "supported / partially_refuted / refuted / pending",
-    "attack_claim": "本 plan 攻的核心子论点 ID",
+    "attack_claim": "本计划检验的核心子论点 ID",
     "next": "指向下一个版本号，或 null（当前最新）",
     "git 映射": "分支名 = idea/v<N>-<slug>；tag = claim-C<id>[-v<k>]（只在 success 节点打，锁 method 代码；failure/active 为空）",
     "链表结构": "versions 数组按时间顺序，next 字段串联"

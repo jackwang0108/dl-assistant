@@ -8,7 +8,7 @@
 > **本文件是导航枢纽，不重抄别处已有的内容**——环境 / 代码 / 数据 / checkpoint / ready 命令
 > 都在 Project Setup Report 里（`code-project-setup` 产），baseline 可信度 + reduced 配置在
 > Reproduction Report 里（`code-paper-reproduction` 产）。本文件只放这些 report 没有的：
-> 研究框架 + baseline 身份一行 + docs 深背景索引。
+> 研究框架 + baseline 身份一行 + docs 中的调研资料索引。
 
 ## 研究框架
 
@@ -24,12 +24,12 @@
 
 Project Setup Report 已有：conda env、ready 命令、数据 / checkpoint 路径、编译依赖、seed / determinism 设置。要细节去读它——路径：`<setup-report 路径>`
 
-> session 恢复记忆的"代码长这样"那节：读 Setup Report 的 ready_commands + 当前 spec 附录 A 代码锚点 + 实际 cat 当前代码。
+> 汇报新会话的「当前代码」时，读取 Setup Report 中的 ready_commands 和当前 spec 附录 A 的代码位置，再打开当前代码核对。
 
-## docs 深背景索引（按需派子 agent 读）
+## docs 中的调研资料索引（按需派子 agent 读）
 
 - literature-survey 报告：`docs/...`
 - idea-find 分析：`docs/...`
 - baseline-survey 报告：`docs/...`
 
-> 遇深问题（"为啥选这 baseline""文献怎么说 X"）派子 agent 读对应那篇返回摘要，别把全文灌进主上下文。
+> 需要查证细节时，例如基线选择的理由或文献对某个问题的结论，请子 agent 阅读相关文档并返回摘要。
