@@ -1,11 +1,11 @@
-# `README.md` template（release repo 门面）
+# `README.md` template（发行版使用说明）
 
-release repo 的 README——**follower 视角第一触点**。假设读者只有论文 PDF，拿到 repo 后 5 分钟内要知道：这是什么工作、效果如何、怎么跑起来。
+release repo 的 README——**供外部读者快速了解论文和代码**。假设读者只有论文 PDF，拿到 repo 后 5 分钟内要知道：这是什么工作、效果如何、怎么跑起来。
 
 > 写作纪律：
-> - **严格 follower 视角**——零内部信息（无中期 repo 节点名/分支名、无被否 idea、无施工痕迹、无内部路径）。
+> - **按外部读者可获得的资料编写**——零内部信息（无中期 repo 节点名/分支名、无被否 idea、无内部研究过程记录、无内部路径）。
 > - **命令必须真跑过**——README 里每条命令都是 Step 5 回归实际验证过的，一条都不许凭记忆写。
-> - **先给结果再给步骤**——follower 先看到主表和 teaser，建立信任后才愿意装环境。
+> - **先给结果再给步骤**——外部读者 先看到主表和 teaser，建立信任后才愿意装环境。
 > - 方括号 `<...>` 是占位符，生成时替换；没有的节（如 demo 视频）整节删掉，不留空标题。
 
 ## 生成时照这个结构写
@@ -61,7 +61,7 @@ bash scripts/eval.sh --checkpoint checkpoints/<权重文件> --data <数据路�
 bash scripts/train.sh --config configs/<主表 config> --data <数据路径>
 ```
 
-<训练资源参考：X 卡 Y 小时（来自 CPE GPU-hours 台账）。>
+<训练资源参考：X 卡 Y 小时（来自 CPE GPU 小时用量记录）。>
 
 ## 复现主表（性能回归测试）
 
@@ -84,7 +84,7 @@ docker build -f docker/Dockerfile.train -t <repo>-train .
 
 ## 仓库结构
 
-<5-10 行目录导览，只列 follower 需要知道的：src/ 模块与论文 method 组件的对应、configs/、scripts/、docs/。>
+<5-10 行目录导览，只列 外部读者 需要知道的：src/ 模块与论文 method 组件的对应、configs/、scripts/、docs/。>
 
 ## 引用
 
@@ -101,5 +101,5 @@ docker build -f docker/Dockerfile.train -t <repo>-train .
 
 - **一句话简介**：能独立看懂，不依赖读全文。浅（差）：「This is the official implementation of our paper.」深（好）：「我们提出 X，用 <一句话机制> 解决 <什么问题>，在 <数据集> 上把 <指标> 从 A 提到 B。」
 - **主要结果**：照抄论文主表数字，和 PDF 一致（Step 5 对外验收已核过）。不要把消融表也堆进来。
-- **Quickstart 命令链**：装环境 → 备数据 → 推理 → 训练 → 回归，顺序就是 follower 的真实动线。每条命令都带具体参数，不写 `<见文档>` 式空转。
-- **训练资源参考**：follower 判断跑不跑得起的依据，从 CPE `pkg-meta.json` 的 GPU-hours 台账拿真数。
+- **Quickstart 运行命令**：装环境 → 备数据 → 推理 → 训练 → 回归，顺序就是 外部读者 的实际操作顺序。每条命令都带具体参数，不写 `<见文档>` 式占位。
+- **训练资源参考**：外部读者判断跑不跑得起的依据，从 CPE `pkg-meta.json` 的 GPU 小时用量记录获取实际用量。

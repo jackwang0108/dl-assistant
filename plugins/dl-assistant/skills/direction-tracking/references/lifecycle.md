@@ -1,62 +1,58 @@
-# 入口与三源机制
+# 运行方式和论文来源
 
-## 四种入口
+## 四种运行方式
 
-### Setup（首次建方向）
+### 首次配置（Setup）
 
-1. 问:方向描述 / 关键词(+ 同义词)/ 2-5 篇种子 arxiv ID。保存目录写死 `<项目>/docs/direction-tracking/`,不问用户。
-2. 建 `track-<slug>/`:`config.yaml` + 空 `seen.jsonl` + 空 `library.md` + `meta.json`(`slug`/`created`/`last_run=null`)。
-3. → 进 Bootstrap。
+1. 询问方向描述、关键词和同义词，以及 2–5 篇种子论文的 arXiv ID。保存根目录固定为 `<项目>/docs/direction-tracking/`。
+2. 建立 `track-<slug>/`，写入 `config.yaml`、空的 `seen.jsonl` 和 `library.md`，以及包含 `slug`、`created`、`last_run=null` 的 `meta.json`。
+3. 进入首次收集。
 
-### Bootstrap（首次跑，走 B）
+### 首次收集（Bootstrap，使用 B 类）
 
-1. 每个种子:`paper-search get_paper_citations`(传种子的稳定 arXiv 标识,机制见下「三源抓取机制·B」),拉取后**客户端按 `published` 排序截断近 N**(N 防爆,默认 ~50,用户可调;工具本身没有 recency 排序参数,别指望服务端排)。
-2. 合并 → seen 空,全是新 → 进漏斗。
-3. 通过的 → `library.md` + `runs/<日期>.md`;**所有拉过的** → `seen.jsonl`。
-4. `meta.last_run = now`。
+1. 对每篇种子论文调用 `paper-search get_paper_citations`，传入稳定的 arXiv 标识，详见下方 B 类说明。将返回的结果在本地按 `published` 排序，每篇种子默认保留最近约 50 篇引用者，用户可调整。该工具不提供按日期排序的参数。
+2. 合并并去重后进入两轮筛选。此时 seen 为空，合并后的候选都是新论文。
+3. 所有获取过的论文都保存到 `seen.jsonl`。通过筛选的写入 `library.md` 和 `runs/<日期>.md`。
+4. 更新 `meta.last_run = now`。
 
-> B 在这里不"滞后"——要的就是这份回顾性 corpus,快速建立方向全貌。
+首次收集的目的是根据已有引用回顾这个方向以前的工作。
 
-### 增量（后续常规跑，A + B）
+### 后续更新（使用 A 和 B 类）
 
-1. **A**:arxiv 关键词查询,日期窗 `last_run → now`(往前 overlap 2 天,防 arxiv 投稿日期抖动;最终靠 seen 去重)。
-2. **B**:每个种子 `get_paper_citations`(传稳定 arXiv 标识并按覆盖和预算续取,机制见下「三源抓取机制·B」),跟 seen diff 出新引用者。
-3. A+B 合并去重 → 新 ID 进 seen → 漏斗 → `library.md` / digest。
-4. `meta.last_run = now`。
+1. **A 类**：按 arXiv 关键词查询从 `last_run → now` 的投稿。为覆盖投稿日期的波动，查询起点向前重叠 2 天，再根据 seen 去重。
+2. **B 类**：对每篇种子论文调用 `get_paper_citations`，传稳定的 arXiv 标识，按覆盖情况和预算继续获取。将结果与 seen 比较，找出本次新增的引用者。
+3. 合并 A、B 结果并去重，把新 ID 记入 seen。做两轮筛选，再更新 `library.md` 并撰写本次简报。
+4. 更新 `meta.last_run = now`。
 
-### C（事件驱动，用户给会议 proceedings）
+### 按会议与年份查询（使用 C 类）
 
-用户给 **会议 + 年份**(或 URL / 清单)→ 按 `conference-sources.md` 抓 → 合并去重 → 漏斗 → `library.md` / digest。可在增量 run 里顺手跑,或单独触发。`last_run` 不因 C 单独变(C 不参与 A 的日期窗)。
+用户提供会议名和年份，或直接提供 URL、论文清单。按 `conference-sources.md` 获取，合并去重后进行两轮筛选，再更新 `library.md` 并撰写本次简报。可单独查询会议，也可与后续更新一并执行。仅查询 C 类时保持原有 `last_run`，因为 C 类不参与 A 类的日期范围计算。
 
----
+## 三类论文来源
 
-## 三源抓取机制
+### A 类：arXiv 关键词查询
 
-### A：arxiv 关键词（及时）
+- arXiv API 关键词查询：`(all:"kw1" OR all:"kw2" OR ...) AND submittedDate:[last_run TO now]`。同义词组内和各组之间均使用 OR。
+- 使用 `scripts/fetch_arxiv_keywords.py`，按关键词的 OR 组合和提交日期范围查询。返回的论文记录字段与 `fetch_arxiv_daily` 一致，供 R2 复用。主会话先把 `config.yaml` 的同义词组展开成一个关键词列表，因为脚本不处理同义词分组。
+- A 类能够及时查到首次提交的新论文。
 
-- arxiv API 关键词查询:`(all:"kw1" OR all:"kw2" OR ...) AND submittedDate:[last_run TO now]`。同义词组:每组内 OR、组间再 OR。
-- 用本 skill `scripts/fetch_arxiv_keywords.py`(关键词 + submittedDate 窗 OR 查询,paper 字段形状跟 `fetch_arxiv_daily` 一致,好让 R2 复用)。**主会话从 config.yaml 把同义词组展开成扁平关键词列表传给它**(脚本本身不管同义词分组)。
-- 只走 A 能 timely 抓 day-1 新论文——这是 A 不可替代的理由。
+### B 类：引用种子论文的工作
 
-### B：种子引用（语义）
+- 对每篇种子发起一次 `paper-search get_paper_citations` 查询。
+- 使用稳定标识，例如 `get_paper_citations(paper_ref="arxiv:…")`。来源需要其他标识时，先用 `get_papers` 或 `resolve_papers` 核实别名。
+- 用 `get_query_results` 读完当前快照，必要时用 `extend_query(action="fetch_more")` 继续获取。记录查询失败、因预算截断的结果和未确认的覆盖范围。
+- 后续更新不设日期范围，在预算内获取引用者，再与 seen 比较。B 类结果可能较晚出现，用来补充 A 类未检索到的工作。
+- 若新增的引用者超过阈值（默认约 100 篇），先报告结果并请用户确认保留上限，再做两轮筛选。
 
-- `paper-search get_paper_citations`,每种子一次。
-- **种子标识**：用 `get_paper_citations(paper_ref="arxiv:…")`。来源需要其他标识时，先用 `get_papers` 或 `resolve_papers` 核实别名。
-- **检查覆盖**：用 `get_query_results` 读完当前快照，必要时用 `extend_query(action="fetch_more")` 继续向来源取结果。记录失败、预算截断和未确认的来源覆盖。
-- 增量:**在预算内拉取引用者，再与 seen 比较**(不用日期窗)。滞后无所谓——B 的角色就是"事后补 A 漏的"。
-- **量爆控量**:种子多了引用者只涨不跌;diff 出的新引用者超阈值(默认 ~100)先报用户、确认 cap 再进漏斗,别整批烧 token。
+### C 类：会议论文集
 
-### C：会议 proceedings（高质量）
+- 来源涵盖 11 个会议，各会议的网站及 OpenReview 和 ACM DL 无法访问时的处理方式见 `conference-sources.md`。
+- 有 arXiv 版本的论文按 arXiv ID 跨来源去重。没有 arXiv 版本的使用标题哈希或 DOI。
 
-- 见 `conference-sources.md`(11 个顶会的 host 映射 + OpenReview/ACM DL 受限类的兜底)。
-- 大多数会议论文有 arxiv 版本 → 跨源去重靠 arxiv ID 兜底;少数没有的 → 标题哈希 / DOI。
+## 根据已有目录选择运行方式
 
----
+检查固定目录 `docs/direction-tracking/` 下是否已有 `track-<slug>/`。
 
-## 入口路由（每次进来先判）
-
-扫固定目录 `docs/direction-tracking/` 下有没有 `track-<slug>/`:
-
-- **没有** → Setup。
-- **有** → 续跑(读 `config` + `seen` + `last_run`)。多个夹子 / 歧义 → 问用户跟哪个。
-- **拿不准** → 追问,别猜。
+- 没有对应目录时，先做首次配置。
+- 有对应目录时，读取 `config`、`seen` 和 `last_run`，做后续更新。
+- 有多个目录或无法确定方向时，请用户确认本次要跟踪哪一个。

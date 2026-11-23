@@ -1,10 +1,10 @@
-# Advanced Reveal.js Features
+# Reveal.js 高级功能
 
-These features are available if the user specifically requests them. They are not used by default.
+以下功能仅在用户明确提出时使用。
 
-## Fragments (Progressive Reveal)
+## 片段（逐步显示）
 
-Show content step-by-step on click:
+逐步显示内容。
 
 ```html
 <p class="fragment">Appears on click</p>
@@ -12,16 +12,16 @@ Show content step-by-step on click:
 <p class="fragment highlight-red">Turns red</p>
 ```
 
-Fragment animations:
-- `fade-in` (default)
+可选的片段动画如下。
+- `fade-in` （默认）
 - `fade-out`
 - `fade-up`, `fade-down`, `fade-left`, `fade-right`
 - `highlight-red`, `highlight-green`, `highlight-blue`
-- `strike` (strikethrough)
+- `strike` （删除线）
 
-## Speaker Notes
+## 讲者备注
 
-Add private notes visible only in speaker view (press `S` to open):
+添加仅在讲者视图中可见的备注，按 `S` 打开该视图。
 
 ```html
 <section>
@@ -35,21 +35,21 @@ Add private notes visible only in speaker view (press `S` to open):
 </section>
 ```
 
-## Backgrounds
+## 背景
 
-### Solid Color
+### 纯色
 ```html
 <section data-background-color="#283b95">
 ```
 
-### Image
+### 图片
 ```html
 <section data-background-image="image.jpg">
 <section data-background-image="image.jpg" data-background-opacity="0.5">
 <section data-background-image="image.jpg" data-background-size="contain">
 ```
 
-### Gradient
+### 渐变
 ```html
 <section data-background-gradient="linear-gradient(to bottom, #283b95, #17b2c3)">
 <section data-background-gradient="radial-gradient(#283b95, #17b2c3)">
@@ -57,7 +57,7 @@ Add private notes visible only in speaker view (press `S` to open):
 
 ## Auto-Animate
 
-Automatically animate elements between slides. Elements with matching `data-id` attributes will transition smoothly:
+自动为相邻页面之间的元素添加动画。具有相同 `data-id` 的元素会平滑过渡。
 
 ```html
 <section data-auto-animate>
@@ -69,7 +69,7 @@ Automatically animate elements between slides. Elements with matching `data-id` 
 </section>
 ```
 
-More complex example with matching elements:
+以下示例演示多个对应元素的过渡。
 
 ```html
 <section data-auto-animate>
@@ -80,9 +80,9 @@ More complex example with matching elements:
 </section>
 ```
 
-## Transitions
+## 转场
 
-Set per-slide transitions:
+为单页设置转场。
 
 ```html
 <section data-transition="fade">
@@ -93,26 +93,26 @@ Set per-slide transitions:
 <section data-transition="none">
 ```
 
-Different in/out transitions:
+进入和退出可分别设置不同的转场。
 ```html
 <section data-transition="slide-in fade-out">
 ```
 
-## Slide Visibility
+## 幻灯片可见性
 
-Hide slides from normal flow (accessible via URL only):
+从正常播放流程隐藏幻灯片，仅通过 URL 访问。
 ```html
 <section data-visibility="hidden">
 ```
 
-Skip slides in navigation but keep visible:
+导航时跳过幻灯片，同时保留其可见性。
 ```html
 <section data-visibility="uncounted">
 ```
 
-## Code Highlighting
+## 代码高亮
 
-Basic syntax highlighting:
+基本的语法高亮。
 ```html
 <pre><code class="language-python">
 def hello():
@@ -120,9 +120,9 @@ def hello():
 </code></pre>
 ```
 
-Supported languages: `javascript`, `python`, `html`, `css`, `java`, `ruby`, `go`, `rust`, `sql`, `bash`, `json`, `yaml`, and many more.
+支持的语言包括 `javascript`, `python`, `html`, `css`, `java`, `ruby`, `go`, `rust`, `sql`, `bash`, `json`, `yaml`等。
 
-**Line highlighting (step-through on click):**
+**按操作逐步高亮指定行**
 ```html
 <pre><code data-line-numbers="1-2|3|4">
 let a = 1;
@@ -132,20 +132,20 @@ c(3);
 </code></pre>
 ```
 
-This highlights lines 1-2 first, then line 3 on click, then line 4.
+先高亮第 1–2 行，再依次高亮第 3 行和第 4 行。
 
-**Static line highlighting (no step-through):**
+**静态行高亮（一次显示）**
 ```html
 <pre><code data-line-numbers="3,5-7">
 ...
 </code></pre>
 ```
 
-## Built-in Helper Classes
+## 内置辅助类
 
 reveal.js 自带的布局辅助类（直接用，无需自定义 CSS）：
 
-- `r-fit-text` — 自动缩放文字填满 slide（大标题用）
+- `r-fit-text` — 自动缩放文字填满幻灯片（大标题用）
 - `r-stretch` — 元素拉伸填满剩余垂直空间（图片用）
 - `r-stack` — 元素堆叠（层叠动画用）
 

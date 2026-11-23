@@ -47,7 +47,7 @@
 - **每个符号定义一次**：首次出现处定义（公式后 `where` 逐符号释义），之后直接用；不重复定义、不中途改义、不让两个符号指同一个东西（同义符号合并）。
 - **和方法图对齐**：总览图/模块图上标注的符号 = 正文符号，图与文共享同一套记号。
 
-符号表定稿后**注入后续各节写作 prompt**（Method 各小节、Experiment 的分析式子、Appendix 的证明都消费同一份 `notation.md`），不是各写各的再对表。写后续节时新引入符号 → 先回 `notation.md` 补登记，再用。
+符号表定稿后**提供给后续各节的写作任务**（Method 各小节、Experiment 的分析式子、Appendix 的证明都消费同一份 `notation.md`），不是各写各的再对表。写后续节时新引入符号 → 先回 `notation.md` 补登记，再用。
 
 ## 默认结构 = 5 个写作决策点（goal）
 
@@ -160,7 +160,7 @@
 
 ## 文风 lint
 
-写完按三层 craft 跑一遍（`sentence-craft.md` + `word-craft.md` + `anti-ai-patterns.md`，句段/字词/AI 跨节通用；论证层查本节 checklist）。
+写完按句段、字词和常见生成式写作问题三类写作要求 跑一遍（`sentence-craft.md` + `word-craft.md` + `anti-ai-patterns.md`，句段/字词/AI 跨节通用；论证层查本节 checklist）。
 
 ## 输出
 

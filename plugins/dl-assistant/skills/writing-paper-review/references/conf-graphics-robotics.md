@@ -5,7 +5,7 @@
 ## SIGGRAPH（+ SIGGRAPH Asia）
 
 **审稿规模**：每篇 **4 份全文审**（委员会成员 + 外审），双盲。
-**评分（6 档单一刻度，Journal/Conference/dual-track 同一把尺）**：
+**评分（6 档单一刻度，Journal/Conference/dual-track 同一套评分标准）**：
 Strong Reject / Reject / Borderline Reject / Borderline Accept / Accept / Strong Accept。整篇作为整体评（含所有方面）。
 **rebuttal（严格）**：限 **1000 词纯文本**，**只能纠正事实错误、回答具体问题**——不许放新结果、新实验、修订文本、URL，越界材料会被忽略。
 **录用**：rebuttal 后资深 reviewer 通读全部评审 + rebuttal，委员会会议给"conditionally accepted"或"rejected"。

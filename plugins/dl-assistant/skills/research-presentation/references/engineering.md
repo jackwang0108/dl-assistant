@@ -14,4 +14,4 @@ node scripts/check-overflow.js /path/to/presentation.html
 node scripts/check-charts.js /path/to/presentation.html
 ```
 
-生成骨架后，在浏览器中检查所有幻灯片。按 [skill 的导出步骤](../SKILL.md#step-6-visual-review-with-screenshots) 用 Decktape 导出 PDF 和截图。v9 骨架从 CDN 载入前端库，打开 HTML 和导出时需要能访问这些资源。
+生成初始 HTML 后，在浏览器中检查所有幻灯片。按 [逐页截图检查步骤](../SKILL.md#step-6-visual-review-with-screenshots) 用 Decktape 导出 PDF 和截图。v9 生成的 HTML 从 CDN 载入前端库，打开 HTML 和导出时需要能访问这些资源。

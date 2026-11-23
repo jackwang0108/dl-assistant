@@ -15,10 +15,10 @@
 
 ## 1. repo 介绍
 
-- **是什么**：<任务 + 框架 + 血缘一句话，如 基于 MMDetection 3.x 的目标检测 repo，Detectron2 的近亲改造>。
+- **是什么**：<用一句话说明任务、框架和实现来源，如 基于 MMDetection 3.x 的目标检测 repo，基于 Detectron2 修改的实现>。
   （写到"用户不看 README 也知道接手的是什么"为止；不要抄 README 简介。）
 - **来自哪**：baseline-survey 推荐（commit <sha>）/ 用户指定（<url>）。
-- **要 setup 成什么样**：可读（代码能 import）/ 可调（能改参数跑）/ 可信（三层验证 + 数值 sanity 通过），为下游 code-paper-reproduction / code-reading / code-idea-execution 备好 baseline。
+- **要 setup 成什么样**：可读（代码能 import）/ 可调（能改参数跑）/ 可信（三层验证 + 数值正确性检查通过），为下游 code-paper-reproduction / code-reading / code-idea-execution 备好 baseline。
 
 ## 2. 环境决策（每个决策都要带理由——没有理由的决策用户没法审）
 
@@ -26,7 +26,7 @@
   （判据：repo 有官方维护的 Dockerfile / 镜像 且 编译型依赖重 → 优先 docker，省掉本地编译对齐；否则 conda。）
 - **conda env 名** / **Python 版本**：<env-name> / 3.x
 - **torch × CUDA 组合**：<torch 2.x + cuda 11.8>——<理由：机器 nvcc 是 X、repo 要求 Y，所以选这个组合>
-- **编译型依赖处置方案**（自 survey 预判的地雷，逐条给打法）：
+- **编译型依赖处置方案**（选型报告列出的依赖风险，逐条写明处理办法）：
   - <mmcv-full：用预编译 wheel（cu118/torch2.1 index），不本地编译——理由：官方 wheel 覆盖此组合>
   - <flash-attn：无覆盖组合，源码编译预计 20 分钟；失败 fallback xformers>
   - 无编译型依赖则写"无"。
@@ -53,10 +53,10 @@
 
 - **Layer 1 import / config**：framework + 项目 package + config 系统加载无报错；`torch.cuda.is_available()` 为真；编译型算子 import 无 undefined symbol。
 - **Layer 2 synthetic smoke**：smoke script 调真实 model/loss/collate，forward 输出有限且非全零、loss 量级合理（参考：<N 类分类交叉熵初始 ≈ ln(N)>）、backward 梯度非全零。
-- **Layer 3 官方命令 smoke run**：smoke train <5 iter> loss 从 <初始量级> 下降且无 NaN；tiny subset eval metric > 0 且非假满分；实测开发卡单 step 显存 / 耗时。
-- （执行链骨架自 survey：训练链 `train.py:main → build_model → forward → loss`；eval 链 `eval.py:evaluate → load_ckpt → forward → metric`；数据链 `dataset.py:__getitem__ → transforms → collate`。）
+- **Layer 3 官方命令 smoke run**：smoke train <5 iter> loss 从 <初始量级> 下降且无 NaN；tiny subset eval metric > 0 且已排除异常满分；实测开发卡单步显存峰值和耗时。
+- （主要调用关系自 survey：训练链 `train.py:main → build_model → forward → loss`；eval 链 `eval.py:evaluate → load_ckpt → forward → metric`；数据链 `dataset.py:__getitem__ → transforms → collate`。）
 
-## 5. 预判地雷 + 语义改动预警
+## 5. 已知问题、待验证风险和需确认的实验变更
 
 **确定要处置的**（已知、已列入计划）：
 - <config 多处硬编码 data_root，逐处改全>
@@ -67,7 +67,7 @@
 - <社区有人报 checkpoint key mismatch——Layer 3 加载时核 missing/unexpected keys（自 survey)>
 - license 同意：<某权重需点击同意条款，是停下交用户的点>
 
-**语义改动预警**（命中即停，汇报为什么 + 怎么改，等用户拍板）：
+**语义改动预警**（遇到时立即暂停，汇报为什么 + 怎么改，等用户确认）：
 - checkpoint 加载可能 strict=False（key mismatch）→ 即停
 - <数据集 annotation 可能要 label map 修正> → 即停
 - <metric 调用参数 / config 中与实验相关的默认值> → 即停
@@ -93,8 +93,8 @@
 
 ## 模板使用说明
 
-- **spec 是对齐不是流水账**：用户审 spec 是确认"方向 / 方案 / 风险"对不对，不是逐行核数据。写法上突出**决策点（环境 / 资源，带理由）+ 缺口（哪些要用户手动）+ 风险（地雷 / 语义预警）**。
-- **地雷分两档**：「确定要处置」= 已核实、已列计划的工程活；「风险待验证」= 预判、要在 setup 中实测坐实或推翻的。混在一起用户分不清哪些是计划哪些是赌注。
-- **继承自 survey 不单列**：survey 的执行链骨架进第 4 节、依赖地雷进第 2 / 5 节、关键风险进第 5 节，各标 "(自 survey)"。
+- **用 Spec 确认准备目标、方案和风险**。重点说明环境与资源决策的理由、哪些工作需要用户手动完成，以及已知问题、待验证风险和需确认的实验变更。
+- **分别列出已确认问题与待验证风险**：「确定要处置」= 已核实、已列计划的工程活；「风险待验证」= 尚未确认、需要在 setup 中实测核对的情况。
+- **继承自 survey 不单列**：survey 的主要调用关系进第 4 节、依赖安装和兼容性问题进第 2 / 5 节、关键风险进第 5 节，各标 "(自 survey)"。
 - **没有 survey 也能填**：独立 setup 时，"来自哪"写用户指定，各节从 repo 实际探索填，不强依赖 survey。
 - **spec 确认后才转 Plan**：spec 没确认不往下走（SKILL 核心纪律 · 两个确认点）。

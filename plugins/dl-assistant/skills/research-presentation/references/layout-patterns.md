@@ -1,6 +1,6 @@
 # 布局速查 (inline grid)
 
-保持原 skill inline 哲学：**不造 preset layout 类**，每页用 inline `style="display:grid"` 自由搭。每个 `<section>` 要有唯一 `id`，主内容包在 `<div class="content">` 里。
+不创建通用布局类，每页用内联样式 `style="display:grid"` 设置所需布局。每个 `<section>` 要有唯一 `id`，主内容包在 `<div class="content">` 里。
 
 所有可见文字必须在 `<p>/<li>/<h1>-<h6>` 里（继承基础样式），`<div>` 只做布局容器。
 

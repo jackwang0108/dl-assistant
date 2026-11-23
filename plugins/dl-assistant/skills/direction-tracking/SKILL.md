@@ -1,163 +1,163 @@
 ---
 name: direction-tracking
-description: 窄方向论文跟踪器：长期盯一个细分方向，有记忆地增量跟踪（arXiv 关键词 + 种子引用 + 会议 proceedings），只推新论文。当用户要持续跟踪某方向进展时使用；广撒看每日全域前沿用 arxiv-daily-paper。
+description: 持续跟踪细分研究方向。检索 arXiv 关键词、引用种子论文的工作和会议论文集，筛选本次新发现的论文并更新论文库。查看指定 arXiv 分类的每日新投稿时使用 arxiv-daily-paper。
 ---
 
-# 窄方向论文跟踪器
+# 细分研究方向的论文跟踪
 
-给一个细分研究方向,长期盯着它的最新进展——**有记忆地增量跟踪**:只推新论文、绝不重复推老的,跑得越多、方向论文库越攒越大。
+每次运行读取已有论文记录，只筛选本次新发现的论文，并将通过筛选的论文加入同一份论文库。
 
-跟 `arxiv-daily-paper` 互补:arxiv-daily 是**全域类目漏斗**(按 `cs.CV` 整类拉全量、方向只置顶、服务跨领域暴露);本 skill 是**窄方向持续跟踪**(严过滤、方向相关性是主滤、累积)。要广撒看前沿 → arxiv-daily;要长期盯一个细分方向 → 本 skill。
+本技能以研究方向的相关性作为第一轮筛选条件。`arxiv-daily-paper` 用于查看所选分类的全部当日投稿，研究方向只影响展示顺序。
 
-> 本 skill 只在**本地机器**跑(前期·输入阶段)。
+> 本技能在科研前期使用，只在本地机器上运行。
 
-## 在系统里的位置（局部）
+## 与其他技能的关系
 
-前期·本地机器,跟 `arxiv-daily-paper` / `hf-trending-papers` / `paper-reading` / `literature-survey` 并列的输入节点。区别:它是**唯一"窄方向 + 持续 + 增量"**的,其他都广撒或一次性。
+本技能与 `arxiv-daily-paper`、`hf-trending-papers`、`paper-reading` 和 `literature-survey` 同属科研前期，负责持续更新细分方向的论文库。
 
 ```mermaid
 flowchart LR
-    USER(["用户直接说<br/>跟踪我这方向 / 给个会议proceedings"]) --> DT
-    DT["direction-tracking<br/>窄方向·持续·增量·三源 A+B+C"]
-    DT -->|累积库| IF[idea-find]
+    USER(["用户直接说<br/>跟踪我的研究方向 / 查看某会议论文集"]) --> DT
+    DT["direction-tracking<br/>细分研究方向跟踪 · 三类来源 A、B、C"]
+    DT -->|累计论文库| IF[idea-find]
     DT -.->|arXiv ID·深读某篇| PR[paper-reading]
-    DT -.->|累积库·铺综述| LS[literature-survey]
+    DT -.->|提供累计论文库用于综述| LS[literature-survey]
 ```
 
-> 整体架构看 `dl-assistant` 全局图;本 skill 只画相邻 skill。
+> 完整流程见 `dl-assistant` 的全局图。此图只显示本技能直接涉及的交接。
 
 ## 边界
 
-**做**:三源抓取 → 去重 → 相关性+量化漏斗 → 累积库 + digest → 交棒 arXiv ID。
+从相应来源获取论文，合并去重后先筛选相关性，再做量化评估。将通过筛选的论文加入论文库，写本次简报，按需交接论文的 arXiv ID。
 
-**不做**（交给相邻 skill）:
+其他任务按下表交接。
 
-| 不是本 skill 的活 | 交给 |
+| 任务 | 交给 |
 | --- | --- |
-| 深读单篇、讲懂 | `paper-reading`(本 skill 只标"值得深读"flag) |
-| 判 gap / 找 idea / 创新性够不够 | `idea-find`(累积库是它的富矿) |
-| 铺领域综述 | `literature-survey` |
-| 整个类目全域质量漏斗(广撒) | `arxiv-daily-paper` |
-| 跟踪作者 | (不做,盲区已弃) |
+| 逐篇精读与讲解 | `paper-reading`(本技能只标记「值得深读」) |
+| 判断研究缺口、选题或创新性 | `idea-find`（可参考累计论文库） |
+| 整理领域综述 | `literature-survey` |
+| 查看指定分类的全部当日投稿 | `arxiv-daily-paper` |
+| 跟踪作者 | 此技能未提供 |
 | 复现 / 跑代码 | 中期 `code-*` |
 
-## 怎么跟用户协作（核心原则）
+## 与用户协作
 
-**三个角色**:**主会话**(掌舵——对话 / 判断 / 调度 / 派子 agent)/ **子 agent**(体力活——读不到主会话上下文,派时把任务 + 读写文件 + 起点信息全塞进 prompt)/ **用户**(真人研究者——方向定义、配置演化、关键判断归用户)。
+**分工**。主会话负责与用户沟通、判断、安排和委派任务。子 agent 执行批量任务，接收任务要求、读写文件路径和起始信息，因为它们无法读取主会话上下文。用户确定方向、配置如何调整以及关键研究判断。
 
-**派子 agent 前过用户**(贯穿全程):每次要派子 agent(漏斗的 R1 / R2 分片),先说清"准备派几个、每个干啥、读写哪、为啥这么切",等用户点头(或调整)再发。常规增量 run **轻过**(漏斗开工前一次性过);bootstrap / C 量大时,R1 完加一个中途汇报("X/Y 篇相关,进 R2?")。
+**委派前确认**。说明计划派几个子 agent、各自承担什么任务、读写哪些文件、为什么这样分批，等用户确认或调整后再委派。常规更新在筛选前集中确认一次。首次收集或会议查询的候选较多时，第一轮结束后再汇报有多少篇相关，并确认是否进入第二轮。
 
-**边查边讲**:子 agent 抓回来 / 漏斗筛出来的论文,用户大概率没读过——全是新信息。不攒到最后倒,digest 出来顺手用白话讲"这批新论文长啥样、哪几篇值得看",再让用户决定深入哪个。
+**边查边讲**。随着结果出来向用户介绍新发现。简报完成后，用直白的话概括本批论文的主题和推荐理由，由用户决定进一步了解哪些论文。
 
-**判断 vs 体力活**:
+具体任务分工如下。
 
-- **判断(主会话亲自)**:方向配置怎么定、digest 怎么组织、哪篇值得深读 flag、交棒给谁。
-- **体力活(派子 agent,必须落盘)**:R1 相关性筛分片、R2 量化卡分片、C 抓 proceedings。可并行、吃 token,交出去;每个子 agent 产出落盘。子 agent 一律 `general-purpose`,禁 `Explore`(要读 PDF / 落盘,Explore 干不了)。
+- **主会话负责判断**。确定方向配置、组织简报、标记值得精读的论文，并决定交给哪个技能。
+- **子 agent 负责批量处理并保存结果**。分批做 R1 相关性筛选、R2 量化评估，以及获取 C 类会议论文集。任务可并行，一律使用能读 PDF 和写文件的 `general-purpose`，禁用 `Explore`。
 
-## references 文件列表
+## 参考文件
 
-| reference | 讲什么 | 什么时候读 |
+| 文件 | 内容 | 何时阅读 |
 | --- | --- | --- |
-| `references/output-contract.md` | 目录树 / config.yaml / seen.jsonl / library.md / meta.json / digest 各 schema + 落盘次序 | 建夹子、写各文件、理清全局时 |
-| `references/lifecycle.md` | 四种入口(setup / bootstrap / 增量 / C)流程 + 三源(A / B / C)抓取机制 | 跑某个入口、实现某源时 |
-| `references/funnel.md` | R1 相关性筛 + R2 量化卡 + 合成 digest 的具体判据 + 控量 + 派子 agent 模板 | 跑漏斗时 |
-| `references/conference-sources.md` | C 顶会源地图 + 各 venue 抓取 + OpenReview 反爬兜底 | 跑 C(会议 proceedings)时 |
+| `references/output-contract.md` | 目录结构、配置、去重记录、论文库、进度文件和简报的格式与保存顺序 | 创建目录或写文件时 |
+| `references/lifecycle.md` | 四种运行方式和三类论文来源的获取步骤 | 选择运行方式或查询论文来源时 |
+| `references/funnel.md` | 两轮筛选与简报的标准、数量限制和子 agent 任务模板 | 筛选论文时 |
+| `references/conference-sources.md` | C 类会议来源、论文集查询方式及无法访问时的处理 | 查询 C 类会议论文集时 |
 
-## 落盘：一个方向一个常驻夹
+## 每个方向使用固定目录
 
-**保存目录写死 `<项目>/docs/direction-tracking/`**,在其下建 `track-<方向slug>/` 常驻夹,**每次 run 更新同一个夹子**(累积,不是按日期摊):
+在固定根目录 `<项目>/docs/direction-tracking/` 下为每个方向建立 `track-<方向slug>/`。后续运行继续更新同一个目录。
 
 ```
 docs/direction-tracking/track-<方向slug>/
-├── config.yaml       方向配置(用户可手改):方向描述、关键词+同义词、2-5 种子 arxiv ID、创建时间(种子可演化:run 时 skill 提名、用户确认才加)
-├── seen.jsonl        已拉过的论文全清单(带源 {id,source,date},去重真相源,含被漏斗砍掉的)
-├── library.md        累积库:只收通过漏斗的论文(digest 条目格式,随时间长大)
-├── runs/<日期>-<HHmm>.md   每次 run 的 digest("自上次以来这方向的新论文";带时间,同日多次 run 不互相覆盖)
-└── meta.json         last_run 水位 + 进度索引(续跑恢复用)
+├── config.yaml       方向描述、关键词、同义词、2-5 篇种子论文的 arXiv ID 和创建时间，用户可编辑。提名的新种子经用户确认后加入
+├── seen.jsonl        所有已获取论文（包括未通过的），记录 {id,source,date} 供下次去重
+├── library.md        累计论文库，只收录通过两轮筛选的论文，沿用简报条目格式
+├── runs/<日期>-<HHmm>.md   本次更新的简报，文件名带时间，同日多次更新互不覆盖
+└── meta.json         上次更新时间 last_run 与进度索引，供下次继续运行
 ```
 
-各文件 schema、落盘次序、seen 带源格式见 `references/output-contract.md`。
+各文件的格式、保存顺序及来源字段见 `references/output-contract.md`。
 
-> **seen 是去重真相源**:记所有拉过的 ID(含被漏斗砍掉的),下次不再重复拉 / 过滤——增量不重跑的关键。library 只收通过的,是给人和下游看的价值产物。呼应 dl-assistant「没有状态文件、产物即真相源」。
+> `seen.jsonl` 记录所有获取过的论文 ID，包括未通过筛选的论文，供下次去重，避免再次获取或筛选。`library.md` 只收录通过筛选的论文，供用户和后续技能查阅。参见 `dl-assistant` 的「没有状态文件这回事」和「产物即真相」。
 
-> 产出在本地;若下游(`idea-find` 等)在别的机器,找用户弄过去——横切规范见 `dl-assistant` SKILL.md「横切规范」。
+> 结果保存在本地。后续技能在其他机器运行时，请用户提供所需文件。见 `dl-assistant` 的「所有技能共用的规则」。
 
 ## 工作流
 
 ```mermaid
 flowchart TD
-    START(["用户要跟踪某方向"]) --> ROUTE{"入口路由<br/>扫父目录找 track-slug"}
-    ROUTE -->|新方向| SETUP["Setup:方向描述+关键词+2-5种子<br/>建常驻夹"]
-    ROUTE -->|续跑| LOAD["读 config+seen+last_run"]
-    SETUP --> BOOT["Bootstrap: B 拉种子引用者(cap近N)"]
+    START(["用户要跟踪某方向"]) --> ROUTE{"查找已有 track-slug 目录"}
+    ROUTE -->|新方向| SETUP["首次配置：方向描述、关键词、2-5 篇种子论文<br/>建立固定目录"]
+    ROUTE -->|续跑| LOAD["读取 config、seen 和 last_run"]
+    SETUP --> BOOT["首次收集：从 B 类查询引用者，保留最近 N 篇"]
     LOAD --> GATHER
     BOOT --> GATHER
-    GATHER["本次源(按情形组合)"] --> A["A·常规:arxiv关键词 last_run→now"]
-    GATHER --> B["B·常规:每种子新引用者"]
-    GATHER --> C["C·事件:用户给的会议proceedings<br/>(复用顶会源地图·OpenReview反爬兜底)"]
-    A --> DEDUP["合并去重+砍已见<br/>(seen记全量ID·带源)"]
+    GATHER["按本次任务选择来源"] --> A["A：按 arXiv 关键词查询 last_run 到当前时间"]
+    GATHER --> B["B：查询引用每篇种子论文的新工作"]
+    GATHER --> C["C：查询用户指定的会议论文集<br/>见会议来源及无法访问时的处理"]
+    A --> DEDUP["合并候选并排除已记录论文<br/>在 seen 保存所有 ID 及来源"]
     B --> DEDUP
     C --> DEDUP
-    DEDUP --> GATE{"派前过用户<br/>漏斗开工"}
-    GATE --> R1R2["R1 相关性筛 + R2 量化卡<br/>(见漏斗节 / references/funnel.md)"]
-    R1R2 --> SYN["合成 digest(主会话)"]
-    SYN --> ACC[("library+=通过篇 / runs/digest")]
-    SYN --> REJ[("被砍的:已在 seen,不进 library")]
+    DEDUP --> GATE{"用户确认子 agent 分工后<br/>开始筛选"}
+    GATE --> R1R2["R1 相关性筛选、R2 逐篇量化评估<br/>见 references/funnel.md"]
+    R1R2 --> SYN["由主会话撰写简报"]
+    SYN --> ACC[("将通过的论文加入 library，写入 runs 简报")]
+    SYN --> REJ[("未通过的论文已在 seen，无需加入 library")]
     ACC --> META[("meta last_run=now")]
-    META --> HAND["交棒 arXiv ID<br/>→ paper-reading / idea-find / literature-survey"]
+    META --> HAND["向后续技能传递 arXiv ID<br/>→ paper-reading / idea-find / literature-survey"]
 ```
 
-### 进来先路由(不默认从头)
+### 按已有记录选择运行方式
 
-扫固定目录 `docs/direction-tracking/` 下有没有 `track-<方向slug>/`:
+检查固定目录 `docs/direction-tracking/` 下是否已有 `track-<方向slug>/`。
 
-- **没有 → setup**:问方向描述 + 关键词(同义词)+ 2-5 篇种子 arxiv ID,建夹子(config + 空 seen + 空 library + meta 骨架)→ 进 bootstrap。
-- **有 → 续跑**:读 config + seen + last_run → 进增量。多个夹子 / 歧义就问用户跟哪个。
-- **拿不准 → 追问**,别猜。
+- **首次配置**。询问方向描述、关键词与同义词，以及 2–5 篇种子论文的 arXiv ID。建立方向目录，保存配置、空的已见记录、空论文库和初始进度文件，再做首次收集。
+- **后续更新**。读取 config、seen 和 last_run，再检索新增论文。存在多个目录或无法确定对应方向时，请用户指定。
+- 无法确定时向用户确认。
 
-四种入口(setup / bootstrap / 增量 / C)的详细流程 + 三源抓取机制见 `references/lifecycle.md`。
+首次配置、首次收集、后续更新和按会议与年份查询的流程，以及三类来源的获取方式，见 `references/lifecycle.md`。
 
-## 漏斗（两轮过滤 + 合成）
+## 两轮筛选与简报
 
-核心区别:**R1 方向相关性筛是命门**——arxiv-daily 是"方向只置顶绝不丢",本 skill relevance 是主滤,A 的假阳全靠 R1 砍。
+第一轮根据方向相关性排除不相关的论文。例如，关键词匹配但研究主题不同的论文不通过这一轮。
 
 ```mermaid
 flowchart LR
-    CAND["去重后候选"] --> R1["R1 方向相关性筛<br/>子agent分片读摘要<br/>方向配置当尺子"]
-    R1 -->|不相关·砍| OUT1["不进 library(已在 seen)"]
-    R1 -->|相关| R2["R2 量化卡<br/>子agent读PDF·Experiment<br/>baseline/规模/可复现"]
-    R2 -->|弱/不可复现·砍| OUT2["不进 library(已在 seen)"]
-    R2 -->|通过| SYN["合成digest<br/>主会话:为啥相关+质量要点<br/>+值得深读flag"]
-    SYN --> LIB[("library+= · runs/digest")]
+    CAND["去重后候选"] --> R1["R1 相关性筛选<br/>子 agent 按方向配置分批阅读摘要"]
+    R1 -->|不相关| OUT1["不进 library(已在 seen)"]
+    R1 -->|相关| R2["R2 逐篇量化评估<br/>子 agent 读 PDF 中的实验部分<br/>检查基线、规模和可复现性"]
+    R2 -->|证据较弱或不可复现| OUT2["不进 library(已在 seen)"]
+    R2 -->|通过| SYN["主会话撰写简报<br/>说明相关性和量化评估要点<br/>标记值得深读的论文"]
+    SYN --> LIB[("更新 library 与 runs 下的简报")]
 ```
 
-- **R1 方向相关性筛**:子 agent 分片读摘要,拿方向配置(描述 + 关键词 + 种子主题)当尺子,判相关 / 不相关 + 一句理由,**不打分**。砍 A / B 的假阳。
-- **R2 量化卡**:复用 arxiv-daily round2 判据(baseline 年份 / 数量、SOTA、规模、算力、可复现)。**C 调轻**(顶会已 peer-review,读摘要 + 元数据做轻量卡即可)。
-- **合成 digest(主会话)**:揉"为啥相关 + 质量要点",标值得深读 flag。**不做 full 精读**(那是 `paper-reading` 的活,交棒)。**种子演化**:从本次通过篇里提名 1-2 篇高质新论文进 config 种子列表(用户确认才写)——B 源语义锚跟着方向长,防老种子引用网络漂移。
+- **R1 相关性筛选**。子 agent 分批阅读摘要，依据方向描述、关键词和种子论文主题，给出相关或不相关的判断，并附一句理由。既检查关键词匹配的论文，也检查引用种子论文的工作。此轮不打分。
+- **R2 逐篇量化评估**。沿用 arxiv-daily 第 2 轮的标准，检查对比基线年份与数量、是否包含 SOTA、实验规模、算力和可复现性。会议论文已同行评审，C 类只读摘要和元数据，做简要评估。
+- **主会话撰写简报**。汇总论文与方向的关联和量化评估要点，标记值得精读的论文。需要精读时交给 `paper-reading`。从本次通过筛选的论文中提名 1–2 篇质量较高的新论文作为种子，用户确认后才更新 config，使引用检索继续贴合当前的研究方向。
 
-每轮判据、控量(bootstrap / C volume 爆时的分片采样)、派子 agent 模板见 `references/funnel.md`。
+各轮的标准、候选较多时如何限制数量，以及子 agent 任务模板，见 `references/funnel.md`。
 
-## 横切规范
+## 通用约定
 
-- **TaskList 跟踪流程**:路由后按入口建流程任务(抓取 A/B/C 按组合 / 去重 / R1 / R2 / 合成 digest / 累积+meta / 交棒),每步完成即勾——多入口多阶段,防跳步。
-- **符号展示**:会话公式用 Unicode——横切规范见 `dl-assistant` SKILL.md「横切规范」。
-- **语言**:中文;论文标题、方法名、数据集、指标保留英文。
-- **工具**:A 用 arxiv API 关键词查询;B 用 paper-search `get_paper_citations`(传入种子的稳定 arXiv 标识,机制见 `references/lifecycle.md`);C 按顶会源地图抓(见 `references/conference-sources.md`)。**不编造**;论文标识规范见 `dl-assistant` SKILL.md「横切规范」。
-- **诚实克制**:源失败如实说(哪个挂了,继续跑别的);无新论文就说"本期无新",不凑数。
-- **派子 agent 过用户 + 落盘零信息损失**:见「怎么跟用户协作」+ 各 reference。
+- **TaskList 跟踪流程**。选定运行方式后，按本次任务跟踪获取论文（按需使用 A、B、C）、去重、R1、R2、写简报、更新论文库和 meta，以及按需交接。每完成一步就标记完成。
+- **符号展示**。会话公式用 Unicode，见 `dl-assistant` 的「所有技能共用的规则」。
+- **语言**。使用中文。论文标题、方法名、数据集和指标保留英文。
+- **工具**。A 类用 arXiv API 做关键词查询。B 类用 paper-search 的 `get_paper_citations`，传稳定的种子论文 arXiv 标识，见 `references/lifecycle.md`。C 类按 `references/conference-sources.md` 查询会议论文集。只使用查到的论文信息，标识约定见 `dl-assistant` 的「所有技能共用的规则」。
+- **来源失败或没有结果**。告知用户哪个来源失败，继续处理其他来源。本次没有新论文时直接说明。
+- **委派与记录**。按「与用户协作」确认分工并保存各批结果。
 
-## 衔接下游（交棒 arXiv ID）
+## 向其他技能交接（附 arXiv ID）
 
 | 用户意图 | 交给 |
 | --- | --- |
-| 深读某篇 / "帮我读第 X 篇" | `paper-reading`(传 arXiv ID) |
-| 从累积库找 gap | `idea-find` |
-| 把累积库铺成综述 | `literature-survey` |
+| 精读选定论文 | `paper-reading`(传 arXiv ID) |
+| 从累计论文库寻找研究缺口 | `idea-find` |
+| 根据累计论文库整理综述 | `literature-survey` |
 
 ## 核心原则
 
-- **增量不重跑**:seen 记全量 ID(含砍掉的),已落盘的抓取 / 筛选绝不重做,只做增量。
-- **方向相关性是主滤**:R1 是命门,区别于 arxiv-daily 的"方向只置顶"。
-- **不做精读、不判 novelty**:只标值得深读 flag,深读交 `paper-reading`、gap 判断交 `idea-find`。
-- **三源互补**:A 及时、B 语义、C 高质量;跨源去重靠 seen 兜底。
-- **派子 agent 前过用户**:不自作主张一次全发。
+- **只处理新增论文**。`seen.jsonl` 包含全部已获取的论文 ID，包括未通过筛选的。已有记录的获取和筛选工作无需重做。
+- **以方向相关性作为第一轮筛选条件**。
+- **标记值得精读的论文**。全文精读交给 `paper-reading`，研究缺口的判断交给 `idea-find`。
+- **按需使用三类来源**。A 类及时检索新投稿，B 类补充引用种子论文的相关工作，C 类补充经过同行评审的会议论文。`seen.jsonl` 用于跨来源去重。
+- **委派前由用户确认**。按已确认的分工安排子 agent。

@@ -33,27 +33,27 @@
 ## T3 数据 & 权重就绪 + 数据集速览
 
 - **目的**：数据真能被 loader 读到、checkpoint 真能加载。
-- **做什么**：下载 / 转换 / 改硬编码路径 / 造 subset / 验证 loader 读真实样本；checkpoint 下载并 strict 加载验证；挑样本产 `<repo>-datasets-intro.md` + `images/`。
+- **做什么**：下载 / 转换 / 改硬编码路径 / 构建测试子集 / 验证 loader 读真实样本；checkpoint 下载并 strict 加载验证；挑样本产 `<repo>-datasets-intro.md` + `images/`。
 - **预期结果**：每个数据集 loader 读到真实样本（非空）、版本与论文协议对齐；checkpoint strict 加载 key 全中；数据集速览落盘。
 - **依赖**：T1
 
 ## T4 Layer 2 synthetic smoke
 
-- **目的**：在真实数据之外先验一次数值链路，拦截静默错误。
+- **目的**：先用合成输入调用真实组件，检查输出、损失和梯度，发现未报错的数值异常。
 - **做什么**：写 smoke script 调真实 model / loss / transform / collate / trainer 组件，显式断言数值；script 落盘 `smoke.py`。
 - **预期结果**：forward 输出有限非全零、形状对；loss 有限正数、量级合理；backward 梯度非全零。smoke script 进产出目录。
 - **依赖**：T2, T3
 
 ## T5 Layer 3 官方命令 smoke run
 
-- **目的**：验证官方入口命令每条链能从头跑到尾、出的数机械上合理；实测开发卡足迹。
-- **做什么**：枚举官方 train / eval / inference / demo / preprocess 命令逐个判 ready / blocked；能轻量跑的做 smoke 验证（tiny subset eval → 1-5 iter train）；记单 step 显存 / 耗时。
-- **预期结果**：smoke train loss 趋势下降无 NaN；eval metric > 0 且非假满分；`dev_card_footprint` 实测值到手；blocked 清单明确。**不对照论文数字**（那是 code-paper-reproduction 的事）。
+- **目的**：验证官方命令能完整执行，输出通过基本数值检查，同时实测开发卡单步显存峰值和耗时。
+- **做什么**：枚举官方 train / eval / inference / demo / preprocess 命令逐个判 ready / blocked；能轻量跑的做 smoke 验证（tiny subset eval → 1-5 iter train）；记单步显存峰值和耗时。
+- **预期结果**：smoke train loss 趋势下降无 NaN；eval metric > 0 且已排除异常满分；`dev_card_footprint` 填写实测值；blocked 清单明确。**不对照论文数字**（那是 code-paper-reproduction 的事）。
 - **依赖**：T4
 
 ## T6 可复现性基线
 
-- **目的**：摸清 repo 随机性从哪来，给 execution 的可比性审计打底（只摸不改）。
+- **目的**：记录仓库中的随机性来源，给 execution 的可比性审计打底（只摸不改）。
 - **做什么**：查 seed 设置位置、`cudnn.deterministic` / `benchmark`、dataloader shuffle / worker seed。
 - **预期结果**：`setup.json` 的 `reproducibility` 块填齐 + report 记一节叙事。
 - **依赖**：T5
@@ -69,16 +69,16 @@
 
 - **目的**：让 setup fix 干净可回溯地进主分支。
 - **做什么**：在 `code/project-setup` 分支向用户汇报全部修复；用户同意才 merge；有疑问停在分支继续修。
-- **预期结果**：用户同意，merge 回主分支，交棒下游。
+- **预期结果**：用户同意，merge 回主分支，将产出交给下游技能。
 - **依赖**：T7
 
 ## 执行纪律
 
 - **tasklist 跟踪**：进工程执行区时，把任务建进 tasklist，逐项 in_progress → completed。
 - **report 动态更新**：每完成一个任务，当场回填 setup-report.md 对应任务节（实际结果 + 是否成功），不留到最后补写。
-- **语义改动即停**：任意任务执行中命中语义改动（strict=False / label map / metric / config 实验值），立即停下、汇报为什么 + 怎么改、等用户拍板（SKILL 核心纪律，贯穿全程）。
+- **语义改动即停**：任何任务需要做可能影响实验含义的改动（strict=False / label map / metric / config 实验值）时，立即停下、汇报为什么 + 怎么改、等用户确认（SKILL 核心纪律，贯穿全程）。
 - **长任务托管**：大下载 / 偏长 smoke run 走 tmux detach（详见 `dl-assistant/references/long-run-ops.md`），不用 run_in_background。
-- **死结上报**：编译型依赖反复修不动、大资源超 spec 估算、需人工点击同意条款——停下报告用户，不盲耗。
+- **遇到无法继续处理的问题时报告用户**：编译型依赖多次处理仍未解决、大资源超 spec 估算、需人工点击同意条款——停下报告用户，不盲耗。
 - **只补未完成**：中断恢复时扫产物定位断点，不重跑已验证的任务。
 ````
 
@@ -95,7 +95,7 @@
 
 > ## T3 数据 & 权重就绪
 > - **目的**：COCO val2017 真能被 repo 的 loader 读到，且和论文协议（v2 标注、官方 split）对齐。
-> - **做什么**：官方源下 val2017 + annotations（镜像站加速）；改 `configs/base.py` 和 `tools/train.py` 两处硬编码 data_root；固定 seed 抽 200 张造 smoke subset；用 repo 的 `CocoDataset` 读 3 个真实样本；下 R50 backbone 权重 strict 加载。
+> - **做什么**：官方源下 val2017 + annotations（镜像站加速）；改 `configs/base.py` 和 `tools/train.py` 两处硬编码 data_root；固定 seed 抽 200 张构建 smoke run 的测试子集；用 repo 的 `CocoDataset` 读 3 个真实样本；下 R50 backbone 权重 strict 加载。
 > - **预期结果**：loader 返回非空样本、bbox 格式 xyxy 与 annotation 一致；权重 167 个 key 全中无 missing；数据集速览落盘（3 样本：典型 / 密集小目标 / 遮挡）。
 > - **依赖**：T1
 

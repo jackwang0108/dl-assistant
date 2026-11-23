@@ -1,6 +1,6 @@
 # 数学公式 (KaTeX)
 
-KaTeX 全局已引，auto-render 已注册。写 LaTeX 即可，`$...$` 行内、`$$...$$` 行间。slidechanged 时自动渲染当前页。
+初始 HTML 已加载 KaTeX，并注册了自动渲染。写 LaTeX 即可，`$...$` 行内、`$$...$$` 行间。触发 `slidechanged` 事件时自动渲染当前页。
 
 ## 行内
 ```html

@@ -140,7 +140,7 @@
 
 ## 文风 lint
 
-写完按三层 craft 跑一遍（`sentence-craft.md` + `word-craft.md` + `anti-ai-patterns.md`，句段/字词/AI 跨节通用；论证层查本节 checklist）。
+写完按句段、字词和常见生成式写作问题三类写作要求 跑一遍（`sentence-craft.md` + `word-craft.md` + `anti-ai-patterns.md`，句段/字词/AI 跨节通用；论证层查本节 checklist）。
 
 ## 输出
 

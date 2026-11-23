@@ -22,7 +22,7 @@
 `.code-block` 走 `--code-bg` token，换主题自动联动。复制按钮用 `navigator.clipboard`，无需额外库。
 
 ## diff2html（按需引，展示代码 diff）
-用 diff2html 的 slide 按需引 CDN：
+仅在展示代码差异的页面通过 CDN 加载 diff2html。
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css">
 <script src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html.ui.min.js"></script>

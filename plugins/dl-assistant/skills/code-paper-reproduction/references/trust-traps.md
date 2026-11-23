@@ -1,35 +1,33 @@
-# 可信度陷阱（trust traps）：跑出数 ≠ 数可信
+# 复现差异排查（trust traps）
 
-> reproduction 的真盲区。复现失败里**最不像 bug 的那一类**——命令跑通了、有 metric 出来了，
-> 但数字要么伪对齐（看着齐其实错）、要么伪差距（看着差其实是噪声/协议）。这些错不 crash、
-> 不报 error，靠盯 traceback 永远抓不到。本手册把它们做成可操作的排查顺序 + 默认容差 band。
+> 即使命令正常运行，相近的数值也可能来自不同设置，数值差距也可能由设置差异或随机波动产生。下面给出逐项核对的顺序和默认容差。
 >
-> 用法：reduced/eval/训练 跑出数和论文对不上（或"好得可疑"）时，**按下面顺序排**——前面的坑命中率远高于后面。
-> ①-⑥ 是 eval 侧通吃的；**要重训/微调的 idea 还必须过 ⑦（训练链特有的伪对齐）**——它是 eval 对齐完全覆盖不到的盲区。
-> full / b+a 都跑不动时用「组件级验证手册」验训练链语义（证据阶梯第 3 级）。
+> 评测或训练结果与参考值不符，或明显优于报告值时，按下面的顺序核对，先查最常见的问题。
+> ①–⑥ 适用于评测。需要重训或微调时，还要逐项核对 ⑦ 中的训练设置和实现。
+> full / b+a 都跑不动时用「组件级验证手册」验训练链语义（各项验证能支持的结论第 3 级）。
 
-## 信任阶梯（双轨：eval 可信 + training 可信）
+## 推理评测与训练复现各自的通过条件
 
 ```
 能跑              ← setup 的事（环境/依赖/数据/ckpt 就绪），前置已过
   ↓
 跑出数            ← reduced/eval/训练 产出了 metric / log / artifact，命令不报错
   ↓
-eval 可信         ← checkpoint eval 在容差 band 内对齐论文 + 排除 ①-⑥（推理链对）
+eval 可信         ← checkpoint eval 在容差范围内对齐论文 + 排除 ①-⑥（推理链对）
   ↓
 training 可信     ← 重训能复现论文数（或合理外推）+ 排除 ⑦（训练链对）
                     training-free idea 到 eval 可信即可；要重训 idea 必须到 training 可信
 ```
 
-> **eval 可信是 training 可信的前置地基，不是 training-free 的专属。** 阶梯是递进的：要重训的 idea 也**先**把 eval 链校准（用 official checkpoint eval，官方权重训练已知正确），**再**叠训练复现。这样重训出的 gap 能干净归因——eval 已对 → gap 必在训练链（查 ⑦）；eval 没对 → 是 eval 链坏了（查 ①-④），训练数字没有可信标尺。所以 official checkpoint eval 对**所有** idea 都做，只是 training-free 到此为止、要重训的在它之上继续。
+> **所有分支都先用官方 checkpoint 跑评测。** 需要重训时，先验证推理和评测，再开始训练复现。评测不符时查 ①–④，评测通过后若重训结果仍与参考值有差异，再查 ⑦ 的训练设置。只改推理或后处理时，评测验证完成即可。
 
-> **eval 可信 ≠ baseline 可信**。official checkpoint eval 只验推理链，碰不到训练链。绝大多数 idea 要重训，**只有 training 可信这层过了，你重训出来的 delta 才有意义**。这是本手册区别于"eval 对齐就完事"的根本。本 skill 的判断停在对应轨的"可信"档（见 SKILL 的双轨判定）。
+> 官方 checkpoint 的评测覆盖推理、权重加载和评测协议。涉及重训的研究还须通过训练复现验证，再用重训结果比较方法改动带来的差异。
 
 ---
 
-## 排查顺序（按命中率降序，前三个是重灾区）
+## 排查顺序（按命中率降序，前三项优先检查）
 
-### ① metric 定义：同名不同算法（头号伪差距）
+### ① metric 定义：同名不同算法（最常见的表面差距）
 
 同一个 metric 名，背后可能是完全不同的算法/实现：
 
@@ -49,14 +47,14 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 
 > **排查动作**：确认 eval 命令实际加载的 split 文件 / annotation 路径；和论文"在哪个集上报"对齐；reduced subset 的数字**只用来验 pipeline，不和论文比绝对值**。
 
-### ③ checkpoint 血缘：官方权重不等于"产出论文数字那一版"
+### ③ checkpoint 的训练来源与版本：官方权重不等于"产出论文数字那一版"
 
 - **EMA vs raw**：很多 SOTA 训练维护 EMA 权重，论文数字来自 EMA，repo 默认 load raw（或反之）——差好几个点。
 - **best vs last**：官方放的是 best epoch 还是 last epoch 的 ckpt？论文报的是哪个？
 - **是不是那一版**：官方 release 的权重未必是产出论文表格那次训练的产物（可能是重训的、清理过的、换了 backbone init 的）。
-- **strict 加载丢 key**：`load_state_dict(strict=False)` 静默丢了一半 key，模型一半是随机初始化，eval 还能跑出"不算太差"的数字——伪差距的隐形炸弹。
+- **strict 加载丢 key**：`load_state_dict(strict=False)` 静默丢了一半 key，模型一半是随机初始化，eval 还能跑出"不算太差"的数字——由设置差异或随机波动产生的表面差距的隐形炸弹。
 
-> **排查动作**：load 时**强制 `strict=True` 看报不报 missing/unexpected keys**（setup 的 numeric-sanity 已埋此检查，复现要再确认一次）；确认 load 的是 EMA 还是 raw、best 还是 last；权重来源对照论文/repo issue 确认血缘。strict 报 key 不匹配 = 命中语义判断即停（停下问用户）。
+> **排查动作**：load 时**强制 `strict=True` 看报不报 missing/unexpected keys**（setup 的 numeric-sanity 已埋此检查，复现要再确认一次）；确认 load 的是 EMA 还是 raw、best 还是 last；权重来源对照论文/repo issue 确认权重的训练来源和版本。strict 报 key 不匹配 = 命中语义判断即停（停下问用户）。
 
 ### ④ 评测协议：测试时增强没对齐
 
@@ -66,17 +64,17 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 - **flip / 10-crop / sliding window**：分类、分割的测试时技巧。
 - **测试分辨率**：论文 train@224 test@384 这类"train-test resolution discrepancy"，repo 默认可能 test@224。
 
-> **排查动作**：读论文 Implementation Details / Appendix 有没有"test-time augmentation / multi-scale"；对照 eval config 的 test pipeline；**协议不一致是伪差距高发区**，且开/关协议是实验语义判断 → 命中语义判断即停，别擅自开关。
+> **排查动作**：读论文 Implementation Details / Appendix 有没有"test-time augmentation / multi-scale"；对照 eval config 的 test pipeline；**协议不一致是由设置差异或随机波动产生的表面差距高发区**，且开/关协议是实验语义判断 → 命中语义判断即停，别擅自开关。
 
-### ⑤ 跟错论文表格行 / setting
+### ⑤ 使用了错误的论文表格行 / setting
 
 - 论文一张表多行（不同 backbone / 不同输入尺寸 / 不同 schedule / w/ vs w/o 某 trick），**跟错行**就拿错了对比目标。
 - main table vs ablation table 数字不同；论文正文数字 vs 附录数字不同。
 - 对比的是"我们方法"那行还是"baseline"那行——复现 baseline 时要跟 baseline 行，不是 SOTA 行。
 
-> **排查动作**：写 spec 时就**把"Table X 第 N 行 + 该行的 setting"钉死**（spec 模板已要求）；复现 spec 里写清对的是哪一行哪个 setting。
+> **排查动作**：写 spec 时就**把"Table X 第 N 行 + 该行的 setting"明确并固定**（spec 模板已要求）；复现 spec 里写清对的是哪一行哪个 setting。
 
-### ⑥ 噪声 vs 真差：小 gap 先怀疑噪声
+### ⑥ 差异是否超出随机波动：小 gap 先怀疑噪声
 
 - **单 seed 的 ±零点几**：很多任务单次训练的 run-to-run std 就有零点几到一个点。单 seed 复现出的小 gap，**先怀疑是噪声，不是 baseline 不可信**。
 - **determinism 没固定**：cudnn.benchmark=True、dataloader 没固定 worker seed、没设 `cudnn.deterministic`——同样代码两次跑结果就不同。
@@ -86,7 +84,7 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 
 ---
 
-## ⑦ 训练链特有的伪对齐（只在「要重训」分流出现）
+## ⑦ 重训时需核对的训练设置和实现
 
 > ①-⑥ 主要管 eval 侧（推理链 + 权重 + 评测）。但绝大多数 idea 要重训/微调，这时 **eval 对齐 ≠ 训练链可信**——dataloader 增强、loss 实现、optimizer、分布式行为这些**只在训练时才跑到**，official checkpoint eval 完全碰不到它们。下面这些坑**只在你重新训练 baseline 时才暴露**，是"训练 loss/metric 曲线和论文对不上"的高频原因。**走 SKILL 决策树的「规模不大 full」「规模大 b+a」分流时，逐条核对。**
 
@@ -96,7 +94,7 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 - **BN 的 momentum / eval 时 running stats**：训练 momentum 配错、或 eval 时该用 running stats 却用了 batch stats，都让训练出的模型在 eval 时数字偏。
 - **frozen BN**：检测任务常 freeze backbone BN，repo 配置里 freeze 没 freeze 影响很大。
 
-> **核对**：读 config/源码确认 BN 类型（`SyncBatchNorm`?）、freeze 设置；对照论文 Implementation Details。1 卡复现大规模多卡训练时，BN 差异是头号"趋势对但数偏"的来源——这正是决策树「规模大」要靠 (b) 小 setting 补硬证据的原因。
+> **核对**：读 config/源码确认 BN 类型（`SyncBatchNorm`?）、freeze 设置；对照论文 Implementation Details。1 卡复现大规模多卡训练时，BN 差异是头号"趋势对但数偏"的来源——这正是决策树「规模大」要靠 (b) 小 setting 核对小规模完整训练能否复现的原因。
 
 ### 分布式 loss 归约：mean vs sum
 
@@ -134,7 +132,7 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 
 ## 组件级验证手册（不跑完整训练，验训练链语义）
 
-> 证据阶梯第 3 级的操作手册：full / b+a 都跑不动时，不跑完整训练也能验训练链语义；也适用于 training 曲线异常时的排障——先回到组件级，把"训练链断了"和"规模/超参问题"分开。
+> 各项验证能支持的结论第 3 级的操作手册：full / b+a 都跑不动时，不跑完整训练也能验训练链语义；也适用于 training 曲线异常时的排障——先回到组件级，把"训练链断了"和"规模/超参问题"分开。
 > 改动代码后的排障同样用这套手册（`code-idea-execution` 经全路径引用本文件）。
 >
 > **排查前置：simplify**——先关数据增强、固定 seed，把变量减到最少再定位；增强是又一个引入静默 bug 的机会，确认链路正确后再加回来。
@@ -172,19 +170,19 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 
 ### 使用方式
 
-- **证据阶梯第 3 级**：全过 → 训练链语义正确（`evidence_strength: low`，数值对齐 deferred）；任何一项不过 → 训练链有 bug，逐项查实。
+- **各项验证能支持的结论第 3 级**：全过 → 训练链语义正确（`evidence_strength: low`，数值对齐 deferred）；任何一项不过 → 训练链有 bug，逐项查实。
 - **曲线异常排障**：training loss 不降 / 震荡 / 早期炸 → 先 simplify，再按 1→2→3→4→5 顺序过，多数问题在前三项现形。
 
 ---
 
-## 容差 band（默认值）
+## 容差范围（默认值）
 
 **优先级：论文自报 > 默认 band。**
 
 1. **论文自报 std / 多次实验范围**最权威——论文写了 "X.X ± Y.Y" 或给了多 seed，**直接拿 ±std 当 band**。
 2. 论文没报方差时，用下面的**默认 band**（经验值，覆盖常见任务）：
 
-| 任务 | 指标 | 默认容差 band | 备注 |
+| 任务 | 指标 | 默认容差范围 | 备注 |
 | ---- | ---- | ------------- | ---- |
 | 图像分类 | top-1 acc | ±0.3% | 大模型/大数据集可放宽到 ±0.5% |
 | 目标检测 | mAP / AP | ±0.5 | COCO mAP；单 seed run-to-run 常达此量级 |
@@ -199,7 +197,7 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 
 ---
 
-## 伪对齐：数字"太好"也要警惕
+## 数值接近但设置或实现不一致：数字"太好"也要警惕
 
 不只是"差了"要查，**"好得可疑"同样是陷阱**：
 
@@ -216,4 +214,4 @@ training 可信     ← 重训能复现论文数（或合理外推）+ 排除 �
 
 - 命中 **③ checkpoint strict 报 key 不匹配** / **④ 协议要不要开** / **②val-test 该用哪个不确定** / **⑦ 该不该开同步 BN / 改 loss 归约 / 调 lr 缩放** → 这些是**实验语义判断**，命中语义判断即停（停下问用户）。
 - gap 原因查到 metric 实现 / dataloader 行为 / 训练链某处、**对齐表里看不直接** → **不是切出去，是 reproduction 该下源码追到底**：读那段源码把可疑点查实（如 ⑦ 里 BN 同步/loss 归约/lr 缩放到底在哪、对没对齐），追到能落判定 为止。可信度结论是本 skill 的交付，不追完就没有结论。
-- 反复修不动的工程死结（不是语义判断）→ 上报用户。
+- 多次处理后仍无法解决的工程死结（不是语义判断）→ 上报用户。

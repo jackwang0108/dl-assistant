@@ -26,7 +26,7 @@
 |---|---|---|
 | `id` | `P1` / `P2` / … | 去重后连续编号（跨 reviewer 同一问题合并为一条） |
 | `severity` | `致命` / `改进` | 对照 `fairness-firewall.md`（七类=改进）+ `calibration.md`（致命类）；response 据此排优先级 |
-| `type` | `内容` / `合规` / `指控成立` | 来源类别：reviewer/AC 的内容问题、合规审稿人的 desk-reject 项、魔鬼代言人经 AC 裁决成立的指控 |
+| `type` | `内容` / `合规` / `指控成立` | 来源类别：reviewer/AC 的内容问题、合规审稿人的 desk-reject 项、重大缺陷审稿人经 AC 裁决成立的指控 |
 | `location` | section + page-line | 问题锚点（如 `Experiments §4.2, p6 L188`） |
 | `verbatim_quote` | 逐字原文引用 | **必填**——问题指的原文逐字引用（含页码）。引不出原文 = reviewer 没读，该条在 Step 4 汇总时直接丢弃并计数汇报，不进清单 |
 | `问题描述` | 自由文本 | reviewer 的 weakness/question 摘要（忠实，不润色掉锋芒） |
@@ -52,4 +52,4 @@
 }
 ```
 
-> response 消费约定：`severity=致命` 对应 response 侧的 substance 类（必正面改 + 正面刚），`改进` 对应可权衡类——标签是先验，逐条讨论时用户可推翻（见 `writing-paper-response/references/fix-strategy.md`）。`close_criterion` 是初版判据，response 逐条讨论时可与用户修订（外部来源的意见没有判据，由 response 讨论起草）；定稿后的判据随 `revision-brief.json` 的 `关闭判据` 字段交 writing-paper，改稿按判据锁范围、按判据验收勾单。
+> response 消费约定：`severity=致命` 对应 response 侧的 substance 类（必直接修改并据证回应），`改进` 对应可权衡类——标签是先验，逐条讨论时用户可推翻（见 `writing-paper-response/references/fix-strategy.md`）。`close_criterion` 是初版判据，response 逐条讨论时可与用户修订（外部来源的意见没有判据，由 response 讨论起草）；定稿后的判据随 `revision-brief.json` 的 `关闭判据` 字段交 writing-paper，改稿按判据锁范围、按判据验收勾单。

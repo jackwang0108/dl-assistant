@@ -1,11 +1,11 @@
 {
   "_notes": [
-    "survey.json 模板（Step 6 用 · 机读数据 · 下游契约）——与 report.md（人读散文，report-template.md）同源、Step6 一起产出。",
-    "axis / purpose / familiarity 用中文，和 organizing-axis.md 词汇表对齐。purpose 枚举：学习理解 / 找研究方向 / 定位自己的工作 / 选技术方案。familiarity 枚举：基本陌生 / 有点了解 / 就在其中做。二级轴写法：'按方法 > 按时间'。",
-    "papers[].category 必须对齐 taxonomy；role 枚举：奠基 / 里程碑 / 近期前沿 / 其他；论文标识用 arXiv ID / DOI / URL，不用 paper_id（横切规范见 dl-assistant SKILL.md「横切规范」）；一篇不漏（含 report.md 只顺带提及的）。",
-    "gaps[] 是客观事实：每条带至少一个真实 arXiv 锚点 + category（对齐 taxonomy，挂到组，下游台账落格直接对号入座）；不判断哪个 gap 值得做——那是 idea-find 的活。label 枚举：性能 / 效率 / 可解释 / 数据 / 评测 / 其他。",
-    "hf_upvotes 可选——仅 HF 源带来的篇标，upvote≠质量，只当信号。",
-    "消费关系只在消费方声明（idea-find 自取 taxonomy 领域地图 / papers 论文池 / gaps 线索）；本 skill 不产正式 bib、不写论文章节，只给结构化原料。"
+    "Step 6 同时写 survey.json 和 report.md，两者基于同一份调研记录。此文件供程序读取。",
+    "axis、purpose 和 familiarity 用中文，分类维度参见 organizing-axis.md。purpose 枚举：学习理解 / 找研究方向 / 定位自己的工作 / 选技术方案。familiarity 枚举：基本陌生 / 有点了解 / 就在其中做。二级分类写法：'按方法 > 按时间'。",
+    "papers[].category 必须与 taxonomy 中的分类一致。role 枚举：奠基 / 里程碑 / 近期前沿 / 其他。用 arXiv ID、DOI 或 URL 标识论文，见 dl-assistant 的「所有技能共用的规则」。report.md 提到的论文也全部收录。",
+    "gaps[] 记录有文献依据的开放问题。每条至少附一个已核实的 arXiv ID，category 须与 taxonomy 对应。研究缺口是否值得做由 idea-find 评估。label 枚举：性能 / 效率 / 可解释 / 数据 / 评测 / 其他。",
+    "hf_upvotes 可选，仅记录来自 Hugging Face 的论文投票数，反映社区关注度。",
+    "idea-find 可从本文件读取分类、论文及开放问题。论文写作和正式 BibTeX 由相应技能负责。"
   ],
   "topic": "视频生成中的扩散模型",
   "slug": "video-diffusion",
@@ -15,7 +15,7 @@
   "axis": "按方法",
   "scope": "近3-5年，共42篇",
   "sources": ["semantic_scholar", "scholar", "arxiv", "hf-papers"],
-  "coverage_notes": "主要覆盖英文主流叫法；X 社区 'Y' 叫法未深挖",
+  "coverage_notes": "主要覆盖英文主流叫法；X 社区 'Y' 叫法未深入分析",
   "taxonomy": [
     "基于扩散的方法",
     "基于自回归的方法",

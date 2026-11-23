@@ -1,10 +1,10 @@
-# 产草稿（Step 15-17）：准 spec + plan + claim 树种子（两层）
+# 产草稿（Step 15-17）：准 spec + plan + 初始 claim 树（两层）
 
 讨论②一起打磨出方法后，主会话（本阶段不派子 agent）跟用户定稿，产**三个文件**：
 
 - `specs/<方向slug>-idea-spec-draft.md`（准 spec）
 - `specs/<方向slug>-idea-plan-draft.md`（准 plan，**方法设计**）
-- `specs/<方向slug>-claim-tree-draft.json`（claim 树种子，**两层**）
+- `specs/<方向slug>-claim-tree-draft.json`（初始 claim 树，**两层**）
 
 一方向一份，集中放 `specs/`。
 
@@ -14,7 +14,7 @@
 
 ### Step 15 写 spec → 确认点：用户确认
 
-按 spec-template 写 spec（§0 总论点+Roadmap+当前子论点 / §1 问题 / §2 文献 / §3 novelty / §4 失败解读表初稿）。摆给用户审：总论点立得住吗、Roadmap 第一个创新点（当前子论点）对不对、novelty 够不够目标会议、解读条目覆盖了各方案的主要死法吗、**每条的三问讲得通吗**（验什么 / 阈值来历或「无先验」标注 / 命中支持哪种解读+嫌疑层+后路——光写结论不讲推导，用户没法审）。**用户确认才写 plan**。
+按 spec-template 写 spec（§0 总论点+Roadmap+当前子论点 / §1 问题 / §2 文献 / §3 novelty / §4 失败解读表初稿）。摆给用户审：总论点立得住吗、Roadmap 第一个创新点（当前子论点）对不对、novelty 够不够目标会议、解读条目覆盖了各方案的主要失败情形吗、**每条的三问讲得通吗**（验什么 / 阈值来历或「无先验」标注 / 命中支持哪种解读+嫌疑层+后路——光写结论不讲推导，用户没法审）。**用户确认才写 plan**。
 
 ### Step 16 写 plan（共同打磨实验设计）→ 确认点：用户拍板
 
@@ -27,7 +27,7 @@
 
 > 共同打磨手法见 SKILL「怎么跟用户协作」（边查边讲 / 按需展开 / 一起打磨不做选择题）。文献用 paper-search 取真实数据，禁止编造。
 
-### Step 17 写 claim 树种子（两层，跟着 plan 定）
+### Step 17 写初始 claim 树（两层，跟着 plan 定）
 
 plan 拍板后，claim 树跟着定（总论点 = spec §0，子论点 = plan 的方法派生）——不单独停顿，是 spec+plan 的结构化沉淀。
 
@@ -37,30 +37,30 @@ idea-find 的产物是**中期 `code-idea-execution` 的输入**。execution 是
 
 但"定到可执行"的范围是 **v1 最小实验方案**，不是完整方法：
 
-> 纪律：plan 把 **v1 最小实现 + 实验设计**定到能执行（实验总览聚焦第一裁决 + 核心假设的裁决闭环、方案设计只写验证核心赌注所需的实现、每实验原理）。**不许基于"实验会成功"的预定假设预设计完整方法形态 / 完整实验矩阵**——实验结果不确定，预设的完整方案一旦与结果不符就整体作废；后续版本（加组件、扩 ablation、收敛成论文方法）是 iterate 基于每版实验证据演化的，事先铺排违背"在验证中迭代"。Roadmap 里 v1 之后的创新点只列**方向假设**（赌什么 / 怎么算死），不设计。
+> 纪律：plan 把 **v1 最小实现 + 实验设计**定到能执行（实验总览聚焦首个验证实验 + 核心假设对应的验证及判据、方案设计只写验证核心假设所需的实现、每实验原理）。**不许基于"实验会成功"的预定假设预设计完整方法形态 / 完整实验矩阵**——实验结果不确定，预设的完整方案一旦与结果不符就整体作废；后续版本（加组件、扩 ablation、收敛成论文方法）是 iterate 基于每版实验证据演化的，事先铺排违背"在验证中迭代"。Roadmap 里 v1 之后的创新点只列**方向假设**（要验证什么假设 / 什么结果说明假设不成立），不设计。
 
 **IF 必须产（不留空）**：
 
 - **spec**（§0 总论点 + Roadmap + 当前子论点 / §1 问题 / §2 文献 / §3 novelty / §4 失败解读表初稿 / 附录代码锚点**概要**）
 - **plan**（v1 实验总览 + v1 最小方案设计 + **每实验原理** + 代码指引概要 + 运行命令 + DoD）
-- **claim 树种子**（两层：总论点 + 子论点）
+- **初始 claim 树**（两层：总论点 + 子论点）
 
 **待补齐（留空，execution 读代码后填，不拍脑袋）**：
 
 - **claim×代码地图 file:line**（execution 读代码理解接入点后填——叙述关落 `03-claim-code-map.md`；IF 还没碰真实 baseline 代码，填不了精确位置）
-- baseline / 基座选型：**标 idea 形态**（前驱改进型 / 组合 insight 分析先行型）+ 候选 repo / 权重 / 数据集**只列线索 URL，不下判断**；分析先行型另写**载体需求**（分析实验需要长在什么任务 / 数据 / 模型上）——选哪个交 `baseline-survey` 尽调（它按形态走对打 baseline 选型或基座选型）
+- baseline / 选择用于分析实验的代码仓库：**标 idea 形态**（前驱改进型 / 组合 insight 分析先行型）+ 候选 repo / 权重 / 数据集**只列线索 URL，不下判断**；分析先行型另写**载体需求**（分析实验需要长在什么任务 / 数据 / 模型上）——选哪个交 `baseline-survey` 尽调（它按形态走选择用于比较的 baseline或选择用于分析实验的代码仓库）
 - 版本号（进 `ideas/` 时 execution 分配 v1）
 
 ## spec 草稿（按 spec-template）
 
 按 `dl-assistant/references/spec-template.md` 骨架产（单一真相源、不誊抄）。各节内容来自哪：
 
-- §0 总论点 + Roadmap（创新点状态表，第一个创新点 = 当前子论点；**v1 之后的创新点只列方向假设——赌什么 / 怎么算死，不设计**）+ 当前子论点 ← 讨论②定的 v1 方案 + 找方向阶段的方向
-- §0 候选方案节（每方案三要素：赌什么 / 为什么值得赌 / 怎么算死，结构见 spec-template）← 选定路线为方案 A；挑错中幸存、用户也想试的其他路线可作方案 B/C 进赛马（2-4 个，排除法定）
+- §0 总论点 + Roadmap（创新点状态表，第一个创新点 = 当前子论点；**v1 之后的创新点只列方向假设——要验证什么假设 / 什么结果说明假设不成立，不设计**）+ 当前子论点 ← 讨论②定的 v1 方案 + 找方向阶段的方向
+- §0 候选方案节（每方案三要素：要验证什么假设 / 为什么值得验证 / 什么结果说明假设不成立，结构见 spec-template）← 选定路线为方案 A；挑错中通过检查、 用户也想试的其他路线可作方案 B/C 一起比较（2-4 个，排除法定）
 - §1 问题定义 ← 找方向阶段的核心问题 + 挖方法阶段深读的"为什么现有方案不够"
 - §2 文献基础 ← `papers/` 里选定方向的必读论文
-- §3 novelty ← 挖方法阶段选定路线 + 挑错验证
-- §4 失败解读表（初稿：每个方案的主要死法 → 观察模式 + 解读 + 嫌疑层 + 后路，与用户共同打磨，**每条带判据三问**：验什么假设 / 阈值来历（无先验须标注）/ 命中支持哪种解读+嫌疑层+后路；命中不判死 claim，只触发解读 + iterate 验尸流程；iterate 写 spec 时随版本演化）← 讨论②的证伪条件 + Step 16 实验设计的预期失败信号
+- §3 novelty ← 挖方法阶段选定路线 + 独立检查
+- §4 失败解读表（初稿：每个方案的主要失败情形 → 观察模式 + 解读 + 嫌疑层 + 后路，与用户共同打磨，**每条带判据三问**：验什么假设 / 阈值来历（无先验须标注）/ 命中支持哪种解读+嫌疑层+后路；命中不判死 claim，只触发解读 + iterate 分析实验未达预期的流程；iterate 写 spec 时随版本演化）← 讨论②的证伪条件 + Step 16 实验设计的预期失败信号
 - 附录 A 代码锚点**概要**（模块级，如"改 backbone 的 neck"——精确 file:line 留 execution）标「待补齐」
 
 > spec-template 没有的 idea-find 额外节：**目标会议**（项目级，后续进 `PROJECT_CONTEXT.md` 的研究框架）：
@@ -73,17 +73,17 @@ idea-find 的产物是**中期 `code-idea-execution` 的输入**。execution 是
 
 按 `dl-assistant/references/plan-template.md` + `plan-writing-principles.md` 骨架产。**这是 v1 最小实验方案**，挖方法阶段一起打磨的路线落地成可执行 plan：
 
-- **实验总览**：v1 范围内每个子论点 / 判据对应哪些实验验证——聚焦第一裁决 + 核心假设的裁决闭环（先过这张表再设计实验）
-- **方案设计**：挖方法阶段选定路线的 **v1 最小实现**——机制 / 公式 / 架构改动只写验证核心赌注所需的部分 + 预期工作原理 + 接入点概要
+- **实验总览**：v1 范围内每个子论点 / 判据对应哪些实验验证——聚焦首个验证实验 + 核心假设对应的验证及判据（先过这张表再设计实验）
+- **方案设计**：挖方法阶段选定路线的 **v1 最小实现**——机制 / 公式 / 架构改动只写验证核心假设所需的部分 + 预期工作原理 + 接入点概要
 - **每实验原理**：回答什么 / 为什么这样设计 + 机制 / 预期成功·失败信号（含判据三问：验什么假设 / 阈值来历 / 命中意味着什么——让 execution 能看懂每个实验在干啥，让用户能审）
 - **代码指引概要**：改哪个模块（模块级，精确 file:line 留 execution 读代码落 `03-claim-code-map.md`）
 - **Phase 分组 + 共享对照协议 + 运行命令 + DoD**
 
 > plan-template 的「代码指引」节——IF 只写模块级概要，精确 file:line 和 claim×代码地图由 execution 落 `03-claim-code-map.md`。
 
-## claim-tree-draft.json（两层脊柱种子）
+## claim-tree-draft.json（初始两层 claim 树）
 
-claim 树是贯穿 idea-find → execution → 验收 → iterate → writing 的脊柱。产草稿阶段产两层种子，execution 起手（Step 2）拷成 `ideas/v1-<slug>/claims.json` 后正式诞生。
+claim 树记录各项研究论点，供构想设计、实验执行、结果验收、后续迭代和论文写作使用。这里先写两层草稿，execution 在 Step 2 将它复制到 `ideas/v1-<slug>/claims.json`，作为该版本的正式记录。
 
 - **路径**：`specs/<方向slug>-claim-tree-draft.json`。
 - **schema 直接用 `dl-assistant/references/claims-template.json`**（两层：总论点 paper_claim + 子论点 claims[]），三处不同：`verdict` 全 `pending`、`evidence[]` 空、`version`/`snapshot_date` 留空。
@@ -99,9 +99,9 @@ claim 树是贯穿 idea-find → execution → 验收 → iterate → writing �
 
 ## 结束语（显式交接）
 
-> **以上是这个方向的准 spec + plan + claim 树种子（两层），已存到 idea 文件夹的 specs/ 目录。**
+> **以上是这个方向的准 spec + plan + 初始 claim 树（两层），已存到 idea 文件夹的 specs/ 目录。**
 >
-> 下一步（前期收尾）：用 `baseline-survey` 对候选 baseline 做工程尽调——核查候选 repo 的代码质量、权重可得性、数据集版本、社区复现报告，选定用哪个。它会先按草稿里的形态标注判定走**对打 baseline 选型**还是**基座选型**（组合 insight / 分析先行型没有直接前驱 repo，选的是跑分析实验的载体），最终以「clone 卡」给出"去服务器 clone 哪个 repo、什么角色、带什么坑"。它也在本地跑；产出的选型报告和这份草稿一起作为跨机器交接物，需要时找用户弄到目标机器（横切规范见 `dl-assistant` SKILL.md「横切规范」）。
+> 下一步（前期收尾）：用 `baseline-survey` 对候选 baseline 做工程尽调——核查候选 repo 的代码质量、权重可得性、数据集版本、社区复现报告，选定用哪个。它会先按草稿里的形态标注判定走**选择用于比较的 baseline**还是**选择用于分析实验的代码仓库**（组合 insight / 分析先行型没有直接前驱 repo，选的是跑分析实验的载体），最终以「clone 卡」给出"去服务器 clone 哪个 repo、什么角色、带什么坑"。它也在本地跑；产出的选型报告和这份草稿一起作为跨机器交接物，需要时找用户弄到目标机器（通用规范见 `dl-assistant` SKILL.md「所有技能共用的规则」）。
 >
 > 然后（进中期）：把草稿 + 选型报告放到服务器 baseline repo，按主线准备 baseline——`code-project-setup`（环境就绪）→ `code-paper-reproduction`（复现验证）→ 需要时 `code-idea-prepare`（分诊：要不要先清理/优化 baseline）→ `code-reading`（读懂 baseline，必经）——然后把草稿交给 `code-idea-execution`。它起手结合 baseline 代码 + setup/reproduction 报告**确认 spec+plan**，**读代码填 claim×代码地图**（落 `03-claim-code-map.md`），草稿就地升级为正式 spec+plan；同时把 claim-tree-draft.json 拷成 `claims.json`，实现第一版。
 >

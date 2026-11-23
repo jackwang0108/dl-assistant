@@ -1,7 +1,7 @@
 # 清理方案 Spec 模板（code-idea-prepare · cleanup-spec）
 
-> CIP 清理阶段（减法）的方案，**用户审过才执行**。只动 reproduction 覆盖的核心路径 + 确定的死代码。
-> 潜伏不确定代码不进清理清单（记 uncovered 交 execution）；迭代设施受保护（不删）。
+> 这是删除不再使用的代码和依赖的方案，**须经用户确认后执行**。只动 reproduction 覆盖的核心路径 + 确定的死代码。
+> 未覆盖且用途未确认的代码不进清理清单（记 uncovered 交 execution）；迭代设施受保护（不删）。
 > 保存 `cleanup-spec.md`。技术术语保留，整体中文。
 
 ---
@@ -9,14 +9,14 @@
 ````markdown
 # Cleanup Spec: <repo-name>
 
-> 清理方案（减法）。审阅通过后才执行。有问题就改，改到确认再动手。
+> 清理方案。审阅通过后才执行。有问题就改，改到确认再动手。
 
 ## 0. 评分摘要（来自探索阶段）
 
-- 三分类统计：死代码 {X} / 潜伏不确定 {Y}（→ uncovered）/ 核心路径 {Z}
+- 三分类统计：死代码 {X} / 未覆盖且用途未确认 {Y}（→ uncovered）/ 核心路径 {Z}
 - 清理必要度：高 / 中 / 低
 - 预估清理量：{文件数} 文件 / {行数} 行 / {依赖数} 包
-- coverage 明细 + 热路径地图：`coverage/`（含 hot-path.md）
+- coverage 明细 + 迭代命令执行到的模块与位置：`coverage/`（含 hot-path.md）
 
 ## 1. 性能基准（来自 reproduction.json，清理后必须严格相等）
 
@@ -25,12 +25,12 @@
 | <config> | <metric 精确定义> | <val> | ±0.1% |
 
 - 基准来源：`reproduction.json` 的冻结 `target` 块（metric 精确定义 + tolerance_band + eval/training_reproduced）
-- **验证级别 = 迭代级别**：execution 将在 <reduced / eval / full> 上迭代，本 spec 的性能验证就在该配置上做（有 `reduced_setting` 则基准用 `reduced_setting.baseline_result`，噪声判据用其 `noise_floor`）
+- **用后续迭代的实际配置做性能验证**：execution 将在 <reduced / eval / full> 上迭代，本 spec 的性能验证就在该配置上做（有 `reduced_setting` 则基准用 `reduced_setting.baseline_result`，噪声判据用其 `noise_floor`）
 - 核心入口（从 `reproduction.json` 的 `ready_commands` / `reduced_setting.command` 拿）：<命令>
 
-## 2. 迭代设施保护清单（不删不改）
+## 2. 迭代所用文件、配置和开关的保护清单（不删不改）
 
-以下触及 `ready_commands` / `reduced_setting` 命令链，或是 scaling-law 迭代的缩放开关——即使 coverage 未覆盖、静态分析像死代码，也一律不删不改：
+以下触及 `ready_commands` / `reduced_setting` 命令链，或是 后续迭代用到的缩放开关——即使 coverage 未覆盖、静态分析像死代码，也一律不删不改：
 
 | 项 | 为什么是迭代设施 |
 |---|---|
@@ -57,7 +57,7 @@
 |---|---|---|
 | `utils/init_weights.py` | 可能经 registry 影响初始化，静态查不到 | 记 uncovered，execution 碰到确认后再定 |
 
-> 研究代码的坑：动态 import / registry / 配置驱动加载让静态分析不确定。**不确定的不删**（误删 execution 崩）。
+> 动态 import、registry 和配置驱动加载都可能让静态分析漏掉引用。无法确认是否仍被使用的代码应保留。
 
 ## 4. 待精简依赖
 
@@ -78,7 +78,7 @@
 
 - 目的：先清静态确认无引用的独立文件，风险最低，先验证 smoke 流程通畅
 - 内容：§3 低风险表全部
-- 预期：smoke（`train_smoke`）通过，管道不崩
+- 预期：smoke（`train_smoke`）通过，检查本批改动影响的入口
 
 ### Batch 2：删函数/类
 
@@ -106,7 +106,7 @@
 
 - [ ] 死代码清单（低/中风险）无异议
 - [ ] 高风险/uncovered 清单认可（这些不删）
-- [ ] 迭代设施保护清单认可（这些不删不改）
+- [ ] 迭代所用文件、配置和开关的保护清单认可（这些不删不改）
 - [ ] 同意分批顺序
 - [ ] 同意最终手动 review + merge
 ````

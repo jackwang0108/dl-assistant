@@ -1,6 +1,6 @@
 # Review Protocols（写后自审 + 全文润色 子 agent 协议）
 
-写正文和审正文是**两件事**——写正文的 agent 对自己的文字（尤其 AI 味）有确认偏误，自审容易手软、自我合理化。所以自审/润色**派未参与写作的子 agent**（fresh eyes），只对着 checklist + lint 裁，不掺写作时的妥协。
+正文起草与检查由不同的 agent 负责——写正文的 agent 对自己的文字（尤其 AI 味）有确认偏误，自审容易手软、自我合理化。所以自审/润色**派未参与写作的子 agent**（由未参与起草者检查），只对着 checklist + lint 裁，不掺写作时的妥协。
 
 > 本文件是两块**子 agent 调度协议**（给什么、它做什么、报什么）：一、逐节写后自审（write-section ③ / ingest-results ④）；二、全文润色（audit 的润色 lens）。**audit 的 fan-out 编排（三 lens、owner 划分）在 `ops/op-7-audit.md`**。子 agent 本身的派发流程见 SKILL.md / 各目标操作的 reference。
 
@@ -12,7 +12,7 @@
 
 - **该节正文**：`content/<节>.md`（刚写的纯文字）。
 - **该节写作指南**：`references/sections/<节>-writing.md` 的「**全节自查 checklist**」（refs_v2 每个章节指南末尾自带反模式信号清单）。
-- **三层 craft lint**（跨节通用）：`references/craft/sentence-craft.md`（句段层：句式/主从/主语/句长 变化）+ `word-craft.md`（字词层：选词原则）+ `anti-ai-patterns.md`（AI 禁止模式：机器指纹）。
+- **句段、字词和常见生成式写作问题三类写作要求 lint**（跨节通用）：`references/craft/sentence-craft.md`（句段层：句式/主从/主语/句长 变化）+ `word-craft.md`（字词层：选词原则）+ `anti-ai-patterns.md`（AI 禁止模式：机器指纹）。
 - **蓝图约束**：该节挂的 contribution / C-ID（claim 回扣，防悬空主张）。
 - **蓝图全文** `_draft/blueprint.md` + **已写节** `content/`（本节之前写的）：跨节一致性对照基准（术语/gap/named-abstraction/contribution 跟它们一致不）。
 - **已写节 digest** `_draft/paper-state.json`（每节的论点句/术语/符号/关键数字/图表清单）：跨节一致性对照基准（比对已有 digest，不用重读全文）。
@@ -20,7 +20,7 @@
 
 ### 子 agent 做什么
 
-只审、不改（改回主流程）：逐条过「全节自查 checklist」（论证层）+ 跑三层 craft lint（句段/字词/AI）+ **跨节一致性**（术语/gap/named-abstraction/contribution 跟 blueprint + 已写节 digest；符号跟 notation.md）+ **引用覆盖**（key baseline/相关工作引了没、orphan claim 有主张没 ref），**输出命中项 + 改法**，不下场重写。
+只审、不改（改回主流程）：逐条过「全节自查 checklist」（论证层）+ 跑句段、字词和常见生成式写作问题三类写作要求 lint（句段/字词/AI）+ **跨节一致性**（术语/gap/named-abstraction/contribution 跟 blueprint + 已写节 digest；符号跟 notation.md）+ **引用覆盖**（key baseline/相关工作引了没、orphan claim 有主张没 ref），**输出命中项 + 改法**，不下场重写。
 
 ### 子 agent 报什么（输出）
 
@@ -59,7 +59,7 @@
 
 ### 子 agent 做什么
 
-- 全文跑三层 craft lint（句段/字词/AI），逐命中给 before/after/原因。
+- 全文跑句段、字词和常见生成式写作问题三类写作要求 lint（句段/字词/AI），逐命中给 before/after/原因。
 - 英文打磨（句长变化、术语一致、精确数字）。
 - **meaning-risk flag**：可能**改变含义**的改动（不只是语言）逐条标 before / after / 原因 / 风险等级——**不擅自改**，列为**确认点**给用户确认（防润色偷改 claim）。
 
@@ -83,12 +83,12 @@
 
 ## 为什么要子 agent（不是自审）
 
-- **fresh eyes**：没参与写作，不带"我这么写是有道理的"偏误。
+- **由未参与起草者检查**：没参与写作，不带"我这么写是有道理的"偏误。
 - **指令跟随**：子 agent 只对着 checklist + lint 裁，不被写作时的妥协污染——这正是用户痛点"指令跟随差"的对症。
 - **可校准**：首跑时人工抽查几节自审报告，看 checklist 触发率（太松没意义、太严全 flag），据此调子 agent 的严格度。
 
 ## 派发注意（主流程）
 
-- 子 agent 必须 **general-purpose**（禁 Explore），prompt 里**注入**它要的 checklist + lint 片段（别让它自己翻文件——又回到跟随差）。
+- 子 agent 必须 **general-purpose**（禁 Explore），直接向子 agent 提供对应的检查清单和 lint 片段。
 - 一节一个子 agent（隔离上下文）；全文润色一个子 agent（要看全文）。
 - 子 agent 报告落 `_draft/`（如 `_draft/audit/<节>.md`），不进 Overleaf。

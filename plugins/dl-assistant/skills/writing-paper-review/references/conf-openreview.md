@@ -1,4 +1,4 @@
-# 会议评审参考 · 打分派（OpenReview 体系）
+# 会议评审参考 · 采用结构化评分的会议（OpenReview 体系）
 
 `writing-paper-review` Step 2/3 用。这类会议共性：**结构化子维度评分 + 数值 overall + confidence**，有 rebuttal 轮和 discussion 期，AC/SAC 综合数值与讨论定夺。审稿人 subagent 按目标会议加载对应那一节，照搬其评分维度和刻度。
 

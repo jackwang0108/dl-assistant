@@ -1,10 +1,10 @@
-# Adding Charts to Reveal.js Presentations
+# 在 Reveal.js 幻灯片中添加图表
 
-Charts are added using the [reveal.js-plugins/chart](https://github.com/rajgoel/reveal.js-plugins) plugin, which integrates Chart.js into your slides.
+通过 [reveal.js-plugins/chart](https://github.com/rajgoel/reveal.js-plugins) 插件在幻灯片中使用 Chart.js。
 
-## Setup
+## 安装
 
-The chart plugin is included by default in the scaffold. It adds these to your HTML:
+初始 HTML 默认包含图表插件及以下内容。
 
 ```html
 <!-- In <head> -->
@@ -25,33 +25,33 @@ Reveal.initialize({
 });
 ```
 
-## Chart Types
+## 图表类型
 
-**Supported types:** `line`, `bar`, `pie`, `doughnut`, `radar`, `polarArea`, `bubble`, `scatter`
+**支持的类型** `line`, `bar`, `pie`, `doughnut`, `radar`, `polarArea`, `bubble`, `scatter`
 
-For most presentations, you'll use:
-- **bar** - Comparing categories
-- **line** - Trends over time
-- **pie/doughnut** - Parts of a whole
-- **scatter** - Relationships between variables
+常用类型如下。
+- **bar** - 比较不同类别
+- **line** - 展示随时间变化的趋势
+- **pie/doughnut** - 展示各部分占比
+- **scatter** - 展示变量间的关系
 
-## Chart Sizing (IMPORTANT)
+## 图表尺寸要求
 
-Charts MUST use one of these four layout options to properly fill their space without overflow:
+图表必须使用以下四种布局之一，以填满分配的空间并避免越界。
 
-1. **Full slide** - Chart fills entire slide below title
-2. **Half slide (horizontal)** - Chart on left or right, content on the other side
-3. **Half slide (vertical)** - Chart on top or bottom, content on the other half
-4. **Quarter slide** - Chart in one quadrant, other content in remaining three
+1. **整页** - 图表占满标题下方的空间
+2. **半页（左右）** - 图表和其他内容分居左右
+3. **半页（上下）** - 图表和其他内容分居上下
+4. **四分之一页** - 图表占一个区域，其余三个区域放其他内容
 
-### Required CSS Pattern
+### 必需的 CSS 设置
 
-Every chart needs:
-1. **Flexbox section** with `display: flex; flex-direction: column; height: 100%;`
-2. **Container div** with `flex: 1; position: relative; min-height: 0;` (and `min-width: 0` for grid layouts)
-3. **`maintainAspectRatio: false`** in chart options
+每个图表需要以下设置。
+1. **使用 Flexbox 的 section** with `display: flex; flex-direction: column; height: 100%;`
+2. **图表容器 div** with `flex: 1; position: relative; min-height: 0;`（网格布局还需设置 `min-width: 0`）
+3. **`maintainAspectRatio: false`** 设在图表选项中
 
-### Full Slide Layout
+### 整页图表布局
 
 ```html
 <section style="display: flex; flex-direction: column; height: 100%;">
@@ -78,9 +78,9 @@ Every chart needs:
 </section>
 ```
 
-### Half Slide - Horizontal (Left/Right)
+### 半页图表布局（左右）
 
-Chart on right, content on left:
+图表在右，其他内容在左。
 
 ```html
 <section style="display: flex; flex-direction: column; height: 100%;">
@@ -116,9 +116,9 @@ Chart on right, content on left:
 </section>
 ```
 
-### Half Slide - Vertical (Top/Bottom)
+### 半页图表布局（上下）
 
-Content on top, chart on bottom (equal halves):
+其他内容在上，图表在下，两部分高度相等。
 
 ```html
 <section style="display: flex; flex-direction: column; height: 100%;">
@@ -154,11 +154,11 @@ Content on top, chart on bottom (equal halves):
 </section>
 ```
 
-### Content Header + Chart Below (Unequal Split)
+### 上方内容与下方图表（不等比例）
 
-Small content area on top (1/4 or 1/3), chart fills the rest. Use explicit fractions for predictable sizing:
+上方内容区占 1/4 或 1/3，图表占其余空间。明确指定比例以控制尺寸。
 
-**1/4 content, 3/4 chart:**
+**内容占 1/4，图表占 3/4**
 ```html
 <section style="display: flex; flex-direction: column; height: 100%;">
   <h2>Chart Title</h2>
@@ -189,7 +189,7 @@ Small content area on top (1/4 or 1/3), chart fills the rest. Use explicit fract
 </section>
 ```
 
-**1/3 content, 2/3 chart:**
+**内容占 1/3，图表占 2/3**
 ```html
 <section style="display: flex; flex-direction: column; height: 100%;">
   <h2>Chart Title</h2>
@@ -225,14 +225,14 @@ Small content area on top (1/4 or 1/3), chart fills the rest. Use explicit fract
 </section>
 ```
 
-**Common row fractions:**
-- `1fr 3fr` - 25% content / 75% chart (minimal text)
-- `1fr 2fr` - 33% content / 67% chart (short paragraph or bullet list)
-- `1fr 1fr` - 50% / 50% equal split
+**常用行高比例**
+- `1fr 3fr` - 内容占 25%，图表占 75%，适合少量文字
+- `1fr 2fr` - 内容占 33%，图表占 67%，适合短段落或要点列表
+- `1fr 1fr` - 各占 50%
 
-### Quarter Slide (Quadrant)
+### 四分之一页图表布局
 
-Chart in one quadrant (bottom-right), other content in remaining three:
+图表位于右下角，其余三个区域放其他内容。
 
 ```html
 <section style="display: flex; flex-direction: column; height: 100%;">
@@ -301,23 +301,23 @@ Chart.js 画不了的科学图（3D 散点/等高线/热图/box/violin）用 plo
 - **plotly**：科学图（3D/等高线/热图/box/violin/统计），按需引。Chart.js 画不了时才用。
 
 ### decktape 截图注意
-plotly 交互模式在 headless 截图可能渲染不全。截图前确保渲染完（`Plotly.newPlot` 返回的 Promise resolve），或用 `Plotly.toImage` 导出静态图嵌入。
+plotly 交互模式在 headless 截图可能渲染不全。截图前确保渲染完（`Plotly.newPlot` 返回的 Promise resolve），或用 `Plotly.to图片` 导出静态图嵌入。
 
-## Why This Pattern Works
+## 布局原理
 
-Chart.js by default maintains a 2:1 aspect ratio, which causes overflow in constrained slide layouts. The flexbox/grid pattern solves this by:
+Chart.js 默认保持 2:1 的宽高比，在空间有限的幻灯片中可能造成溢出。Flexbox 和网格布局通过以下设置控制尺寸。
 
-1. **`height: 100%` on section** - Makes the slide fill available space
-2. **`flex: 1` on container** - Expands to fill remaining space after title
-3. **`min-height: 0; min-width: 0`** - Allows flex/grid children to shrink below content size (critical for preventing overflow)
-4. **`position: relative`** - Required by Chart.js for responsive sizing
-5. **`maintainAspectRatio: false`** - Tells Chart.js to fill container instead of maintaining ratio
+1. **`height: 100%` 用于 section** - 让页面占满可用空间
+2. **`flex: 1` 用于容器** - 填满标题下方的剩余空间
+3. **`min-height: 0; min-width: 0`** - 允许弹性或网格布局中的子元素缩到小于内容本身尺寸，避免溢出
+4. **`position: relative`** - Chart.js 根据容器调整尺寸所需的设置
+5. **`maintainAspectRatio: false`** - 让 Chart.js 填满容器，不再强制保持宽高比
 
-## Styling Charts
+## 图表样式
 
-### Colors
+### 配色
 
-Set colors in the JSON configuration:
+在 JSON 配置中设置颜色。
 
 ```json
 "datasets": [{
@@ -326,7 +326,7 @@ Set colors in the JSON configuration:
 }]
 ```
 
-### Common color arrays for charts
+### 常用图表色组
 
 ```javascript
 // Blues
@@ -342,9 +342,9 @@ Set colors in the JSON configuration:
 ["#2196F3", "#ff9800", "#4caf50", "#e91e63", "#9c27b0"]
 ```
 
-## Common Options
+## 常用选项
 
-### Hide Legend
+### 隐藏图例
 
 ```json
 "options": {
@@ -355,7 +355,7 @@ Set colors in the JSON configuration:
 }
 ```
 
-### Custom Axis Labels
+### 自定义坐标轴标签
 
 ```json
 "options": {
@@ -371,7 +371,7 @@ Set colors in the JSON configuration:
 }
 ```
 
-### Start Y-Axis at Zero
+### Y 轴从零开始
 
 ```json
 "options": {
@@ -382,7 +382,7 @@ Set colors in the JSON configuration:
 }
 ```
 
-### Legend Position
+### 图例位置
 
 ```json
 "options": {
@@ -393,9 +393,9 @@ Set colors in the JSON configuration:
 }
 ```
 
-## CSV Data Format
+## CSV 数据格式
 
-You can define data using CSV format (simpler than JSON):
+可用 CSV 提供图表数据。
 
 ```html
 <canvas data-chart="line">
@@ -410,11 +410,11 @@ May, 70, 45
 </canvas>
 ```
 
-The first row becomes labels, subsequent columns become datasets.
+首行为标签，后续各列为数据集。
 
-## External CSV Files
+## 外部 CSV 文件
 
-For larger datasets, use external CSV files:
+数据较多时，使用外部 CSV 文件。
 
 ```html
 <canvas data-chart="line" data-chart-src="data/sales.csv">
@@ -429,19 +429,19 @@ For larger datasets, use external CSV files:
 </canvas>
 ```
 
-## Validation
+## 验证
 
-Run the overflow check script to verify charts don't overflow:
+运行脚本检查图表是否超出页面。
 
 ```bash
 node scripts/check-overflow.js presentation.html
 ```
 
-## Tips
+## 使用建议
 
-1. **Always use the flexbox pattern** - Never set fixed height on canvas directly
-2. **Always include `maintainAspectRatio: false`** in chart options
-3. **Keep charts simple** - Presentations aren't dashboards
-4. **Use consistent colors** - Match your presentation's color palette
-5. **Limit data points** - 4-8 points is ideal for readability
-6. **Test overflow** - Run `check-overflow.js` after adding charts
+1. **使用规定的 Flexbox 布局** - 避免直接为 canvas 设置固定高度
+2. **必须设置 `maintainAspectRatio: false`** 设在图表选项中
+3. **保持图表简洁** - 每页只放汇报需要的信息
+4. **统一配色** - 与幻灯片的整体配色一致
+5. **控制数据点数量** - 4–8 个数据点较易阅读
+6. **检查溢出** - 添加图表后运行 `check-overflow.js`

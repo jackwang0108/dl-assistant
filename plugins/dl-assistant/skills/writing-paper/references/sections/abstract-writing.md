@@ -85,7 +85,7 @@
 **选择逻辑**：你的结果"强"在哪？
 
 - 单点大幅领先 → 头条数字 + 具名对手
-- 全面但小幅 → 先重选主战场（摘要报的是最强维度上的数字；评价维度的重选回 design-story / ingest-results 定，不在摘要层临时找补），不得已才多维数字 + hedge
+- 全面但小幅 → 先重选论文重点比较的维度（摘要报的是最强维度上的数字；评价维度的重选回 design-story / ingest-results 定，不在摘要层临时找补），不得已才多维数字 + hedge
 - 有代价 / 让步 → while 对偶 + 让步反转
 
 - ✓ **do：落到具体可核验数字，配具名锚点**
@@ -98,7 +98,7 @@
 - ✗ **dont：断然否认存在 trade-off**（`does not come at the cost of` / `simultaneously improves both`）
     - 为什么坏：绝大多数方法有代价，断然否认不可信；用 `Although 对手更优，己方在 X 占优` 的让步反转诚实承认更可信。
     - 自查：出现 `not at the cost of / simultaneously improves both`。
-- ✓ **do：hedge 软化**（`up to / potential / on most metrics`），把精确数字留正文——**只在主战场已选定、数字本身需要限定时用**；不用 hedge 把弱结果包装成可接受（那是防御性写作，见 `word-craft` 原则 4）。
+- ✓ **do：hedge 软化**（`up to / potential / on most metrics`），把精确数字留正文——**只在论文重点比较的维度已选定、数字本身需要限定时用**；不用 hedge 把弱结果包装成可接受（那是防御性写作，见 `word-craft` 原则 4）。
 
 ### goal 5：收尾升华 —— 最后一句留什么印象
 
@@ -136,7 +136,7 @@
 
 ## 文风 lint
 
-写完按三层 craft 跑一遍（`sentence-craft.md` + `word-craft.md` + `anti-ai-patterns.md`，句段/字词/AI 跨节通用；论证层查本节 checklist）。
+写完按句段、字词和常见生成式写作问题三类写作要求 跑一遍（`sentence-craft.md` + `word-craft.md` + `anti-ai-patterns.md`，句段/字词/AI 跨节通用；论证层查本节 checklist）。
 
 ## 输出
 

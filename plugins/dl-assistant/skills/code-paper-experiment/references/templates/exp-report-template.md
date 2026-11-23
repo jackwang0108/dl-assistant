@@ -1,8 +1,8 @@
 # 实验 报告.md 模板（experiments/<exp_id>/报告.md）
 
-每个实验一份，**人读**——你（用户）随时打开就能看明白这个实验。机读字段（mean±std / seed 明细 / signal 判定）在 `results.json`，本文件是它的「人读封面」：数字照抄 `results.json`，不另造机读字段。
+每项实验一份摘要，供用户阅读。均值 ± 标准差、各随机种子的结果和对照判据的判断都记录在 `results.json`。报告直接引用其中的数字，无需新增供程序读取的字段。
 
-**写法要求**：一页以内；陈述事实，不 storytelling（怎么叙述是 writing-paper 的事）；否定信号、异常、意外观察如实写。每跑完一个实验就和 `results.json` 一起增量写好，别攒到最后。
+**写法要求**。报告限一页，如实记录结果、未达到预期的情况、异常和意外观察。论文中的论述由 `writing-paper` 负责。每项实验完成后，立即编写报告并更新 `results.json`。
 
 **读者视角组织**——打开报告的人按这个顺序问问题：结果是什么 → 为什么跑它 → 怎么跑的 → 细节在哪。模板就按这个顺序排。
 
@@ -11,7 +11,7 @@
 ```markdown
 # <exp_id>：<一句话标题>
 
-> **TL;DR**：<干了啥，一句话>｜<主指标> <mean±std，n seeds>｜**success / failure / partial**（对照预注册 bar）
+> **TL;DR**：<用一句话说明做了什么>｜<主指标> <mean±std，n seeds>｜**success / failure / partial**（对照预先设定的判据）
 
 ## 为什么跑这个实验
 
@@ -26,30 +26,30 @@
 
 ### TL;DR（三行以内，结论先行）
 
-读者只看这三行也该知道：这个实验干了什么、核心数字、对照预注册 bar 的判定。
+前三行应说明实验内容、主要结果，以及对照预先设定判据的判断。
 
-- 浅（不合格）：「消融模块 A，结果见下文。」——零信息，读者还是得翻全文。
-- 深（合格）：「Contribution 1 消融：去模块 A｜mIoU 74.2±0.3（n=3）vs 完整版 76.8±0.2｜**success**（掉 2.6 ≥ 预注册 bar 1.5，A 是增益来源）。」
+- 浅（不合格）：「消融模块 A，结果见下文。」。缺少主要结果和判断。
+- 深（合格）：「Contribution 1 消融：去模块 A｜mIoU 74.2±0.3（n=3）vs 完整版 76.8±0.2｜**success**（掉 2.6 ≥ 预先设定的判据 1.5，A 是增益来源）。」
 
 ### 为什么跑这个实验
 
-两样：**plan 三样原样带**（paper_claim——支撑论文哪条 claim；purpose——回答什么问题；expected_signal——预注册 success bar）+ **批内位置**（depends_on 谁、谁依赖它；尤其 decides_config 实验：它的结果定了哪些实验的配置）。
+原样引用计划中的三个字段。`paper_claim` 说明支撑论文中的哪条论点，`purpose` 说明要回答的问题，`expected_signal` 记录预先设定的成功判据。说明 `depends_on` 记录的依赖和哪些实验依赖本实验。对 `decides_config` 实验，说明其结果决定了哪些实验的配置。
 
-- 浅（不合格）：「消融模块 A。」——只是名字复读，读者不知道为什么要消融、判据是什么。
-- 深（合格）：「验证 Contribution 1：模块 A 是性能增益的来源而非装饰。预注册 bar：去掉 A 后主指标掉 ≥ 1.5 视为有效。它是主表 exp-main-A 的消融臂，与其共用同一冻结配置（否则对比被污染）。」
+- 浅（不合格）：「消融模块 A。」。缺少消融目的和判据。
+- 深（合格）：「验证 Contribution 1：模块 A 是否带来性能增益。预先设定的判据：去掉 A 后主指标掉 ≥ 1.5 视为有效。它是主表 exp-main-A 的对应的消融实验，与其共用同一冻结配置，以保证对比条件一致。」
 
 ### 怎么做的
 
-**关键信息自包含**——读者不跳文件也该知道：config 相对 full config 的变动（一句话）、eval 协议（checkpoint 选择规则 val 选 best、eval split、seeds 列表）；main/comparison 实验必写 **fairness 怎么落实**（baseline 超参来源、数据集/预处理/training budget 是否对齐）和 **baseline 来源**（self-run 还是 official 引数）。指针（`configs/` 冻结副本、`scripts/` 启动脚本、`experiments/run-spec.json` 本实验条目——完整命令在其中）只作备查，不放正文。
+**关键信息自包含**——读者不跳文件也该知道：config 相对 full config 的变动（一句话）、eval 协议（checkpoint 选择规则 val 选 best、eval split、seeds 列表）；main/comparison 实验必写 **fairness 怎么落实**（baseline 超参来源、数据集/预处理/training budget 是否对齐）和 **baseline 来源**（self-run 还是 official 引数）。备查资料（`configs/` 冻结副本、`scripts/` 启动脚本、`experiments/run-spec.json` 本实验条目——完整命令在其中）只作备查，不放正文。
 
 - 浅（不合格）：「配置见 configs/，命令见 run-spec.json。」——读者必须跳文件才知道你干了什么。
 - 深（合格）：「full config 仅去模块 A，其余与 exp-main-A 逐字节相同；val 选 best checkpoint、test 只评一次；seeds 0/1/2。完整 config 与命令见 configs/、scripts/。」
 
 ### 结果与现象
 
-- **主结果**：mean ± std + n seeds + **各 seed 原始数**（照抄 `results.json`——让人能看出方差是不是某一个 seed 撑起来的）；
-- **signal 判定**：success / failure / partial + 对照预注册 bar 的一句话理由。**否定信号如实写**；
-- **和 reduced 趋势对照**：方向一致？量级合理？（反转的，这里写查 bug 的结论）；
+- **主结果**：mean ± std + n seeds + **各 seed 原始数**（照抄 `results.json`——便于判断结果波动是否主要来自某一个随机种子）；
+- **signal 判定**：success / failure / partial + 对照预先设定的判据 的一句话理由。**否定信号如实写**；
+- **和 reduced 趋势对照**：方向一致？量级合理？（如有反转，记录故障排查结论）；
 - **意外观察**：跑出来的计划外现象（某类样本全错、某个 seed 训练动态异常……）——往往是论文 analysis 节或下个工作的素材，没有就写「无」；
 - **异常备注**：resume 记录、失败 seed 及原因（n 不足必须写，判定降置信）。
 
@@ -57,4 +57,4 @@
 
 ### 产物
 
-一行指针：「产物齐全（check-run-artifacts.sh 过）：configs/ / scripts/ / runs/seed-{0,1,2}/（train.log、eval.log、metrics.json）/ results.json / meta.json。」**只在缺项时展开写缺哪个、为什么**——机器已逐项查过，人读报告不重复审计清单。
+用一行列出产物路径：「产物齐全（check-run-artifacts.sh 过）：configs/ / scripts/ / runs/seed-{0,1,2}/（train.log、eval.log、metrics.json）/ results.json / meta.json。」**只在缺项时展开写缺哪个、为什么**——详细检查结果见脚本输出，无需逐项复述。

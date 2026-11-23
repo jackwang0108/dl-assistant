@@ -1,6 +1,6 @@
 # 实验计划包（`_draft/experiments/plan-vN.md`）人读区
 
-实验计划包的**人读区**——`writing-paper` 的 op-4-design-experiment 产，**用户在确认点逐项拍板时读的就是这份**。**机读区（experiments[] 等全部字段）在 `paper-experiment-plan-template.json`**，产物落同名 `plan-vN.json`——CPE 消费的单一读取源是 json；本 md 只装给人看的总览与设计记录。流程 / 用户拍板 / CPE 交接契约见 `references/ops/op-4-design-experiment.md`。
+实验计划包的**人读区**——`writing-paper` 的 op-4-design-experiment 产，**用户在确认点逐项由用户确认时读的就是这份**。**机读区（experiments[] 等全部字段）在 `paper-experiment-plan-template.json`**，产物落同名 `plan-vN.json`——CPE 消费的单一读取源是 json；本 md 只装给人看的总览与设计记录。流程 / 用户确认 / CPE 交接契约见 `references/ops/op-4-design-experiment.md`。
 
 > **版本化递增**：`plan-v1.md` / `plan-v1.json` 只装**长周期必做项**（写作启动就必须排上 GPU 的实验；配置未冻结则配置选定批优先）；写作中新增的实验需求不改动旧版，攒一批成 `plan-vN+1` 追加交接。
 
@@ -33,13 +33,13 @@ flowchart LR
     MAIN --> QUAL["exp-qual-case<br/>（用主 run checkpoint）"]
 ```
 
-- **配置未冻结，主表不开跑**——`decides_config: true` 的实验（组件消融/超参选定）先跑，配置冻结确认点（用户拍板）后主表批才开跑。
+- **配置未冻结，主表不开跑**——`decides_config: true` 的实验（组件消融/超参选定）先跑，配置冻结确认点（用户确认）后主表批才开跑。
 - **一次实验多处消费**：组件消融（全量+多 seed 正规协议）既是配置决策依据又是论文消融表；超参搜索进附录敏感性分析。
 - **test peeking 红线**：配置决策只用 validation split。
 
 ## 逐实验卡片
 
-[每个实验一个二级标题，人话写清——用户逐项拍板读的就是这里；字段的机读编码在 json，这里不贴 yaml/json]
+[每个实验一个二级标题，人话写清——逐项请用户确认时查阅此节；字段的机读编码在 json，这里不贴 yaml/json]
 
 ### exp-main（主表）
 

@@ -1,11 +1,11 @@
 # Self-Check（audit 一致性 lens 清单——纯内容一致性）
 
-`writing-paper` 的 **audit 目标（op-7-audit）一致性 lens** 清单——给 fan-out 的 fresh-eyes 子 agent 用，**不是一次性 gate，每次 audit 都跑**。这是 writing-paper 自己的质量闸——不把质量关推给 `writing-paper-review`。
+`writing-paper` 的 **audit 目标（op-7-audit）一致性 lens** 清单——由未参与起草的子 agent 在每次 audit 中使用。这是 writing-paper 自己的写作质量检查——不把质量关推给 `writing-paper-review`。
 
 > **本清单只管内容一致性**（要判断力的）。其他检查各归各家，别在这里重复：
 > - 确定性检查（label/\ref、蓝图↔成稿、venue 合规、页数）→ op-7 主 agent 查（grep/对照就能定）。
 > - 渲染/美观检查 → `visual-aesthetic-review.md`。
-> - 逐节写后自审（write-section ③ / ingest-results ④）→ `section-self-audit.md` 一；三层 craft 润色 → 同文件 二。
+> - 逐节写后自审（write-section ③ / ingest-results ④）→ `section-self-audit.md` 一；句段、字词和常见生成式写作问题三类写作要求 润色 → 同文件 二。
 
 ## 自检清单（六项）
 

@@ -14,14 +14,14 @@ graph LR
 支持：graph/flowchart（流程）、sequenceDiagram（时序）、classDiagram（类图）、stateDiagram（状态）、gitGraph 等。语法见 mermaid 文档。
 
 ## d3（按需引，复杂网络/力导向图）
-用 d3 的 slide 按需引：
+仅在需要 D3 的页面加载。
 ```html
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 ```
 d3 灵活但代码多、LLM 生成易错。**mermaid 画不了的网络/力导向图才用 d3**。decktape 截图前确保渲染完（等 simulation.tick 结束）。
 
 ## rough.js（按需引，手绘风图）
-手绘风矩形/圆/线，区别于 mermaid 的规整图，画概念图/草图很 fancy：
+可用手绘风格的矩形、圆和线绘制概念图或草图。
 ```html
 <script src="https://cdn.jsdelivr.net/npm/roughjs@4/bundled/rough.js"></script>
 <canvas id="rough" width="400" height="200"></canvas>
@@ -33,7 +33,7 @@ d3 灵活但代码多、LLM 生成易错。**mermaid 画不了的网络/力导�
 ```
 
 ## leaflet（按需引，地图）
-用地图的 slide 按需引 CSS+JS：
+仅在包含地图的页面加载 CSS 和 JavaScript。
 ```html
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9/dist/leaflet.css">
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9/dist/leaflet.js"></script>

@@ -1,26 +1,24 @@
 # 数值正确性检查（numeric-sanity）
 
-> 三层验证的升级核心：每层不只看"不报错"，还看"数值合理"。主文 SKILL.md 说"加数值 sanity"，
-> 这里放每层具体查什么、怎么查、命中红线怎么办。
+> 三层验证都要达到各自的通过条件。下面列出需要检查的数值、异常表现和处理方式。
 
 ## 为什么"跑通"不等于"跑对"
 
-setup 最危险的不是报错——报错会停下来，看得见。最危险的是**静默错误**：代码全程不抛异常，
-但结果是错的。常见五种，都在 setup 阶段就能拦：
+命令未报错时，程序也可能没有加载预期的权重、使用了不正确的设备映射，或采用了错误的预处理。以下现象需要在准备阶段排查。
 
-| 静默错误 | 表象（不报错） | 真相 |
+| 问题 | 可观察到的现象 | 对结果的影响 |
 | --- | --- | --- |
-| checkpoint 半加载 | `load_state_dict(strict=False)` 静默吞掉 | 一半权重是随机初始化，eval 数字莫名其妙 |
-| device map 错 | 能跑，慢 | 部分张量在 CPU、部分在 GPU，结果可能对但极慢；或 silently 在错的卡 |
+| checkpoint 只加载了部分权重 | `load_state_dict(strict=False)` 允许权重键缺失或多出，调用仍可能完成 | 未加载的层可能仍使用初始化权重，评测结果不可信 |
+| device map 错 | 能跑，慢 | 部分张量在 CPU、部分在 GPU，结果可能对但极慢；或实际使用的显卡与预期不一致 |
 | 预处理 mean/std 错 | forward 正常出数 | 输入分布偏移，输出全错但形状对 |
-| NaN 传播 | loss 打印出来是 `nan`，训练"在跑" | 学习率/初始化/数据问题，越跑越烂 |
-| 假成功 | eval metric=0.0 或 =1.0 | 数据没真加载 / 全预测同一类 / 标签泄漏，不是真的完美 |
+| NaN 传播 | loss 打印出来是 `nan`，训练"在跑" | 学习率/初始化/数据问题，训练继续执行也不会消除 NaN |
+| 评测指标恰好为零或满分 | eval metric=0.0 或 =1.0 | 可能未实际加载数据、模型总预测同一类或存在标签泄漏 |
 
-**拦截原则**：每过一层验证，问一句"这个数值如果是错的，它会长什么样？"——对照红线检查。
+每一层都按下面的判据检查异常表现。
 
-## Layer 1（import/config）：轻量数值 sanity
+## Layer 1（import/config）：轻量数值正确性检查
 
-import 成功后，确认 CUDA 这条链没静默错位：
+import 成功后确认 PyTorch、运行时和编译型算子使用的 CUDA 版本兼容。
 
 ```python
 import torch
@@ -32,9 +30,9 @@ print(torch.__version__, torch.version.cuda)    # 与 nvcc 对齐（详见 compi
 
 红线：`is_available()` 为 False、看到的卡不对、编译算子 import 报 undefined symbol → 回 `compile-deps.md`。
 
-## Layer 2（synthetic smoke）：关键数值 sanity
+## Layer 2（synthetic smoke）：关键数值正确性检查
 
-这是拦截静默错误的主战场。smoke script 调真实组件后，**显式断言数值**，别只看"没抛异常"：
+运行 smoke script 调用真实组件后，显式检查并断言下列数值条件。
 
 ```python
 # forward 输出
@@ -58,15 +56,15 @@ assert grad_norm > 0, "梯度全零 —— 计算图断了 / requires_grad 没�
 > **量级直觉**（瞄一眼用，不强卡）：N 类分类交叉熵初始 loss 约 `ln(N)`（10 类 ≈ 2.3）；
 > 检测/分割的初始 loss 看 repo 文档预期。明显偏离（如 1e6 或 1e-8）是信号。
 
-## Layer 3（官方命令 smoke run）：强数值 sanity
+## Layer 3（官方命令 smoke run）：强数值正确性检查
 
 smoke 真实数据跑几步/一小轮后：
 
-- **loss 趋势对**：smoke train 几步内 loss 应有下降趋势（不是上涨、不是纹丝不动、不是 NaN）。
-- **eval metric 不离谱**：tiny subset eval 的 metric **> 0 且不是假满分**。
+- **损失呈下降趋势**：smoke train 几步内 loss 应有下降趋势（不是上涨、不是纹丝不动、不是 NaN）。
+- **评测指标数值合理**：tiny subset eval 的 metric **> 0 且已排除异常满分**。
   - `metric == 0.0` → 数据没真加载 / 预测全错 / 标签对不上，**不是**"小子集太难"就能搪塞的。
-  - `metric == 1.0`（或恰好满分）→ 标签泄漏 / 评估了训练样本 / 度量实现 bug，**假成功比失败更危险**。
-- **checkpoint 加载完整性**（最高频静默坑）：
+  - `metric == 1.0`（或恰好满分）→ 标签泄漏 / 评估了训练样本 / 度量实现 bug，应排查这些原因。
+- **checkpoint 加载完整性**（常见的未报错错误）：
 
 ```python
 ckpt = torch.load(path, map_location='cpu')
@@ -79,14 +77,14 @@ print(f"unexpected keys: {len(unexpected)}", unexpected[:10])  # ckpt 有、模�
   - 大量 `unexpected` → 多半是 `module.` 前缀（DataParallel 存的）/ 命名规范不一致，需要 key remap。
   - **注意**：`strict=False` 本身、以及任何 key remap，都是**语义改动即停点**——停下问用户，别在工程执行区悄悄做。
 
-- **资源足迹**（顺带记）：smoke run 时记开发卡（1×A100）单 step 显存峰值（`torch.cuda.max_memory_allocated()`）和耗时，写进 setup.json 机读区（dev_card_footprint），判断够不够支撑 execution 迭代。
+- **单步显存峰值和耗时**（顺带记）：smoke run 时记开发卡（1×A100）单 step 显存峰值（`torch.cuda.max_memory_allocated()`）和耗时，写进 setup.json 机读区（dev_card_footprint），判断够不够支撑 execution 迭代。
 
-## 命中红线怎么办
+## 发现异常时的处理方式
 
-- **NaN / 全零 / 梯度断**：是 bug，agent 进 debug 循环（不是停顿点）——查初始化、数据、device、计算图。
+- **NaN / 全零 / 梯度未正常传递**：是 bug，agent 进 debug 循环（不是停顿点）——查初始化、数据、device、计算图。
 - **checkpoint missing keys 异常 / 需要 remap**：**语义改动即停**，把 missing/unexpected 列给用户，解释"这样加载会有层是随机的"，问怎么处理。
-- **eval 假满分 / 恰好 0**：是危险信号，agent 自己先排查（数据路径、标签映射、是否评估了训练集），排查不出再上报。
-- **量级离谱但有限**：记进 report 的"语义风险"，提示下游 reproduction 重点核对——不一定是 setup 能定的（可能是 repo 本身的预期）。
+- **eval 异常满分 / 恰好 0**：是危险信号，agent 自己先排查（数据路径、标签映射、是否评估了训练集），排查不出再上报。
+- **数值有限但量级异常**：记进 report 的"语义风险"，提示下游 reproduction 重点核对——不一定是 setup 能定的（可能是 repo 本身的预期）。
 
 > 与 baseline-survey 的衔接：survey 的"社区复现"若提到有人报 key mismatch / 复现不出数字，
-> 这里的 checkpoint 完整性检查就是验证那个预判——实测 missing keys，把"传闻"坐实或推翻，写进 report。
+> 这里的 checkpoint 完整性检查就是验证那个预判——实测 missing keys，核对社区报告的问题能否重现，写进 report。

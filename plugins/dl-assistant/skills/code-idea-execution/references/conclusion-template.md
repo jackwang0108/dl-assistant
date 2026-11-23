@@ -32,7 +32,7 @@
     | ---- | ------ | --- | ------- | ---------------- |
 
 - **诊断**（为什么是这个结果 / 根因）：[机制结论。例：「不是 RGB 高频不够强，是 F_high residual（norm 25.87）淹没了它」]
-- **判决**：支撑 / 部分 / 证伪 C_x —— **trade-off 诚实**（例：「治了 A 但引入 B，净 +X 但 miss +Y」）
+- **判决**：支撑 / 部分 / 证伪 C_x —— **trade-off 诚实**（例：「改善了 A，同时出现 B 问题，净 +X 但 miss +Y」）
 
 ### [维度 2：如「abs_hf 高频分析」/「case study 6 图」/「fail-win 对称」]
 
@@ -49,7 +49,7 @@
 
 ## §2 claim 裁决（从 claims.json 渲染，不手抄）
 
-> claim 裁决（supported / plausible / insufficient_evidence / contradicted，枚举以 `claims-template.json` 为准）由验收子 agent 写进 claims.json。本表从那渲染；完整裁决 + 证据指针读 claims.json。**contradicted ≠ 死刑**——它是「证据与预测相反」的事实描述，claim 的 status 变化（refuted）归 iterate 验尸后拍板。
+> claim 裁决（supported / plausible / insufficient_evidence / contradicted，枚举以 `claims-template.json` 为准）由验收子 agent 写进 claims.json。本表从那渲染；完整裁决 + 证据指针读 claims.json。**contradicted 表示证据与预测相反**。子论点是否设为 refuted，由 iterate 分析原因后与用户决定。
 
 | Claim（子论点） | verdict                     | evidence          | is_innovation |
 | --------------- | --------------------------- | ----------------- | ------------- |
@@ -118,10 +118,10 @@
 ## 模板使用说明
 
 - **`status` 枚举对齐 idea_tree 节点**：`completed`（跑完）/ `abandoned`（中途放弃）——部分完成不写 status，用 `outcome: partially_refuted` + 执行摘要的实验完成度表达。
-- **`outcome: refuted` 是版本级事实描述**（核心子论点未获支持 / 实验结果不利），不写进 claims.json、不改任何 claim 的 `status`——claim 生死归 iterate 验尸后拍板。
-- **`claims_json` 是裁决真相源**：这里只放指针，不重抄裁决。
-- **`method_tag`**：成功节点打的 git tag（锁 method 代码）；失败/分析为 null。`node_type: success` 才有 tag。
+- **`outcome: refuted` 是版本级事实描述**（核心子论点未获支持 / 实验结果不利），不写进 claims.json、不改任何 claim 的 `status`——子论点状态由 iterate 分析原因后与用户决定。
+- **`claims_json`** 记录保存完整验收结论的文件路径。
+- **`method_tag`**：成功节点打的 git tag（指向验证通过的方法实现）；失败/分析为 null。`node_type: success` 才有 tag。
 - **`golden_metrics`**：release 用——每个 supported 子论点的关键数字 + 出处实验 + 锁它的 tag。
-- **`key_insights`**：iterate 用（粗种子，iterate 深化）。
-- **`scale_risks`**：reduced 迭代的系统性风险出口——CPE full-scale 优先验清单；没有则空数组。
+- **`key_insights`**：iterate 用（供 iterate 进一步分析）。
+- **`scale_risks`**：reduced 迭代的需要在全量规模复核的风险——CPE full-scale 优先验清单；没有则空数组。
 - **`evidence_quality_issues`**：跨 claim 共性问题（execution 汇总验收结果后写），单 claim 的问题在 claims.json 各自的 `evidence_quality.issues` 里。
