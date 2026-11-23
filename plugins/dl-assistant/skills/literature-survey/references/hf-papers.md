@@ -1,55 +1,71 @@
-# 用 hf-papers 查找相关论文和近期工作
+# 用 HF Papers 补查相关论文和近期工作
 
-hf-papers 是官方 `hf` CLI 的 `hf papers` 子命令，在本技能中用于语义搜索和补查近期工作。
+本文件说明文献调研什么时候用 HF Papers 补查、怎样调用和筛选结果，以及怎样记录实际查到的范围。
 
-- **arxiv**：全量、次日收录，但搜索是关键词匹配（title/abs）——同义变体、替代术语召回差，查询词设计必然有限；
-- **hf-papers**：HF 论文库对收录的 arxiv 文章做过 AI 解析（`ai_keywords` / `ai_summary`），**`search` 是语义搜索，召回质量明显好于 arxiv 关键词**；但它是社区策展子集（漏掉没被社区提交的），且 `search` 无日期过滤。
+定向调用 → 日期后筛 → 记录纳排 → 合并论文身份 → 汇报覆盖限制
 
-第一轮同时用 arXiv 按关键词和日期查新，并用 hf `search` 补充同义表述。补查近期工作时，为每个子方向查询一次，再按 `published_at` 筛选。查看最近几天的日报可用 `ls`。完整命令文档见 <https://huggingface.co/docs/huggingface_hub/guides/cli>。
+HF Papers 用于补充候选、发现替代术语、了解社区关注的工作。按 [来源选择](source-strategy.md) 和已确认的方案决定在哪些主题上使用。第一批查到且符合范围的论文可以参与分类；查漏时按具体路线或别名定向补查。HF 的搜索、日报和热门列表都只覆盖平台收录的部分论文。正式调研还需用适合本领域的来源查近期进展。
 
-## 命令速查
+## 一、先核对命令，再按目标调用
 
-**安装**（任选其一；匿名即可用只读命令）：
+`hf papers` 是独立 CLI。不要把 HF 填进 paper-search MCP 的 `sources`。先用 `hf --version` 和相应子命令的 `--help` 核对本机版本与参数。安装、认证和历史观察到的返回限制见 [统一的 HF CLI 说明](../../hf-trending-papers/references/hf-cli.md)。
 
-- `curl -LsSf https://hf.co/cli/install.sh | bash`（macOS / Linux 推荐）
-- `pip install -U huggingface_hub`
-- 临时运行：`uvx hf papers ...`（需先装 `uv`）
+| 目标 | 命令示例 | 怎样使用结果 |
+| --- | --- | --- |
+| 按主题补候选 | `hf papers search "on-device vision inference" --limit 3 --format json` | 先看标题和摘要是否符合调研问题，再按实际日期字段后筛。可换一个任务别名，例如 `mobile vision latency`，检查是否有实质新增。 |
+| 查看平台日报或列表 | `hf papers ls --limit 2 --format json` | 要看特定日期时按本机帮助加 `--date YYYY-MM-DD`。列表没有主题过滤，有限样本不能当作该主题的全量结果。 |
+| 核对已知论文的 HF 条目 | `hf papers info 2112.10752 --format json` | 核对返回的 `id`、标题和可用字段。`ai_keywords` 可提供补搜词，`ai_summary` 可帮助定位要回查的内容。字段以实际返回为准。 |
 
-**输出**：一律显式加 `--format json`（结构化、便于解析；`-q` 只输出 ID 适合管道）。命令不存在 → 提示用户安装；限流/报错要登录 → `hf auth login`。
+搜索结果的顺序不能当发表时间顺序，达到 `--limit` 时记录可能受限。日报尚未发布时，记录原请求及失败原因；需要改查提示中的可用日报日期时，写清实际查的是哪一天。限流或网络故障先看错误并按计划处理；缺少 CLI 时说明可用入口，只有实际需要认证时才按统一说明处理。剩余覆盖由其他已批准来源继续。
 
-### search — 语义搜索（主题召回主力）
+## 二、日期后筛与纳排记录
 
-```
-hf papers search "<query>" [--limit N] --format json
-```
+`search` 没有服务端日期过滤参数。保留原始返回的 `published_at`，按本次确认的时区和起止日期后筛。将它标为 **HF 返回的日期**；若调研按 arXiv 首次提交或正式发表统计，另从对应来源核对日期。把 HF 日报日期、记录中的 `published_at` 和本次获取时间分开写。缺日期时单独标记待核查；有日期且在窗口内的候选仍要按主题和纳排规则判断。
 
-- **无日期过滤**：按返回的 `published_at` 后筛（如保留近 6 个月 / 近 1 年，按用途定的时间窗）。
-- query 可以写**自然语言概念描述**（语义搜索），不只堆关键词——"looped transformer" 和 "weight-shared recurrent depth" 这类同义表述都能召回。
-- 返回字段：`id`（arXiv ID）、`title`、`authors`、`summary`、`upvotes`、`published_at` 等。
+每个查询批次按 [运行步骤](workflow.md) 保存到 `search/<批次>.json`。在 `requests[]` 记录命令、查询词、`--limit`、获取时间、实际返回数、后筛窗口和筛选后数量。按实际情况保存 `included`、`excluded` 和 `pending`。写明每条纳排理由，保留论文 ID、标题和原始返回。HF 的 `id` 核实为 arXiv ID 后，填入归一化记录的 `arxiv` 字段；合并时用同一稳定标识关联其他来源。保留 HF 的原始观测和自己的来源记录。
 
-### ls — 查看日报或热门论文
+平台生成的关键词和摘要用作候选线索。介绍论文的方法、结果和证据时，回到作者摘要或正文核对。投票、评论和仓库 stars 随观测时间记录；历史日报中今天查到的指标，按今天的观测处理。
 
-```
-hf papers ls [--date today|YYYY-MM-DD] [--week YYYY-Www] [--month YYYY-MM]
-             [--sort trending|publishedAt] [--limit N] --format json
-```
+## 三、完整填写示例
 
-- 列的是当期 HF **全部**论文（日报），**不带主题过滤**——窄主题得自己筛标题/摘要。
-- **返回数量上限（2026-08 实测）**。`--limit` 默认 50，最多 100，`--limit >100` 会报错，且无分页。一月的日报可能有几百篇，`ls --month/--week` 不用于按细分主题补查历史论文。本流程只用 `--date` 查看最近几天的日报。
-- **补查近期工作改走 `search`**：把方向拆成几个子方向，各查询一次定向 `search` + 按 `published_at` 后筛（实测精确 query 精度很高）。
-- **日报尚未发布**。`--date today` 可能返回 `"date" must be less than or equal to "<最新日期>"`。改用提示中的 `<最新日期>`，或使用 `--sort trending`。
+以下用「边缘设备上的视觉模型加速」说明执行和记录。示例命令通过本机 Clash 代理 `127.0.0.1:7890` 实测。代理只用于本次环境测试，运行时按所在机器的网络条件配置。
 
-### info — 单篇结构化详情（可选）
-
-```
-hf papers info <arxiv_id> --format json
+```bash
+hf papers search "on-device vision inference" --limit 3 --format json
 ```
 
-额外返回 `ai_keywords`、`ai_summary`、`github_repo` 和 `github_stars`。可用 `ai_keywords` 扩充 arXiv 和 Semantic Scholar 检索组的同义词。
+1. **定向调用。** 实测返回 3 条，依次是 `2601.20262`、`2412.11475` 和 `2606.07431`。日期顺序并不单调。
+2. **日期后筛。** 假设本轮窗口是 2026-01-01 至 2026-06-30，按返回的 `published_at` 的 UTC 日期后筛。前者和最后一条落在窗口内，中间一条落在窗口外。记录日期后筛结果为 2 条。
+3. **记录纳排。** 如本轮只收窄到视觉模型在设备上的单图推理，`2412.11475` 的排除理由可写「HF 日期在窗口外」。两条窗内结果先放入 `pending`，分别核查任务和测量设置是否符合本轮要求。满足日期条件并不自动纳入。
+4. **合并论文身份。** 将下列示例记录写入 `search/hf-edge-vision.json`，再按运行步骤执行合并脚本。如果另一批也记录了相同 arXiv ID，检查 `pool.json` 是否保留两批观测；遇到纳排分歧时按 Step 2 核查。
 
-## 文献调研中的用法
+以下 JSON 摘出本次返回的必要字段。正式记录保留原始条目和真实获取时间。
 
-- **Step2 第一轮**：核心概念组的 query 除了走 paper-search MCP（SS/scholar/arxiv），检索子 agent 同时跑 `hf papers search`（按用途定的时间窗后筛）；**补查近期工作 = 把方向拆成几个子方向，各查询一次定向 `search` + 后筛**（实测精确 query 精度很高）。
-- 结果与 arxiv 检索近期论文**同等待遇**：进候选论文清单、参与 Step3 确定分类方式。
-- Step 2 单独报告 hf 命中数量。没有运行 hf 检索时，报告 0。
-- CLI 安装失败或受限流时，记录原因并继续 arXiv 近期检索，在 `survey.json` 的 `coverage_notes` 中注明缺少 hf 来源。
+```json
+{
+  "query_group": "HF 边缘视觉补查",
+  "requests": [{
+    "source": "hf_papers",
+    "command": "hf papers search \"on-device vision inference\" --limit 3 --format json",
+    "status": "ok",
+    "limit": 3,
+    "returned_count": 3,
+    "date_filter": {"field": "published_at", "timezone": "UTC", "start": "2026-01-01", "end": "2026-06-30", "applied_after_fetch": true},
+    "in_window_count": 2,
+    "limitations": ["返回数等于查询上限", "日期只在返回结果上后筛"]
+  }],
+  "included": [],
+  "excluded": [{
+    "source": "hf_papers",
+    "arxiv": "2412.11475",
+    "title": "OmniVLM: A Token-Compressed, Sub-Billion-Parameter Vision-Language Model for Efficient On-Device Inference",
+    "reason": "HF published_at 为 2024-12-16，落在窗口外"
+  }],
+  "pending": [
+    {"source": "hf_papers", "arxiv": "2601.20262", "title": "Shallow-π: Knowledge Distillation for Flow-based VLAs", "reason": "日期在窗口内，待核任务与推理测量设置"},
+    {"source": "hf_papers", "arxiv": "2606.07431", "title": "OpenGlass: Ultra-Low-Power On-Device AI Eyewear with Event-based Vision", "reason": "日期在窗口内，待核是否报告单图延迟"}
+  ]
+}
+```
+
+5. **汇报覆盖限制。** 在 `coverage-review.md` 写明，这次 HF 搜索返回 3 条，达到查询上限，后筛留下 2 条待核查。这个结果只说明已查看的样本。另行区分未选用或未执行、执行失败、有效查询但零命中、有返回但窗口内零纳入，以及可能截断的情况。发现限制时，注明是否要扩大别名查询、核对另一来源或留作待补。

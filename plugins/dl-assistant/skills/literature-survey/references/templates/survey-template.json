@@ -1,45 +1,271 @@
 {
   "_notes": [
-    "Step 6 同时写 survey.json 和 report.md，两者基于同一份调研记录。此文件供程序读取。",
-    "axis、purpose 和 familiarity 用中文，分类维度参见 organizing-axis.md。purpose 枚举：学习理解 / 找研究方向 / 定位自己的工作 / 选技术方案。familiarity 枚举：基本陌生 / 有点了解 / 就在其中做。二级分类写法：'按方法 > 按时间'。",
-    "papers[].category 必须与 taxonomy 中的分类一致。role 枚举：奠基 / 里程碑 / 近期前沿 / 其他。用 arXiv ID、DOI 或 URL 标识论文，见 dl-assistant 的「所有技能共用的规则」。report.md 提到的论文也全部收录。",
-    "gaps[] 记录有文献依据的开放问题。每条至少附一个已核实的 arXiv ID，category 须与 taxonomy 对应。研究缺口是否值得做由 idea-find 评估。label 枚举：性能 / 效率 / 可解释 / 数据 / 评测 / 其他。",
-    "hf_upvotes 可选，仅记录来自 Hugging Face 的论文投票数，反映社区关注度。",
-    "idea-find 可从本文件读取分类、论文及开放问题。论文写作和正式 BibTeX 由相应技能负责。"
+    "本文件说明怎样把调研报告中的分类、论文证据、近期进展、开放问题和检索覆盖保存为可供下游读取和回查的结构化记录。",
+    "这是 Step 6 的完整虚构示例，与 report-template.md 和 notes-template.md 的边缘视觉加速案例一致。标题、example.org 链接、数据、批次及路径只演示填法。实际交付时移除 _notes 并替换示例数据。未知标量用 null，尚无记录的列表用 []。",
+    "保留 taxonomy、papers 和 gaps 供 idea-find 读取。purpose 使用学习理解 / 找研究方向 / 定位自己的工作 / 选技术方案。familiarity 使用基本陌生 / 有点了解 / 就在其中做。axis 使用已确认的分类维度，二级维度可写成按方法 > 按时间。",
+    "papers 与 pool.json 的纳入项按论文身份对应，每篇只记一条。taxonomy 是类别名称数组。category 为主类，尚未归类时填 null，categories 至少包含已确定的主类及交叉类别。所有类别名与 taxonomy 对齐。身份或纳排仍待确认的论文放 pending_papers，已排除记录和原始观测回查 pool.json 与 search/。",
+    "pool_id 用于对照本轮 pool.json、笔记和本文内引用。重建论文池后重新核对这些关联。跨调研引用用已核实的 arXiv ID、DOI 或论文页面 URL。身份和版本分别记录，论文来源页与所读原文的出处各自保留。",
+    "role 可用奠基 / 里程碑 / 近期前沿 / 其他或 null，具体依据写入 role_reason。reading_level 可用 metadata / abstract / partial_text / detailed。detailed 表示已详细核查本次问题所需的材料，未读内容仍写入 limitations。证据记录固定版本、原文位置和笔记入口。未核实的作者、年份或版本按未知处理。",
+    "comparisons 按研究问题记参与论文、可比性、结论及原文依据。comparability 可用 comparable / not_directly_comparable / unknown，条件不同或缺失时说明适用范围及如何补齐比较。引用以 pool_id 和论文内 evidence_id 对应原文定位。recent_progress 记录近作日期及口径、新增贡献、关联路线、核查深度和仍待确认的部分。",
+    "gaps 的 sources 保持字符串数组，值用已核实的 arXiv ID、DOI 或论文页面 URL。label 使用性能 / 效率 / 可解释 / 数据 / 评测 / 其他。source_type 可用 author_statement / synthesis / hypothesis。current_status 可用 unverified / partly_addressed / addressed，表示已查范围内的状态。checked_at 是实际核查日，search_scope 记录检索截至日期、来源和范围。证据不足的推测按待验证记录，研究缺口与选题价值由 idea-find 另行判断。",
+    "sources 记实际尝试的来源，成功范围从 coverage 查。coverage.request_records 引用 search/ 下的批次及从 0 起的 requests 数组下标。计划范围见 coverage.plan_path。请求状态沿用批次记录的 success / partial / failed / not_run。只有执行成功且零命中才把 returned_count 写成 0，失败或未执行用 null，部分结果按实际已返回数填写。部分结果的原因写明是截断、来源失败还是尚未取完。",
+    "coverage 记录实际请求的日期口径及范围，是否取得该范围内可用结果另看状态。未执行的请求可在剩余任务中指向 spec.json 的计划项。查询截至日期与最新命中日期分别记录。停止理由、待补任务与 coverage-review.md 对齐，coverage_notes 保留供报告引用的覆盖摘要。交付 status 填 completed 或 partial，后者表示仍有已知的范围或任务待补。",
+    "引用数、HF 投票等观测可选，保留指标、来源和观测时间。旧版 hf_upvotes 可继续作为 HF 投票数读取。这些观测用于描述关注度。旧调研缺少的 v2 字段按未知处理，不自动推断证据深度或问题状态，也无需批量改写旧产物。"
   ],
-  "topic": "视频生成中的扩散模型",
-  "slug": "video-diffusion",
-  "date": "2026-06-29",
-  "purpose": "定位自己的工作",
+  "schema_version": 2,
+  "topic": "边缘设备上的视觉模型加速",
+  "slug": "edge-vision",
+  "date": "2025-07-01",
+  "purpose": "选技术方案",
   "familiarity": "有点了解",
   "axis": "按方法",
-  "scope": "近3-5年，共42篇",
-  "sources": ["semantic_scholar", "scholar", "arxiv", "hf-papers"],
-  "coverage_notes": "主要覆盖英文主流叫法；X 社区 'Y' 叫法未深入分析",
-  "taxonomy": [
-    "基于扩散的方法",
-    "基于自回归的方法",
-    "混合方法"
-  ],
+  "scope": "有边缘设备测量的视觉分类方法，重点考察单张请求的端到端延迟。",
+  "sources": ["arxiv", "openalex"],
+  "status": "partial",
+  "coverage_notes": "arXiv 首次提交窗口 2025-05-01 至 2025-06-30 已查，近作正式发表的 OpenAlex 补查失败。C 的分项消融和 A 的逐阶段裁剪证据待核，详见 coverage-review.md。",
+  "coverage": {
+    "plan_path": "spec.json",
+    "review_path": "coverage-review.md",
+    "as_of": "2025-06-30",
+    "included_count": 3,
+    "detailed_check_count": 3,
+    "detailed_check_count_basis": "按唯一纳入论文计数，已查到本次比较所用正文设置及表格即计入。reading_level 另记各篇是否完成分配给它的阅读任务。",
+    "request_records": [
+      {
+        "batch_path": "search/route-representatives.json",
+        "request_index": 0,
+        "source": "arxiv",
+        "status": "success",
+        "date_range": {"date_type": "first_submitted", "start": null, "end": "2025-06-30"},
+        "returned_count": 3,
+        "latest_hit_date": null,
+        "note": "取得代表作 A、B 和一条身份待核记录。"
+      },
+      {
+        "batch_path": "search/recent-edge-deployment.json",
+        "request_index": 0,
+        "source": "arxiv",
+        "status": "success",
+        "date_range": {"date_type": "first_submitted", "start": "2025-05-01", "end": "2025-06-30"},
+        "returned_count": 1,
+        "latest_hit_date": "2025-05-20",
+        "note": "定向补查新增 C，核实了设备 C 上的组合验证。"
+      },
+      {
+        "batch_path": "search/recent-publications.json",
+        "request_index": 0,
+        "source": "openalex",
+        "status": "failed",
+        "date_range": {"date_type": "published", "start": "2025-05-01", "end": "2025-06-30"},
+        "returned_count": null,
+        "latest_hit_date": null,
+        "note": "正式发表日期补查未取得可用结果。日期来自实际请求参数。"
+      }
+    ],
+    "stop_reasons": [
+      "检索预算已到，已按可用证据完成三篇纳入论文的相关正文核查。正式发表覆盖及分项证据不足，按已查范围交付。"
+    ],
+    "remaining": [
+      {
+        "scope": "近作正式发表记录",
+        "next_action": "重试 search/recent-publications.json 中 requests[0] 的 OpenAlex 查询，再核对新增论文或版本。",
+        "impact": "影响近期进展对正式发表论文的覆盖。"
+      },
+      {
+        "scope": "C v1 的分项消融",
+        "next_action": "从 §4.3 的补充材料入口找仅压缩、仅融合的同设备配置。",
+        "impact": "影响组件归因和压缩单项跨设备验证。"
+      },
+      {
+        "scope": "A v2 的逐阶段裁剪",
+        "next_action": "查训练附录是否有逐阶段对照，并核对是否沿用表 2 的部署条件。",
+        "impact": "影响对各裁剪阶段贡献的归因。"
+      },
+      {
+        "scope": "p00004 的身份",
+        "next_action": "沿原检索记录核标题和论文页面，确认是否与现有版本重复。",
+        "impact": "身份核实前不计入纳入数量。"
+      }
+    ]
+  },
+  "taxonomy": ["模型级优化", "运行时与算子优化"],
   "papers": [
     {
-      "title": "High-Resolution Image Synthesis with Latent Diffusion Models",
-      "arxiv": "2112.10752",
-      "year": 2022,
-      "venue": "CVPR",
-      "category": "基于扩散的方法",
-      "role": "里程碑",
-      "approach": "在 latent 空间做扩散，降算力",
-      "hf_upvotes": 320
+      "pool_id": "p00001",
+      "title": "代表论文 A",
+      "arxiv": null,
+      "doi": null,
+      "url": "https://example.org/papers/edge-vision-a",
+      "authors": null,
+      "year": null,
+      "venue": null,
+      "version": "v2",
+      "full_text": "papers/a-v2.pdf",
+      "category": "模型级优化",
+      "categories": ["模型级优化"],
+      "role": "其他",
+      "role_reason": "代表作，已核查同设备、同运行时下完整模型的裁剪对照。",
+      "approach": "结构化通道裁剪，部署依赖运行时支持裁剪后的网络形状。",
+      "reading_level": "detailed",
+      "evidence_locations": [
+        {"id": "A-E1", "version": "v2", "location": "§4.1、§4.2 表 2，PDF 第 6 页", "note_path": "notes/model-optimization.md"},
+        {"id": "A-E2", "version": "v2", "location": "§5，PDF 第 8 页", "note_path": "notes/model-optimization.md"}
+      ],
+      "limitations": ["已核方法、设置、表 2 和局限。训练附录未读，各阶段的裁剪贡献待核。"]
+    },
+    {
+      "pool_id": "p00002",
+      "title": "代表论文 B",
+      "arxiv": null,
+      "doi": null,
+      "url": "https://example.org/papers/edge-vision-b",
+      "authors": null,
+      "year": null,
+      "venue": null,
+      "version": "v1",
+      "full_text": "papers/b-v1.pdf",
+      "category": "运行时与算子优化",
+      "categories": ["运行时与算子优化"],
+      "role": "其他",
+      "role_reason": "代表作，说明指定算子库中的融合如何影响子图吞吐。",
+      "approach": "在指定算子库中融合相邻算子。",
+      "reading_level": "partial_text",
+      "evidence_locations": [
+        {"id": "B-E1", "version": "v1", "location": "§4.2 表 1", "note_path": "notes/runtime-optimization.md"}
+      ],
+      "limitations": ["已核子图性能的设置和结果。算子库跨设备支持范围未核，单张端到端延迟未见于已读对照。"]
+    },
+    {
+      "pool_id": "p00003",
+      "title": "近期论文 C",
+      "arxiv": null,
+      "doi": null,
+      "url": "https://example.org/papers/edge-vision-c",
+      "authors": null,
+      "year": 2025,
+      "venue": null,
+      "version": "v1",
+      "full_text": "papers/c-v1.pdf",
+      "category": "模型级优化",
+      "categories": ["模型级优化", "运行时与算子优化"],
+      "role": "近期前沿",
+      "role_reason": "在近作窗口内首次提交，并提供本次样本未见设备上的组合部署证据。",
+      "approach": "压缩模型后在运行时 R 中融合相邻算子。",
+      "reading_level": "detailed",
+      "evidence_locations": [
+        {"id": "C-E1", "version": "v1", "location": "§4.1、§4.3 表 3，PDF 第 7 页，附录 B", "note_path": "notes/model-optimization.md"}
+      ],
+      "limitations": ["正文对照同时切换压缩和融合，补充材料中的分项消融表未取得。"]
+    }
+  ],
+  "pending_papers": [
+    {
+      "pool_id": "p00004",
+      "title": "设备端视觉推理候选 D",
+      "arxiv": null,
+      "doi": null,
+      "url": null,
+      "record_path": "search/route-representatives.json",
+      "reason": "检索记录只有标题，需核实论文身份及是否与另一版本重复。"
+    }
+  ],
+  "comparisons": [
+    {
+      "id": "comparison-1",
+      "question": "哪些证据可以指导单张请求的加速选型？",
+      "paper_ids": ["p00001", "p00002", "p00003"],
+      "comparability": "not_directly_comparable",
+      "conclusion": "A 的对照在同一设备上只更换模型，且批大小和计时范围贴近单张请求，可优先在目标设备验证。C 提供组合部署证据。B 的批量子图吞吐量支持子图优化判断。",
+      "evidence": [
+        {
+          "pool_id": "p00001",
+          "evidence_id": "A-E1",
+          "method": "模型通道裁剪，运行时支持裁剪后的形状。",
+          "setting": {"model": "M", "data_split": "D 验证集", "device": "设备 A", "batch_size": 1, "runtime": "原版与裁剪版使用同一运行时", "measurement_scope": "端到端", "metric": "中位延迟", "unit": "ms"},
+          "baseline": 20,
+          "result": 15,
+          "limitation": "未隔离各裁剪阶段。"
+        },
+        {
+          "pool_id": "p00002",
+          "evidence_id": "B-E1",
+          "method": "使用指定算子库进行算子融合。",
+          "setting": {"model": "M", "data_split": "D 验证集", "device": "设备 B", "batch_size": 16, "runtime": "指定算子库", "measurement_scope": "融合子图", "metric": "吞吐量", "unit": "样本/秒"},
+          "baseline": 220,
+          "result": 300,
+          "limitation": "该表未报告整次推理延迟。"
+        },
+        {
+          "pool_id": "p00003",
+          "evidence_id": "C-E1",
+          "method": "将模型压缩与算子融合一起部署。",
+          "setting": {"model": "M", "data_split": "D 验证集", "device": "设备 C", "batch_size": 1, "runtime": "R", "measurement_scope": "端到端", "metric": "中位延迟", "unit": "ms"},
+          "baseline": 24,
+          "result": 14,
+          "limitation": "组合对照未隔离两个组件的作用。"
+        }
+      ],
+      "remaining": "在目标设备上统一运行时、批大小、数据与计时范围，再比较端到端延迟，并核对分类质量。"
+    }
+  ],
+  "recent_progress": [
+    {
+      "pool_id": "p00003",
+      "date": "2025-05-20",
+      "date_type": "first_submitted",
+      "date_source": "arxiv",
+      "categories": ["模型级优化", "运行时与算子优化"],
+      "contribution": "在设备 C 上验证模型压缩与算子融合的组合部署，新增一个设备上的批大小 1 端到端结果。",
+      "reading_level": "detailed",
+      "evidence_ids": ["C-E1"],
+      "remaining": "补查分项消融。与 A、B 的直接承接关系尚待核实。"
     }
   ],
   "gaps": [
     {
       "id": "gap-1",
       "label": "效率",
-      "category": "基于扩散的方法",
-      "desc": "扩散采样步数多、推理慢",
-      "sources": ["2112.10752", "2202.09778"]
+      "category": "模型级优化",
+      "desc": "模型压缩的延迟收益能否在其他设备上复现？",
+      "sources": ["https://example.org/papers/edge-vision-a"],
+      "source_type": "author_statement",
+      "evidence_locations": [
+        {"pool_id": "p00001", "evidence_id": "A-E2"},
+        {"pool_id": "p00003", "evidence_id": "C-E1"}
+      ],
+      "current_status": "partly_addressed",
+      "checked_at": "2025-07-01",
+      "search_scope": {
+        "as_of": "2025-06-30",
+        "sources": ["arxiv"],
+        "query": "检索模型 M 的设备端部署工作，核查 C 的设备清单和表 3。",
+        "limits": "OpenAlex 正式发表补查失败。"
+      },
+      "follow_up_papers": ["p00003"],
+      "remaining": "C 提供另一设备上的组合验证。压缩单项的跨设备效果及其他设备上的结果仍待核。"
+    },
+    {
+      "id": "gap-2",
+      "label": "效率",
+      "category": "模型级优化",
+      "desc": "在同一部署设置下，压缩与融合各贡献多少？",
+      "sources": ["https://example.org/papers/edge-vision-a", "https://example.org/papers/edge-vision-b", "https://example.org/papers/edge-vision-c"],
+      "source_type": "synthesis",
+      "evidence_locations": [
+        {"pool_id": "p00001", "evidence_id": "A-E1"},
+        {"pool_id": "p00002", "evidence_id": "B-E1"},
+        {"pool_id": "p00003", "evidence_id": "C-E1"}
+      ],
+      "current_status": "unverified",
+      "checked_at": "2025-07-01",
+      "search_scope": {
+        "as_of": "2025-06-30",
+        "sources": ["arxiv"],
+        "query": "核查本轮三篇纳入工作的公开正文。",
+        "limits": "尚未针对分项消融做定向补查。"
+      },
+      "follow_up_papers": [],
+      "remaining": "需取得 C 的分项结果，或在同一设置下分别测仅压缩与仅融合。"
     }
   ]
 }
