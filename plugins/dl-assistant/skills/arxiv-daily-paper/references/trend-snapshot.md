@@ -1,8 +1,8 @@
 # trend-snapshot.json 格式（arxiv-daily-paper）
 
-`trend-snapshot.json` 是 arxiv-daily-paper **跨日连续性**的数据源：**每次运行结束时写一个**（落当天产出目录），**下次运行做跨日对比时读历史的**。它和 raw.json / round2 卡片一样是落盘产物、不是状态中枢。
+每次运行结束时，把 `trend-snapshot.json` 保存到当天的产出目录。下一次运行时读取历史快照，用于跨日比较。它与 `raw.json` 和第 2 轮的评估记录一样，都是每次运行保存的文件。全局运行状态不在这里维护。
 
-`clusters` 在 Step5 digest 归簇时同步产出——digest 按话题分组，每组即一簇。
+第 5 步撰写简报时，按话题整理的每组论文对应 `clusters` 中的一项。
 
 ## 模板
 
@@ -22,11 +22,11 @@
 | 字段 | 必填 | 含义 / 来源 |
 | --- | --- | --- |
 | `date` | 是 | 当天日期（YYYY-MM-DD） |
-| `categories` | 是 | 开场定的 arXiv 类目（跨日只比同分类，靠它筛） |
-| `clusters[]` | 是 | 当天话题簇（digest 归簇时同步产出） |
-| `clusters[].name` | 是 | 簇名，**仅给人读**——跨日对比**不用它**（名字不稳定） |
-| `clusters[].keywords` | 是 | 该簇核心方向关键词（英文，从该组论文标题/摘要提炼）——**跨日话题对比的主依据** |
-| `clusters[].top_ids` | 是 | 该簇代表篇 arxiv_id（取 round2 通过的）——重叠判断辅助依据 |
-| `orgs` | 否 | 机构→篇数。arXiv 无现成 org 字段，只从 comment/摘要里能零成本解析到时才写；拿不到就**省略，不强求、不瞎编** |
+| `categories` | 是 | 开场确认的 arXiv 分类，用来选择同分类的历史快照 |
+| `clusters[]` | 是 | 当天的话题分组，撰写简报时一并记录 |
+| `clusters[].name` | 是 | 用于展示的话题名称，跨日比较时忽略该字段 |
+| `clusters[].keywords` | 是 | 从该组论文标题或摘要提炼的英文关键词，是跨日比较的主要依据 |
+| `clusters[].top_ids` | 是 | 从通过第 2 轮的论文中选择代表论文的 arXiv ID，用作判断话题重叠的辅助依据 |
+| `orgs` | 否 | 各机构对应的论文篇数。arXiv 没有专门的机构字段，仅在 comment 或摘要中可直接取得时填写，否则省略 |
 
-> **跨日对比只信 `keywords` + `top_ids` 的重叠**，不信簇名（今天"Agent 自进化"、昨天"LLM Agent"可能是同一簇）。`orgs` 是加分项不是核心。
+> 跨日比较话题时，使用 `keywords` 和 `top_ids` 的重叠情况。例如，「Agent 自进化」和「LLM Agent」可能对应同一组论文。`orgs` 是可选补充信息。
