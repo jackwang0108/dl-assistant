@@ -1,6 +1,6 @@
 # Idea 版本树规范（链表模型 · git 跟 plan 走）
 
-idea 的代码演进是一条**线性链表**：plan-1 → plan-2 → … → plan-N。每个 plan 是一个 git 节点（一个版本）。本文件是版本树的**规范说明**——心智模型、git 实现（命名/tag/切分支）、目录结构。`code-idea-execution` 和 `code-idea-iterate` 维护版本树时遵守，开新 plan、打 tag 前必读。
+研究版本按建立顺序登记，分支和实际起点按各轮获批范围选择。本文件说明版本索引、Git 命名及文件位置，供 `code-idea-execution` 和 `code-idea-iterate` 查阅。
 
 > 一个 baseline repo 只跑一条 idea 链、最终发一个 paper，`ideas/` 直接平铺版本目录。与 `idea-tree-template.json`（机读索引）同源，冲突以本文件 + `code-idea-execution/SKILL.md` 为准。版本变更的**操作步骤**（何时切分支、何时打 tag）在 SKILL.md，本文件不重复。
 
@@ -9,18 +9,14 @@ idea 的代码演进是一条**线性链表**：plan-1 → plan-2 → … → pl
 ### git 跟 plan（不是 spec）
 - **spec 是稳定层**（总论点 claim + Roadmap + 当前子论点 + 文献 + novelty），跨 plan 沿用，**不是 git 节点**。
 - **一个 plan = 一个 git 节点**（一个版本 v<N>）。`code-idea-execution` 根据一份 plan 执行（方法已由 idea-find/iterate 设计好）→ 实现 + 实验 → conclusion。
-- 一个 plan 节点两种结局：
-  - **成功**：核心子论点 supported（升格创新点）→ 打 tag
-  - **失败**：核心子论点 refuted / 效果不好 → 不打 tag
-
-> 诊断（分析未达预期的原因或进行探查实验）不形成独立版本节点——它在 iterate Step 5 会话内就地完成，结论落 `autopsy.md`；版本节点只对应验 claim 的方法版（改进 method / 新创新点 / 演化）。
+- 用户确认建立下一轮版本后，才建版本节点。新版本可以只核准备条件或进行获批的诊断。现有材料复查、准备写作或暂停等决定保存在决定目录。
+- 执行结果、测量有效性和命题证据见本轮结论及命题快照。需要回查实现时，用实际 commit 或项目约定的代码标签定位。
 
 ### claim 两层 + 创新点
 - **总论点 claim**：paper 的总主张（1 个，稳定）。如「我们的方法提升 X」。
 - **子论点 claim**：总论点拆成的可验证命题（pending → supported / plausible / insufficient_evidence / contradicted）。如「组件 A 提升 X 的某方面」。
-- **创新点 = supported 的子论点**（升格为 paper 贡献；非 supported 不算创新点）。
-- **method** = 一个子论点的代码实现，**锁定在成立 tag**。
-- 关系：总论点 ←（拆成）← 子论点；子论点 supported → 升格创新点 → 进 paper method。
+- **科学贡献**由 iterate 和用户结合科学问题、实际发现、替代解释、适用边界和相对已有工作的新增判断。
+- 方法实现从实际 commit、代码映射和运行记录回查。有代码标签时可一并引用。
 
 详见 `claims-template.json`。
 
@@ -30,10 +26,10 @@ idea 的代码演进是一条**线性链表**：plan-1 → plan-2 → … → pl
 plan-1 → plan-2 → plan-3 → … → plan-N（当前最新）
 ```
 
-- **每个 plan = 一个版本**。v1 的 plan 由 `idea-find` 给出（含方法设计）；v2+ 的 plan 由 `code-idea-iterate` 基于上一版 conclusion 给出。
-- **链只追加，不删除**。失败/证伪的 plan 标 `status: abandoned`，但仍留链上——是探索过程的完整记录，写 Related Work / rebuttal 时要回看。
+- **每个获确认的研究版本保存对应 plan**。v1 由 `idea-find` 给出，v2+ 由 `code-idea-iterate` 根据相关证据和用户决定交接。
+- **保留历史节点。** 按实际进度更新状态。提前停止的计划和有效反证分别引用对应决定与证据。
 - **`ideas/` 目录是完整累积集**：v1 到 vN 的所有版本目录平铺在 `ideas/` 下，随时看清"一共有哪些 plan、每个收获什么"。也是 `code-paper-release` 干净抽取的前提。
-- **没有分支选择**。每次迭代从当前最新版继续。想"回到 v2 试另一条路"——那条路就是 v(k+1)，不开分支。
+- **研究上一轮和代码起点分别记录。** 例如研究继续跟进 v4 的观察，同时从 v2 的已核实现建立新的 v5 分支。用 `00-from-previous-version.json` 记录实际关系。
 
 ## 命名（三者同源，从 v<N>-<slug> 派生）
 
@@ -41,42 +37,39 @@ plan-1 → plan-2 → plan-3 → … → plan-N（当前最新）
 |---|---|---|
 | 目录 | `ideas/v<N>-<slug>/` | `ideas/v2-diagnostic/` |
 | git 分支 | `idea/v<N>-<slug>` | `idea/v2-diagnostic` |
-| git tag | `claim-C<id>[-v<k>]`（**只在成功节点**）| `claim-C1` / `claim-C1-v2` |
+| git tag（按需） | `claim-C<id>[-v<k>]` | `claim-C1` / `claim-C1-v2` |
 
-> **取消版本 tag `v<N>`**。tag 只剩 `claim-C<id>[-v<k>]`（成功锚点，锁 method 代码）。版本号在分支名 + commit message + `idea_tree.json` 追踪，不单独打 git tag。
+> 研究版本号通过分支名和 `idea_tree.json` 追踪。可选标签用于定位具体实现。
 
 ### 版本号 v<N>-<slug>
 - **v<N>**：从 1 线性递增，不复用不回退（v3 证伪，下一个仍 v4）。
 - **slug**：plan 的语义名（这版方法/诊断做啥，如 `attention-refill`、`diagnostic`）。
 
-## 分支怎么切（从最新 commit，不靠 tag）
+## 分支怎么切
 
 - **v1**：从 baseline repo 的可信 baseline tag 切——`code-idea-prepare` 成功时打的 `baseline-prepared`（CIP 全退或经评估后被跳过则 `baseline-reproduced`）。
   ```bash
   git checkout -b idea/v1-<slug> baseline-prepared
   ```
-- **v2+**：从最新 commit（HEAD）切，不依赖 tag。
+- **v2+**：从本轮选定并核实的 commit 切。按 [iterate 运行手册 Step 5](../../code-idea-iterate/references/workflow.md#step-5-准备并交接下一轮取证版本)检查工作区与实际起点。
   ```bash
-  git checkout -b idea/v<N>-<slug>
+  git switch -c "$branch" "$verified_start"
   ```
-- 失败节点虽无 tag，commit 在链上，下版照常从它切。
 
 > `baseline-prepared` 由 `code-idea-prepare` 打（CIP 成功 merge 时）。CIP 全退或经评估后被跳过则用 `code-paper-reproduction` 的 `baseline-reproduced`。execution 上来要问 cleanup 目录在不在，确认从哪个 tag 切。
 
-## tag 规矩（只在成功节点打）
+## 用标签定位实现
 
-- **成功节点**（核心子论点 supported）→ 打 `claim-C<id>`（首次成立）或 `claim-C<id>-v<k>`（method 迭代新锚点）。
-- **失败节点**（refuted / 效果不好）→ 不打 tag。
-- claim tag **锁定该子论点的 method 代码**（可回查对比的锚点）。
+按项目约定和已有授权使用 `claim-C<id>` 或 `claim-C<id>-v<k>` 定位已有实测证据的实现。创建新研究版本以确认的 commit 和批准范围为依据。
 
-### tag 三方绑定（成功节点）
+### 标签、实现与证据的对应关系
 
 ```
 git tag: claim-C<id>
    ↕
 method 代码: 该 commit 的实现（这版 method = 这个子论点的实现）
    ↕
-conclusion: ideas/v<N>-<slug>/04-conclusion.md（裁决 supported + evidence 指针）
+conclusion: ideas/v<N>-<slug>/04-conclusion.md（实际比较、条件和证据出处）
 ```
 
 **tag 的 commit message 必须写**：claim ID + 子论点 + 关键 metric + run 路径。
@@ -88,11 +81,7 @@ git 历史、method 代码、conclusion 三方对齐，任何一处能追溯另�
 
 ### method 迭代（同子论点改进 method）
 
-子论点已 supported 后，还想改进它的 method：
-- **子论点 claim 不变**（仍 supported），只动 method。
-- 从最新 commit 切新 plan，改进 method，跑实验，打 `claim-C<id>-v2`。
-- conclusion 对比基线 = `claim-C<id>`（上一版 method），不是和别的 claim 比。
-- method 迭代显著改进才打新锚点（`claim-C<id>-v2` / `-v3`），每个 method 版本一个可回查点。
+命题含义不变时沿用 ID，保留旧实现、实测条件和结论边界。新实现按本轮批准的比较取证，结论引用实际比较所用的基准 commit、运行和配置。命题含义发生实质变化时使用新 ID，记录与旧命题的关系。
 
 ## 文件目录
 
@@ -101,10 +90,14 @@ git 历史、method 代码、conclusion 三方对齐，任何一处能追溯另�
 ```
 ideas/
 ├── PROJECT_CONTEXT.md                # 项目级稳定背景（session 开头读）
-├── idea_tree.json                    # 版本链表机读索引（所有节点：成功/失败）
+├── idea_tree.json                    # 版本机读索引，保留历次已建节点
+├── decisions/
+│   └── <decision-id>/
+│       └── research-assessment.md    # 研究决定与批准范围
 ├── paper-package.md                  # iterate 在决定进入论文阶段时生成，记录总论点、创新点和论证顺序，交给写作和论文实验技能
 └── v<N>-<slug>/                      # 一个 plan 节点（一个版本）
-    ├── 00-from-previous-version.md   # iterate 产（仅 v2+）：上版→这版叙事链
+    ├── 00-from-previous-version.md   # iterate 产（v2+）：上轮证据与本轮选择
+    ├── 00-from-previous-version.json # iterate 产（v2+）：实际版本起点、变更和交接引用
     ├── 01-idea-spec.md               # 稳定层：总论点+Roadmap+当前子论点+文献+novelty
     ├── 02-research-plan.md           # 本 plan：方法设计+claim×实验+原理+代码指引
     ├── 03-claim-code-map.md          # execution 产：claim×代码×验证逻辑地图（叙述关填）
@@ -126,9 +119,10 @@ ideas/
 
 | 文件 | 谁产出 | 作用 |
 |---|---|---|
-| `00-from-previous-version.md` | iterate（仅 v2+） | 上版→这版叙事链（目标→结果→裁决意义→浮出问题→这版做什么）+ 末尾机读变更摘要 |
-| `01-idea-spec.md` | idea-find（v1）/ iterate（v2+） | 稳定层：总论点 claim + Roadmap（已成立子论点=创新点）+ 当前子论点 + 文献 + novelty |
-| `02-research-plan.md` | idea-find（v1）/ iterate（v2+） | 本 plan 的方法设计 + 实验总览 + 每实验原理 + 代码指引 + 运行命令 + DoD |
+| [`00-from-previous-version.md`](../../code-idea-iterate/references/from-previous-version-template.md) | iterate（v2+） | 写上轮实际观察、判断变化、本轮选择、批准范围和继承条件 |
+| [`00-from-previous-version.json`](../../code-idea-iterate/references/from-previous-version-template.json) | iterate（v2+） | 记录研究上一轮、实际代码起点、命题变更及 plan 修订和批准引用 |
+| `01-idea-spec.md` | idea-find（v1）/ iterate（v2+） | 研究问题、研究价值、假设、与已有工作的差异及结论边界 |
+| `02-research-plan.md` | idea-find（v1）/ iterate（v2+） | 按获批范围写各项取证设计、比较、测量、解释、预算和停止点 |
 | `03-claim-code-map.md` | execution | claim×代码×验证逻辑地图（叙述关填；plan 只读，地图落这里） |
 | `04-conclusion.md` | execution | 本 plan 结果：发现 + claim 裁决（从 claims.json 渲染）+ 版本结论 + 可复现 |
 | `conclusion.json` | execution | 机读交接（status/outcome/golden_metrics/key_insights/scale_risks/evidence_quality_issues） |

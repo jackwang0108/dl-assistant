@@ -1,57 +1,91 @@
-# v<N>-<slug> ← v<N-1>-<slug>（上版 → 这版）
+# 下一轮版本交接
 
-> 由 **code-idea-iterate** 产出（v2+ 才有）。讲清"为什么从上版走到这版"。
-> **因果叙事链**（不是清单）：上版目标 → 结果 → 裁决**意义** → 浮出的更深问题 → 这版做什么。每一环都回答"为什么"。
-> 人读叙事主体在本文件；机读变更摘要（这版动了哪些 claim）在配套的 `00-from-previous-version.json`。
+本文件说明为什么从上一轮进入当前版本、哪些判断因证据而改变，以及本轮获准做什么。
 
-## 上版的目标（上版想回答什么问题）
-[上版 plan 要验证哪个子论点、检验什么机制假设——让读者知道上版**为什么**做那些实验，不只是"做了 X"]
+用户确认建立下一轮取证版本后，把下方模板存为新版本目录中的 `00-from-previous-version.md`，同目录保存[机读摘要](from-previous-version-template.json)。两份文件引用确认本轮的决定记录、同一版取证方案和实际代码起点。仅讨论下一步、继续查已有材料或准备写作时，按实际决定更新 `research-assessment.md`。
 
-## 上版的结果 + 裁决意义（不是裸裁决）
-- 上版做了 [实验] → 关键结果：
+## 可复制模板
 
-| 实验 | 关键指标 | 数值 |
-|---|---|---|
-| exp-XXX | [metric] | [值] |
+```markdown
+# {当前版本} ← {研究上一轮}
 
-- 裁决：C_x [supported / plausible / insufficient_evidence / contradicted]（见上版 claims.json）
-- **诊断结论**（上版方法版本未达预期、或验收给任何 claim 写下 contradicted 时必填，见 iterate Step 5 更改子论点状态前的诊断条件）：判断问题属于哪个层次（执行 / 设计选择 / 机制前提）+ 定位证据（哪个 probe / 曲线 / diff 验证确认，指针到 `autopsy.md` 探索链）；归"设计选择错"时写明定错的设计自由度与正确落点（如"机制对，落点应在晚期层而非中间层"）
-- **裁决意味着什么（机制层面）**：[裁决背后的**机制结论**。例：不是"RGB 高频不够强"，是"F_high 被 residual 淹没了"——讲清为什么会 / 不会 work，不是只甩 supported/refuted，也不是只记现象「涨了 0.3」。**这是机制直觉沉淀——论文 method 节「设计动机」段的素材，也是下版方案生成的弹药（spec-design Step A）**，写的时候就想：这条结论下版还能怎么用、写论文时怎么讲]
+- **研究决定**　{决定 ID、research-assessment.md 路径及获批范围}
+- **本轮材料**　{研究说明、取证方案及修订、命题快照}
 
-## 浮出的更深问题
-[上版结果暴露的、上版框架内回答不了的问题]
+## 上一轮观察与判断变化
 
-## 研究判断（iterate 核心：分层诊断 + claim 变更）
-> 每条判断对应一个 claim 变更（refuted / 拆分 / 新增 / 改判），和演化 claims.json 一一对应。
+{上一轮想区分什么，实际观察到什么。引用观察 ID、原始证据、实际条件及适用范围。写明证据改变了哪项判断、仍有哪些解释，诊断或独立核查有实质作用时引用其记录。原因尚未知时保留未知。}
 
-### 判断 1：[标题，如"C3（造高频 scaling）机制前提不成立"]
-- **证据**：上版 exp-XXX + claims.json 裁决 / evidence
-- **分层诊断**（子论点失败先怀疑方法需要改进，不轻易判机制前提不成立）：
-  - 【方法需要改进】（实现/设计问题，机制可能成立）→ 这版改进方法（同子论点继续磨）
-  - 【机制前提不成立】（机制不成立，反复试多种方法都不行）→ 放弃该子论点
-  - 本次诊断：[方法需要改进 / 机制前提不成立 + 理由]
-- **claim 变更**：[refuted 留 ID / 拆分 C3→C3a·C3b（derived_from）/ 新增 C4（emerged_from）/ 改判 verdict_source=iterate-v<N>]
+## 为什么建立本轮
 
-### 总论点是否要演化
-- [若多个核心子论点都机制前提不成立、总论点撑不住 → 演化总论点（改写 P1，用 derived_from 记录原总论点）；否则不动。**单个子论点失败时沿用原总论点**]
+{要弄清哪项未知，它为何影响当前决定。写本轮选的行动、预期带回的证据、实际批准的任务和范围、停止点及待确认事项。具体设计引用 plan，其他备选引用决定记录。}
 
-## 定位声明 + 这版做什么
-- **定位**：这版是 [深化上版 / 转向新子论点 / 改进方法]——不是否定上版，是 [X]
-- **本版核心假设**：[这版检验什么假设；与上版假设的本质差异]
-- **本版方法调整**：[相对上版改了什么、为什么]（详细方法在本版 `02-research-plan.md`）
-- **继承**：[从上版复用哪些已验证的实现 / 发现]
-- **预期结果**：[假设成立应看到什么]
+## 命题和证据的继承
 
-## 从上版学到的教训（避免重蹈覆辙）
-1. **教训**：[描述] → **本版如何避免**：[措施]
+{列相关命题及快照。含义不变时写沿用的 ID、历史证据及适用限制。发生变更时写旧、新 ID、变更内容和证据出处。说明停止投入的原因，并按实际证据另行判断命题。}
 
-## 版本树更新（idea_tree.json 加新节点）
-- **version**：v<N>-<slug> ｜ **from_previous**：[一句话：为什么从上版走到本版] ｜ **hypothesis**：[本版核心假设]
-- **git_branch**：`idea/v<N>-<slug>`（已切）｜ **status**：active ｜ **outcome**：pending ｜ **git_tag**：空（execution 跑完这版、子论点 supported 才打 `claim-C<id>`）
+## 实际代码与条件的起点
 
-## 附录：决策依据
-### 参考的新文献（若方向调整参考了新论文）
-- **论文 A**：[标题/会议/arXiv URL] ｜ **对本版意义**：[为什么引]
+{写实际核实的起点 commit、新分支、选择此起点的理由。列出本轮要复用的模型、数据、配置或基准及条件引用，区分已核实和待核。说明不匹配的条件会限制哪项解释。}
+```
 
-### 否决的备选方案
-- **备选 A**：[描述] ｜ **为什么不采用**：[原因——候选生成时被 pass 的角度留痕，以后可能回来捡]
+## 完整填写示例 · edge-vision
+
+以下延续[先复查已有记录的决定](research-assessment-template.md#填写示例--edge-vision)。假设复查后用户在 D5 确认建立 v2，只批准核最小分派条件。示例路径均相对项目根。
+
+```markdown
+# v2-edge-vision ← v1-edge-vision
+
+- **研究决定**　D5，ideas/decisions/D5/research-assessment.md。批准为目标输入下的实际算子分派做最小核查并建立 v2。
+- **本轮材料**　ideas/v2-edge-vision/ 下的 01-idea-spec.md、02-research-plan.md（rev-1）和 claims.json。
+
+## 上一轮观察与判断变化
+
+Q2 想区分组合加速来自写回量下降，还是来自运行时更换算子。v1 的 OBS-02 显示，同一设备和输入下，基线 12.6 ms，组合 10.8 ms。正式计时关闭轨迹采集，另外采集的轨迹显示两组的写回量和实际算子都发生了变化。现有四组记录没有同算子、不同写回量的配对。所测设置下的配置收益已有证据，C1 的写回量解释仍缺隔离对照。见 ideas/v1-edge-vision/conclusion.json 的 OBS-02 及 exp-002-configuration-comparison 的 analysis/latency-comparison.json。
+
+## 为什么建立本轮
+
+已有源码显示 runtime/dispatch.py 的 select_kernel 可以请求固定分派，目标输入是否触发回退仍未知。先确认这一点能决定写回量对照是否可行。D5 只批准 T0-dispatch，在原目标设备与输入上核实际算子标识和回退行为。取得能定位的实际分派记录或确认阻塞后汇报并停止。T1-writeback 的正式对照和预算待确认，只有固定分派保留目标条件时才审阅该设计。
+
+## 命题和证据的继承
+
+C1 的含义、ID 和现有 insufficient_evidence 判断沿用。C2 沿用原 ID，独立检查仍待做。本轮没有修改命题或更新证据判断。v1 的读数继续用于解释配置收益，引用原始轨迹及独立核查的边界。T0-dispatch 只核 C1 所需的前置条件。
+
+## 实际代码与条件的起点
+
+研究上一轮是 v1-edge-vision。实际代码从已核实的 8d34a2f 建 idea/v2-edge-vision，该提交含已审阅的计时及分派入口。本轮沿用 v1 的目标设备、输入与配置口径。代码入口已核，真实回退行为及能否保持目标运行条件待 T0-dispatch 验证。
+```
+
+同一版本的 `00-from-previous-version.json` 如下。
+
+```json
+{
+  "schema_version": 2,
+  "version": "v2-edge-vision",
+  "from_previous": "v1-edge-vision",
+  "decision_ref": "ideas/decisions/D5/research-assessment.md",
+  "prior_evidence": [
+    {
+      "observation_id": "OBS-02",
+      "ref": "ideas/v1-edge-vision/experiments/exp-002-configuration-comparison/analysis/latency-comparison.json",
+      "limits": "支持所测条件下的配置收益。写回量与实际算子同时变化，缺同算子配对。"
+    }
+  ],
+  "handoff": {
+    "spec_ref": "ideas/v2-edge-vision/01-idea-spec.md",
+    "plan_ref": "ideas/v2-edge-vision/02-research-plan.md",
+    "plan_revision": "rev-1",
+    "approved_task_ids": ["T0-dispatch"],
+    "pending_task_ids": ["T1-writeback"]
+  },
+  "claims": {
+    "snapshot_ref": "ideas/v2-edge-vision/claims.json",
+    "retained_ids": ["C1", "C2"],
+    "changes": []
+  },
+  "git": {
+    "implementation_parent_commit": "8d34a2f",
+    "new_branch": "idea/v2-edge-vision"
+  }
+}
+```

@@ -1,24 +1,31 @@
 {
-  "version": "v<N>-<slug>",
-  "from_previous": "v<N-1>-<slug>",
-  "pattern": "method-improve | new-innovation | evolution",
-  "claim_changes": {
-    "added": [],
-    "refuted": [],
-    "superseded": [],
-    "paper_claim_evolved": false
+  "schema_version": 2,
+  "version": null,
+  "from_previous": null,
+  "decision_ref": null,
+  "prior_evidence": [],
+  "handoff": {
+    "spec_ref": null,
+    "plan_ref": null,
+    "plan_revision": null,
+    "approved_task_ids": [],
+    "pending_task_ids": []
   },
-  "target_claims": [],
+  "claims": {
+    "snapshot_ref": null,
+    "retained_ids": [],
+    "changes": []
+  },
   "git": {
-    "previous_success_tag": "",
-    "new_branch": "idea/v<N>-<slug>"
+    "implementation_parent_commit": null,
+    "new_branch": null
   },
-
   "_notes": {
-    "这是什么": "00-from-previous-version.json —— 版本间变更的机读摘要（这版动了哪些 claim、什么版型、攻哪些子论点）。人读叙事在 00-from-previous-version.md，本文件只放机读部分。这是模板。",
-    "pattern": "三种版型：method-improve=改进 method 版（方法差，同子论点继续磨；含死因归层为「设计选择错」时的换落点重设计）；new-innovation=新创新点版（方向错，换子论点）；evolution=演化版（总论点改写）。诊断/验尸不是版型——在 iterate Step 5 会话内就地完成，结论落 autopsy.md",
-    "claim_changes": "added=新增 claim ID 列表；refuted=本版证伪的 claim ID（留 ID 不删）；superseded=[{from: C3, to: [C3a]}] 拆分取代关系；paper_claim_evolved=总论点是否演化（true 时 claims.json 的 P1 要有 lineage.derived_from）",
-    "target_claims": "下版 plan 攻的子论点 ID 列表",
-    "git": "previous_success_tag=上版成功节点 tag（claim-C<id>，若有）；new_branch=本版从最新 commit 切的分支"
+    "用途": "本文件说明为什么从上一轮进入当前版本、哪些判断因证据而改变，以及本轮获准做什么。用户确认建下一轮版本后，与 00-from-previous-version.md 一起保存。成品可省略 _notes。",
+    "版本与引用": "version 是当前版本，from_previous 是研究上的上一轮，decision_ref 指向确认本版本及任务范围的研究决定记录。路径按项目根解析，外部材料写明可取得的位置及版本。研究上一轮与 git 的实际代码起点分别记录。",
+    "prior_evidence": "记录影响本轮决定的证据，每项写 ref 及 limits，说明支持范围与限制。可附 observation_id。优先引用上一轮结论、原始记录或独立核查。",
+    "handoff": "引用实际确认的 spec、plan 和修订。approved_task_ids 仅列实际已批准项，pending_task_ids 列同一 plan 中仍待确认的项。预算、停止点和批准细节回查 plan 及决定记录。",
+    "claims": "snapshot_ref 指向当前完整快照。retained_ids 列本轮关键且含义不变的命题。changes 只记实际发生的变更，每项写 change、old_ids、new_ids 和 basis_ref。change 可写 added、superseded、assessment_updated、refuted 或 no_longer_pursued。停止追踪不代表被反证。命题含义实质变化使用新 ID，历史证据及关系留在 claims.json。无变更时 changes 留空。",
+    "git": "implementation_parent_commit 写实际验证并作为起点的 commit，new_branch 写确认后创建或已核实的本轮分支。HEAD 或成功标签均不能代替核实的起点。"
   }
 }
