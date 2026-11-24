@@ -1,236 +1,276 @@
-# Reproduction 交付模板（code-paper-reproduction）
+# 复现报告与机读交接模板
 
-> reproduction 的交付是一个**目录** `docs/code-paper-reproduction/<repo>-<日期>/`（固定路径，不问用户），含：
-> - `spec.md` — 复现规格（Step 2 产出，用户审过；模板见 `reproduction-spec-template.md`）
-> - `reproduction.json` — **供下游技能读取的记录**（下游 execution / CIP 直接消费，报告与 JSON 同步）
-> - `report.md` — 供用户阅读的报告，Spec 确认后建立，每项验证完及时更新
-> - `runs/<run-slug>/` — 各 run 的 log / EXIT_CODE / metrics / 训练曲线（run-slug：eval / dev-full / scaled-b / trend-a / sweep-<档位> / reduced）
-> - `alignment.md` — 论文 vs repo vs setup 对齐核对 + trust-traps 排查底稿
->
-> 机读区单独拆 `reproduction.json`（和 `setup.json` / `baseline-survey.json` 一致），`report.md` 是人读叙事。
-> 技术术语保留，整体中文。run 产物路径用**目录内相对路径**。
+本文件说明怎样把每个复现目标的实际结果、可比性和证据范围写成报告，并交付下游可以复跑的基准、适用条件和待验证事项。
 
----
+默认保存到 `docs/code-paper-reproduction/<repo>-<日期>/`，也可使用用户指定路径。从第一次运行开始更新 `report.md` 和 `reproduction.json`，按[运行手册 Step 6](workflow.md#step-6-交付可比较的基准)核对后交付。两份记录使用同一目标 ID、协议版本和 run ID。参考、判据和授权引用[复现规格](reproduction-spec-template.md)，具体排查引用[条件核对记录](alignment-template.md)。对日志、退出码和指标填写实际存在的路径。大文件记录原位置、版本或校验值及取得方式。
 
-## reproduction.json（供下游技能读取的记录）
+## 怎样写结论
 
-> 下游 `code-idea-prepare` / `code-reading` / `code-idea-execution` 直接读这一份。字段名稳定、值要真（验证过才填，查不到标 unknown，不编数字）。json 写不下注释，字段含义统一在模板下方的「字段说明」讲。
+每个目标依次回答**执行到哪里 → 证据覆盖什么 → 条件是否可比 → 与参考差多少 → 可以供谁做什么**。条件变化保留原版本和相关运行。计划复跑或等待补证时，说明下一步需要的条件和接手阶段。
+
+| 实际情况 | 报告写法 |
+| --- | --- |
+| 目标未运行，或中途受阻 | 写计划覆盖的目标和已经完成的检查，给出具体阻塞及解除条件。只有参考值时把实测结果留空 |
+| 命令完成，实际条件与参考不同 | 保留原始读数和条件。例如「500 个样本统计完整，raw 权重得 77.6%。参考使用 EMA，本次仅用于排查加载条件」 |
+| 条件可比，参考与实测仍有差距 | 记录单位、差值、比较依据及尚未解决的解释。另判断实测是否可用于同协议下的改前对照，写清验证范围及依据 |
+| 条件可比，观察达到已确认的判据 | 写参考和实测、协议、主要证据及可用的 run。单次观察按单次交付，另列未验证的情况 |
+
+## 可复制的 report.md
+
+````markdown
+# {项目} · 复现与基准交付报告
+
+- 日期、仓库与环境 | {实际路径、分支、commit 或 diff、机器和运行环境}
+- 依据 | [复现规格](spec.md)、[条件核对](alignment.md)、[机读记录](reproduction.json)、{setup、survey 或研究材料及版本}
+
+## 1. 逐目标结论
+
+| 目标与协议 | 执行及证据范围 | 参考与实测 | 可比性、判断及用途 | 未决及下一步 |
+| --- | --- | --- | --- | --- |
+| {目标 ID、协议版本} | {未开始、受阻、部分完成或完成，实际样本或训练阶段} | {参考位置和单位，逐次实测或主结果及对应 run} | {关键条件、与参考的判断、可交付的基准及证据} | {尚缺什么、接手阶段或适用边界} |
+
+## 2. 运行记录与差距
+
+| Run | 实际入口、配置和条件 | 结果或偏差 | 原始证据 |
+| --- | --- | --- | --- |
+| {run ID} | {命令、配置、权重、数据，以及与目标协议相关的变化} | {运行状态、退出情况、观察和单位，或未完成原因} | {command.sh、meta.json、日志、退出码、指标、产物的实际路径} |
+
+{说明参考统计口径、观察到的主要差距及其影响。保留失败、条件不一致的运行和不同 seed。随机性说明重复单位、次数及已测读数。有待查原因时，引用 alignment.md 的证据与下一项检查。}
+
+## 3. 低成本配置（适用时）
+
+{写用途、实际配置和资源消耗、与正式条件的差异、已跑的基线与对照、证据支持的用途、升档条件。仅讨论或提出候选时写到该进度。}
+
+## 4. 交接与未决事项
+
+- 改前对照 | {给 prepare 的目标、run、复跑命令和环境、需要保持的配置、样本与权重、要比较的读数或行为、未覆盖的回归项}
+- 代码阅读与后续实验 | {实际入口和关键文件、已验证范围、可用权重与基准，以及做后续比较前要验证的条件}
+- 变更和资源 | {影响运行与判定的代码或协议变更、批准范围及资源，当前提交和合并状态}
+- 下一步 | {需要谁做什么，取得什么证据后再判断。相关 survey 待办或 setup 缺项按其实际编号引用}
+```
+
+## reproduction.json 的记录结构
+
+以 `schema_version: 2` 记录逐目标结果。以下是未执行的可复制起点，按实际情况增减目标和运行。`null` 表示该项尚无记录，必要时在对应目标说明原因。产物相对路径以交付目录为起点，仓库内配置路径以实际工作目录为起点，外部资产记录可取得的实际位置。
 
 ```json
 {
-  "inherits": {
-    "setup_report": "docs/code-project-setup/<repo>-<日期>/setup.json",
-    "conda_env": "<env-name>",
-    "repo": { "commit": "<sha>", "branch": "<branch>" }
-  },
-
-  "idea_kind": "needs_retraining",
-  "repo_role": "baseline | substrate（对打 baseline / 实验基座——baseline-survey clone 卡标，经 setup.json 透传）",
-  "repro_strategy": "dev_full",
-
-  "eval_判定": "reproduced",
-  "training_判定": "full_reproduced",
-  "trustworthy_for_delta": true,
-  "evidence_strength": "high",
-  "full_scale_alignment": "done",
-
-  "target": {
-    "paper": "<paper title / arxiv id>",
-    "table_row": "Table 3, row 'baseline R50'",
-    "dataset": "<dataset> / <split: val|test>",
-    "metric": "mAP@[.5:.95] (pycocotools 官方 eval)",
-    "paper_number": 41.2,
-    "tolerance_band": "±0.5",
-    "eval_reproduced": 41.0,
-    "eval_in_band": true,
-    "training_reproduced": 40.8,
-    "training_in_band": true,
-    "scaled_small_setting": "R18 @ 1x on COCO-mini (论文 Table 7)",
-    "scaled_trend_ok": true,
-    "frozen": true
-  },
-
-  "frozen_components": ["eval 协议", "metric 实现", "数据 split", "official checkpoint 血缘"],
-  "mutable_components": ["loss", "架构", "数据增强", "优化器"],
-
-  "noise_floor": {
-    "metric": "mAP@[.5:.95]",
-    "seeds": [42, 43, 44],
-    "values": [40.8, 41.0, 40.7],
-    "std": 0.15,
-    "verdict_rule": "execution 的 delta < 2×std 时不可判 keep/discard"
-  },
-
-  "ready_commands": {
-    "eval": "python tools/test.py configs/xxx.py ckpts/xxx.pth --eval bbox",
-    "train": "python tools/train.py configs/xxx.py",
-    "train_scaled": "python tools/train.py configs/xxx_r18_coco-mini.py"
-  },
-
-  "artifacts": {
-    "eval": { "log": "runs/eval/run.log", "metrics": "runs/eval/metrics.json", "exit": "runs/eval/EXIT_CODE" },
-    "dev_full": { "log": "runs/dev-full/run.log", "metrics": "runs/dev-full/metrics.json", "exit": "runs/dev-full/EXIT_CODE", "work_dir": "/server/path/to/work_dir" },
-    "alignment": "alignment.md"
-  },
-
-  "baseline_curves": {
-    "loss": "runs/dev-full/loss_curve.png",
-    "metric": "runs/dev-full/metric_curve.png",
-    "prediction_dynamics": "runs/dev-full/pred_dynamics/"
-  },
-
-  "checkpoint": {
-    "<name>": { "path": "/ckpts/<file>.pth", "kind": "raw (非 EMA)", "select": "best", "strict_load": "strict=True 全 key", "source": "<url>" }
-  },
-
-  "reproduced_baseline_checkpoint": {
-    "path": "/ckpts/reproduced_baseline.pth",
-    "seed": 42,
-    "config": "configs/xxx.py",
-    "note": "execution 微调从这切，不从 official ckpt 切"
-  },
-
-  "training_chain": {
-    "bn": "SyncBN (论文多卡同步；开发卡用 b 小 setting 补统计差)",
-    "loss_reduction": "mean",
-    "effective_batch": "论文 16 (8卡×2)；复现 16 (1卡×2×accum8)",
-    "lr_scaling": "linear, base 0.02 @ bs16；warmup 500 iter"
-  },
-
-  "determinism": {
-    "seeds": [42, 43, 44],
-    "cudnn": { "deterministic": true, "benchmark": false },
-    "worker_seed_fixed": true
-  },
-
-  "dev_card_footprint": {
-    "card": "1×A100 40GB",
-    "eval": { "mem_peak": "12GB/40GB", "time": "8min full val" },
-    "train": { "mem_peak": "34GB/40GB", "time": "~14h full / ~40min 小setting" }
-  },
-
-  "known_pitfalls": [
-    "本 repo 的 mAP 自实现与 pycocotools 差 0.4 个点——已统一用官方库 eval",
-    "official ckpt 是 EMA 权重，execution 对比实验注意血缘"
+  "schema_version": 2,
+  "status": "not_started",
+  "inherits": {},
+  "sources": [],
+  "targets": [
+    {
+      "id": "EVAL-01",
+      "target_type": "evaluation",
+      "purpose": null,
+      "requested_scope": "original_conditions",
+      "reference": null,
+      "protocol": { "id": "EVAL-01", "version": "v1", "status": "draft" },
+      "execution_status": "not_started",
+      "run_ids": [],
+      "data_validity": "unassessed",
+      "comparability": { "status": "unresolved", "evidence_refs": [] },
+      "assessment": "not_assessed",
+      "finding": null,
+      "uncertainty": null,
+      "use_scope": { "supported_uses": [], "remaining_checks": [] }
+    }
   ],
-
-  "blocked": [
-    "full 规模多 seed/多数据集铺开: 未做（投稿级实验，归运行服务器；本 skill 只验训练链可信）"
-  ],
-
-  "reduced_setting": {
-    "enabled": true,
-    "scale_method": {
-      "data": "各数据集等比采样（seed=42 固定抽样；档位按 wall-clock 标定，见 scale_sweep）",
-      "schedule": "保持原文 100 epoch 计划（iteration 锚定项已换算，EMA 窗口按 iter 数等比调）"
-    },
-    "baseline_result": { "metric": "AP", "value": 72.3, "std": 0.2 },
-    "scale_sweep": {
-      "axis": "data（唯一缩减轴，模型容量不动）",
-      "points": [
-        { "data": "3%", "wall_clock": "12min", "value": 61.2 },
-        { "data": "10%", "wall_clock": "40min", "value": 67.8 },
-        { "data": "30%", "wall_clock": "2.5h", "value": 72.3 }
-      ],
-      "fit": "log-log 幂律（前 3 点拟合）",
-      "holdout": { "data": "60%", "wall_clock": "4h", "predicted": 74.8, "actual": 74.5, "tolerance": "±0.5（跑前写死）", "hit": true },
-      "verdict": "scaling_law_confirmed"
-    },
-    "noise_floor": { "metric": "AP", "std": 0.2, "calibration": "论文消融 -backbone 在 reduced 上 -1.8 AP（同向）；±0.4 以内视为噪声" },
-    "config": "configs/xxx_reduced.py",
-    "command": "bash scripts/train_reduced.sh",
-    "footprint": { "time": "2.5h", "gpu_memory": "10GB" },
-    "validity_check": { "method": "ablation_contrast", "evidence": "论文消融 -backbone 在 reduced 上 -1.8 AP，方向一致", "confidence": "medium" }
-  }
+  "runs": [],
+  "ready_commands": {},
+  "checkpoint": {},
+  "remaining_tasks": []
 }
 ```
 
-### 字段说明
+| 字段 | 填写规则 |
+| --- | --- |
+| `status`、`execution_status` | 记录本轮及目标的进度，按实际用 `not_started`、`in_progress`、`completed`、`partial`、`blocked`、`failed`、`cancelled`。一次运行退出为零只说明该次运行完成，目标的分析和交付范围另核 |
+| `targets[].target_type`、`requested_scope` | 按实际用 `evaluation`、`training` 或 `behavior`。用 `original_conditions` 或 `modified_conditions` 表明要核原条件还是在明确的新条件下建立基准 |
+| `reference`、`protocol` | 保存出处、版本和精确结果或行为、单位、统计或选择方式。写协议 ID、版本、确认及实际判据的引用。修正加载以符合原协议时沿用版本，改变划分、指标等比较条件时保留原版本，记录新协议和受影响的运行 |
+| `data_validity`、`comparability` | 数据有效范围按证据写 `unassessed`、`valid`、`limited`、`invalid`，说明实测覆盖和缺项。可比性用 `matched`、`different`、`unresolved`、`not_applicable`，附条件、证据和影响。诊断 run 的可比性单独记录 |
+| `assessment`、`finding` | 用 `consistent_with_reference`、`discrepant`、`insufficient_evidence`、`not_comparable` 或 `not_assessed`。解释所用判据、观察值、范围和证据。关键条件不同或不明时用 `not_comparable`，在可比较但证据量不足时用 `insufficient_evidence` |
+| `runs` | 每次尝试独立登记目标和协议版本、实际执行状态、工作目录、代码版本、环境、命令、配置、数据与 checkpoint 身份。引用 `meta.json`、日志、退出码、指标和产物，可复用完整运行记录。保存读数和单位、实际统计范围、比较状态、偏差和恢复来源 |
+| `uncertainty`、`use_scope` | 分别说明数值误差、评测随机性、训练 seed 或抽样是否实际查过，记录已有逐次读数及限制。用实际 run 标记每项可交付用途，同时写未覆盖的条件及下一项检查 |
+| `inherits`、`sources`、`remaining_tasks` | 引用实际读取的 setup、survey、规格、原文或发布记录。按需写来源版本、位置及取证范围，保留原待办编号、阻塞、所需补证和接手阶段 |
 
-- **`inherits`**：使用的 setup 文件路径+ conda env + repo commit/branch——可回溯到具体环境状态。
-- **`idea_kind`**：`training_free` | `needs_retraining`。**`repro_strategy`**：`eval_only` | `dev_full` | `scaled_b_plus_a`。所有分支都先用官方 checkpoint 跑评测。`eval_only` 在评测验证完成后结束，`dev_full` 继续在开发卡上进行全量训练，`scaled_b_plus_a` 继续做小规模完整复现和大规模短训趋势验证。
-- **推理评测和训练复现的判定**：`eval_判定` ∈ `reproduced` | `partially_reproduced` | `not_reproduced_diagnosable` | `not_trustworthy`；`training_判定` ∈ `NA`(training-free) | `full_reproduced` | `b_plus_a_confirmed` | `partial` | `blocked_需运行卡` | `not_trustworthy`。`trustworthy_for_delta` 是总判断：training-free 看 eval_判定，要重训看 training_判定。
-- **`evidence_strength`**：`high`（full 对齐）| `medium`（b+a）| `low`（组件级 + 旁证）——各项验证能支持的结论落到哪级写哪级。**`full_scale_alignment`**：`done` | `deferred_to_running_server`；deferred 时数值对齐归 `code-paper-experiment`，execution 的 delta 带着这个风险认知。
-- **`target`**：指标契约的冻结块——metric 写精确定义（`mAP@[.5:.95] (pycocotools 官方 eval)`，不只写名字，trust-traps ①）；`table_row` 明确并固定哪行哪 setting（trust-traps ⑤）；`tolerance_band` 说明是论文自报还是默认；`scaled_*` 仅 `scaled_b_plus_a` 填；**`frozen: true` 表示已冻结，下游改口径 = 语义改动即停**。
-- **`frozen_components` / `mutable_components`**：execution 的迭代边界——frozen 动了就破坏与论文基线的可比性（harness 只读），mutable 是 method 迭代空间。
-- **`noise_floor`**：同配置跨 seed std，execution keep/discard 的判据来源；分流 B/C 训练侧默认 ≥2-3 seed（full 太贵时至少 2 个并在报告写明）。
-- **`ready_commands`**：验证过的可运行入口；`train_scaled` 仅 scaled_b 填。
-- **`artifacts`**：各 run 产物（目录内相对路径；恢复入口 + 审计依据）；scaled_b / trend_a / reduced 按实际分流填，不存在的省略。
-- **`baseline_curves`**：baseline 训练参照曲线（loss / metric / 固定批预测演变）——execution 每版改动对照曲线形状，判"训崩了还是方法不行"。
-- **`checkpoint`**：official checkpoint 的训练来源与版本（trust-traps ③，execution 要知道站在哪版权重上）。**`reproduced_baseline_checkpoint`**：本 skill 自己重训出的 baseline ckpt——execution 微调从这切。
-- **`training_chain`**：重训对齐清单（trust-traps ⑦ 落地）——execution 重训时要对齐 BN / loss 归约 / 等效 batch / lr 缩放。
-- **`determinism`**：seed 列表 / cudnn 实际设置 / worker seed 固定否（静态设置继承 setup.json `reproducibility` 块，复现时确认）。
-- **`known_pitfalls`**：复现排查中发现的已知问题，execution 必须读取。
-- **`blocked`**：没做的 / 做不了的，下游要知道边界。
-- **`reduced_setting`**：要重训且 full 超迭代预算（默认 2-3h、上限 4h）时默认建；training-free 或 full 本就在预算内则整块省略——字段见 `reduced-setting.md`「交付格式」。**只减少训练数据量**（模型容量不动，动容量 = 改 baseline 语义），根据实测耗时选择数据规模；`scale_sweep` 存 scaling 验证链（各点数字 / 拟合 / 留出的较大规模的预测值与实测值 / verdict），`verdict: degraded` 时 execution 只排方向。
+### 运行入口、资产和现有下游查找字段
 
----
+- **`ready_commands`** 保留 `eval`、`train` 或 `train_scaled` 等实际验证过的入口。每条命令能回查到相应 run 的工作目录、环境、有效配置和范围。拟运行的命令写进规格或待办。把成功运行但偏离目标条件的命令留在该次 run。
+- **`checkpoint`、`reproduced_baseline_checkpoint`** 按实际保存发布权重和自训权重的身份、位置、来源、实际变体及适用条件。自训权重另外关联生成和选取它的运行。交接时写明基线从哪份权重启动及其用途。
+- **`target`** 为旧读取路径保留有对应证据的参考行、数据、指标定义和实测读数。单目标或已选定一个明确的下游基准时，标明它指向哪个目标和 run。其余目标在 `targets` 各自交付。已有具体比较判据时引用协议及依据。
+- **`determinism`、`noise_floor`、`baseline_curves`、`artifacts`** 按实际写已核随机性配置、同条件重复的读数与统计量、曲线和产物索引。未做重复时在 `uncertainty` 说明。附统计量的单位、重复对象和原始结果位置，后续比较按本轮目标和设计选择判断方法。
+- **`reduced_setting`** 需要时记录候选或已验证状态、配置及命令、与目标条件的差异、实际资源、基线 run 和 `baseline_result`、已有的同规模成对对照、适用范围和升档条件。候选入口留在提议记录，实测后再交可复跑的配置与结果。观察到规模敏感性时交付成对结果及限制。
+- **下游交接** 给出目标、协议、run 和用途，再给入口及必须保持的条件。部分本地下游仍读取旧的整体可信度、容差或分流标签。交接时提示依据逐目标证据核定使用范围，不从旧标签推断本轮结果。W&B 项目按[共同实验记录](../../wandb/references/experiment-records.md)关联运行，分别记录本地执行、同步与证据有效范围。
 
-## report.md（供用户阅读并随验证进度更新）
+## 完整填写示例 · edge-vision
 
-> **spec 确认后即建立，随验证逐节回填**——每个验证节当场写「目的 / 做了什么 / 预期结果 / 实际结果（实测值）/ 是否成功」，不留到最后补写。机读在 `reproduction.json`，本份**不重复 json 里的数字**，只叙事 + 指向 json / runs / alignment。
+沿用[复现规格](reproduction-spec-template.md#完整填写示例--edge-vision-运行前规格)和[条件核对](alignment-template.md)中的虚构项目。这里展示同一组证据怎样分别写进两份交付文件。示例中的路径和资源记录用于说明填写方式。
+
+### report.md
 
 ````markdown
-# Reproduction Report: <repo-name>
+# edge-vision · 复现与基准交付报告
 
-> 由 code-paper-reproduction 在开发服务器产出。已对齐论文/repo/checkpoint/metric，按分流验证，落推理和评测验证与训练复现验证的结论。
-> 机读在 reproduction.json；本份是人读叙事。
+- 日期、仓库与环境 | 2026-11-24，/srv/research/edge-vision，code/paper-reproduction，c91b7e4，edge-dev-01，/srv/envs/edge-vision/bin/python。
+- 依据 | [复现规格](spec.md)、[条件核对](alignment.md)、[机读记录](reproduction.json)、setup.json 的 E02 与 C03、论文 v2 表 2 和 §4.2。
 
-## 0. 推理和评测验证、训练复现验证结论（Step 6 定稿，建立时先占位）
-- eval_判定 / training_判定 / trustworthy_for_delta / 证据强度 / full_scale_alignment / 能否开始 method 修改（能 / 先解决 X / 不建议基于此 repo 重训）。
+## 1. 逐目标结论
 
-## 1. 复现目标与分流（Step 2 定稿）
-- 论文 / 目标行 / 数据集 split（确认 val 还是 test）/ metric 精确定义 / 论文数 + 容差范围。
-- idea 类型 / 训练规模估算 / 选定分流及理由 / scaled 的小 setting（若有）。
+| 目标与协议 | 执行及证据范围 | 参考与实测 | 可比性、判断及用途 | 未决及下一步 |
+| --- | --- | --- | --- | --- |
+| EVAL-01 v1 · 发布权重全量评测 | 完成评测及核对。Vision-Val v1/val 的 500 个 ID 各计一次 | 论文表 2 的 Vision-S 行为 Top-1 78.4%。eval-attempt-02 用 EMA 得 392/500，Top-1 78.4% | 权重变体、数据、输入处理和指标均已核。在论文报告精度内一致。将 eval-attempt-02 交给 prepare 作为改前对照 | 完整训练和训练间波动未验证。如后续涉及重训，需单独建立训练基准 |
 
-## 2. 继承来源（Step 1 填）
-- 吃的哪份 setup / 继承了什么（env/commit/ready 命令/数据 ckpt 路径/footprint/reproducibility 块）/ setup 标的语义风险实测结果。
+## 2. 运行记录与差距
 
-## 3. 论文 vs Repo vs Setup 对齐表（Step 3-4 持续更新）
-| 项目 | 论文 | Repo/config | Setup | 状态 |
-|------|------|-------------|-------|------|
-| backbone / 输入尺寸 / batch / optimizer / lr / scheduler / epochs | | | | 对齐/不一致/unknown |
-| 数据增强 / metric 实现 / 评测协议(TTA/multi-scale) | | | | |
-| checkpoint 的训练来源与版本(EMA?best/last?) | | | | |
-| 训练链(BN类型/loss归约/等效batch/lr缩放/warmup) | | | | 仅要重训时填，对照 trust-traps ⑦ |
+| Run | 实际入口、配置和条件 | 结果或偏差 | 原始证据 |
+| --- | --- | --- | --- |
+| eval-attempt-01 | tools/eval.py，configs/eval.yaml，Vision-S r1 raw | 退出码 0，388/500，Top-1 77.6%。权重变体偏离 v1，仅用于排查 | [命令](runs/eval-attempt-01/command.sh)、[记录](runs/eval-attempt-01/meta.json)、[日志](runs/eval-attempt-01/repro-edge-vision-eval-01.log)、[退出码](runs/eval-attempt-01/repro-edge-vision-eval-01.EXIT_CODE)、[指标](runs/eval-attempt-01/metrics.json)、[样本 ID](runs/eval-attempt-01/outputs/evaluated-ids.txt) |
+| eval-attempt-02 | 同一入口，使用该 run 的 [EMA 配置](runs/eval-attempt-02/config/eval-ema.yaml)。同一代码、环境、样本、预处理和指标 | 退出码 0，392/500，Top-1 78.4%。日志证实选择同一 r1 发布的 EMA | [命令](runs/eval-attempt-02/command.sh)、[记录](runs/eval-attempt-02/meta.json)、[日志](runs/eval-attempt-02/repro-edge-vision-eval-02.log)、[退出码](runs/eval-attempt-02/repro-edge-vision-eval-02.EXIT_CODE)、[指标](runs/eval-attempt-02/metrics.json)、[样本 ID](runs/eval-attempt-02/outputs/evaluated-ids.txt) |
 
-> 不一致项：哪些是"setting 差异（可解释）"，哪些是"对不上（要查）"。
+首轮读数比参考低 0.8 个百分点。两次均覆盖同一完整清单。论文 §4.2 与首次加载日志显示权重变体不同，获准后只切到 EMA。第二次观察支持权重变体解释此次差距，详见 alignment.md。参考与实测都是固定权重的评测读数，未进行同条件重复或多 seed 重训。
 
-## 4. 推理链验证（Step 3 当场回填）
-- **目的**：用 official checkpoint eval 验证推理、权重加载和评测流程。
-- **做了什么**：命令 / seed / 排了哪些 trust-traps（①-⑥）。
-- **预期结果**：论文数 ± band。
-- **实际结果**：实测值（不是"通过了"）/ 差距 / 在 band？
-- **是否成功**：是 / 否（否则记录修法与重验）。
-- log 路径见 `runs/eval/`，对齐核对底稿见 `alignment.md`。
+## 3. 低成本配置
 
-## 5. 训练链验证（Step 4 当场回填，training-free 时空着注明）
-- 每个 run 一小节（dev-full / scaled-b / trend-a 各自）：**目的 / 做了什么（命令、seed 列表）/ 预期结果 / 实际结果（多 seed 列逐值 + std）/ 是否成功**。
-- 随机种子造成的数值波动：noise_floor 怎么测的、std 多少。
-- scaled_a 的 loss 曲线形状是否对齐论文；命中各项验证能支持的结论哪一级、deferred 了什么。
-- baseline 训练曲线产物（loss / metric / 固定批预测演变）路径。
+本轮只标定固定权重的全量评测，未建立 reduced 训练配置。
 
-## 6. reduced 配置（Step 5，可选；无则注明未建）
-- 配置 / 有效性验证（方法 + 证据 + confidence）/ 噪声标定结论。
+## 4. 交接与未决事项
 
-## 7. 差距分析（命中了哪些 trust-traps）
-> 详细逐条核验落 `alignment.md`，本节是摘要 + 结论：metric 定义 / split / checkpoint 的训练来源与版本 / 评测协议 / 训练链数值接近但设置或实现不一致 / 差异是否超出随机波动 / 表格行 / 最可能的差距来源（一句话定性）。命中的坑已同步进 json `known_pitfalls`。
+- 改前对照 | prepare 从 eval-attempt-02/command.sh 复跑，使用实际工作目录和解释器，保持 Vision-S r1 的 EMA、Vision-Val v1/val 的 500 个 ID、预处理、类别映射和 Top-1 聚合。核样本覆盖、正确数及 78.4% 的读数。
+- 代码阅读与后续实验 | 核 tools/eval.py 的权重选择、loader 和指标调用。若后续涉及训练，在比较方法之前单独核训练配置和生成基线权重的过程。
+- 变更和资源 | 两次使用 c91b7e4。第二次只新增运行专用 EMA 配置，复跑经用户确认。未合并分支。首轮预算与复跑确认见 spec.md，实际执行记录见各 run。
+- 下一步 | 已有评测基准可供 prepare 验证清理前后行为。完整训练和训练间波动留待有对应目标时单独验证。
+```
 
-## 8. 下游 handoff（Step 6 定稿）
-- 给 CIP / execution：可信 baseline / 走的分流 / ready 命令 / 推理评测与训练复现的数值 + 容差范围 + 随机种子造成的数值波动 / frozen|mutable 边界 / 曲线参照 / checkpoint 的训练来源与版本 / 训练链关键设置。
-- 是否需要 code-idea-prepare 的判断+ 理由。
-- 仍 blocked / 未做的；建议下一步。
-````
+### reproduction.json
 
----
+```json
+{
+  "schema_version": 2,
+  "status": "completed",
+  "inherits": {
+    "setup_report": "docs/code-project-setup/edge-vision-2026-11-24/setup.json",
+    "setup_checks": ["E02", "C03"],
+    "conda_env": null,
+    "repo": { "commit": "c91b7e4", "branch": "code/paper-reproduction" },
+    "spec": "spec.md"
+  },
+  "sources": [
+    { "id": "paper-v2", "kind": "paper", "version": "v2", "location": "表 2 Vision-S 行与 §4.2，见 spec.md" },
+    { "id": "vision-s-r1", "kind": "release", "version": "r1", "location": "权重发布记录，见 alignment.md" }
+  ],
+  "targets": [
+    {
+      "id": "EVAL-01",
+      "target_type": "evaluation",
+      "purpose": "为 prepare 建立固定权重的改前评测对照",
+      "requested_scope": "original_conditions",
+      "reference": { "source_id": "paper-v2", "metric": "Top-1", "value": 78.4, "unit": "%", "statistic": "固定发布权重的评测读数" },
+      "protocol": {
+        "id": "EVAL-01",
+        "version": "v1",
+        "status": "approved",
+        "approval_ref": "spec.md",
+        "conditions": "Vision-S r1 EMA；Vision-Val v1/val 的 500 个样本各计一次；同预处理、类别映射和 Top-1 聚合",
+        "comparison_rule": "可比条件核实后按参考显示精度比较，同时保存原始分子和分母"
+      },
+      "execution_status": "completed",
+      "run_ids": ["eval-attempt-01", "eval-attempt-02"],
+      "data_validity": "valid",
+      "comparability": {
+        "status": "matched",
+        "run_id": "eval-attempt-02",
+        "evidence_refs": ["alignment.md", "runs/eval-attempt-02/outputs/evaluated-ids.txt", "runs/eval-attempt-02/repro-edge-vision-eval-02.log"]
+      },
+      "assessment": "consistent_with_reference",
+      "finding": "EMA 评测 392/500，Top-1 78.4%，与对应参考行在报告精度内一致",
+      "uncertainty": {
+        "design": "一次符合 v1 条件的固定权重评测",
+        "raw_result_refs": ["runs/eval-attempt-02/metrics.json"],
+        "limitations": ["未测固定权重的重复评测波动", "未测训练间波动"]
+      },
+      "use_scope": {
+        "supported_uses": [
+          { "use": "prepare 的改前评测对照", "run_id": "eval-attempt-02", "conditions_ref": "alignment.md" }
+        ],
+        "remaining_checks": ["完整训练", "训练间波动"]
+      }
+    }
+  ],
+  "runs": [
+    {
+      "id": "eval-attempt-01",
+      "target_id": "EVAL-01",
+      "protocol_version": "v1",
+      "status": "completed",
+      "code_commit": "c91b7e4",
+      "working_directory": "/srv/research/edge-vision",
+      "environment": "/srv/envs/edge-vision/bin/python",
+      "meta_path": "runs/eval-attempt-01/meta.json",
+      "command_file": "runs/eval-attempt-01/command.sh",
+      "config_ref": "configs/eval.yaml",
+      "data": "Vision-Val v1/val",
+      "checkpoint": { "release": "Vision-S r1", "loaded_parameters": "raw" },
+      "exit_code": 0,
+      "exit_code_path": "runs/eval-attempt-01/repro-edge-vision-eval-01.EXIT_CODE",
+      "log_path": "runs/eval-attempt-01/repro-edge-vision-eval-01.log",
+      "metrics_path": "runs/eval-attempt-01/metrics.json",
+      "sample_ids_path": "runs/eval-attempt-01/outputs/evaluated-ids.txt",
+      "observations": [{ "metric": "Top-1", "value": 77.6, "unit": "%", "numerator": 388, "denominator": 500 }],
+      "comparison_status": "not_comparable",
+      "deviations": ["实际加载 raw；v1 要求 EMA"]
+    },
+    {
+      "id": "eval-attempt-02",
+      "target_id": "EVAL-01",
+      "protocol_version": "v1",
+      "status": "completed",
+      "code_commit": "c91b7e4",
+      "working_directory": "/srv/research/edge-vision",
+      "environment": "/srv/envs/edge-vision/bin/python",
+      "meta_path": "runs/eval-attempt-02/meta.json",
+      "command_file": "runs/eval-attempt-02/command.sh",
+      "config_ref": "runs/eval-attempt-02/config/eval-ema.yaml",
+      "data": "Vision-Val v1/val",
+      "checkpoint": { "release": "Vision-S r1", "loaded_parameters": "EMA" },
+      "exit_code": 0,
+      "exit_code_path": "runs/eval-attempt-02/repro-edge-vision-eval-02.EXIT_CODE",
+      "log_path": "runs/eval-attempt-02/repro-edge-vision-eval-02.log",
+      "metrics_path": "runs/eval-attempt-02/metrics.json",
+      "sample_ids_path": "runs/eval-attempt-02/outputs/evaluated-ids.txt",
+      "observations": [{ "metric": "Top-1", "value": 78.4, "unit": "%", "numerator": 392, "denominator": 500 }],
+      "comparison_status": "matched",
+      "deviations": []
+    }
+  ],
+  "target": {
+    "target_id": "EVAL-01",
+    "run_id": "eval-attempt-02",
+    "paper": "edge-vision v2",
+    "table_row": "表 2 Vision-S 行",
+    "dataset": "Vision-Val v1/val",
+    "metric": "Top-1（正确数除以参与统计的样本总数，以百分比报告）",
+    "paper_number": 78.4,
+    "eval_reproduced": 78.4
+  },
+  "ready_commands": {
+    "eval": "/srv/envs/edge-vision/bin/python -u tools/eval.py --config /srv/research/edge-vision/docs/code-paper-reproduction/edge-vision-2026-11-24/runs/eval-attempt-02/config/eval-ema.yaml"
+  },
+  "checkpoint": {
+    "vision-s-r1": {
+      "source_id": "vision-s-r1",
+      "path": "/srv/assets/edge-vision/vision-s-r1.pth",
+      "kind": "EMA",
+      "verified_run_id": "eval-attempt-02"
+    }
+  },
+  "artifacts": { "alignment": "alignment.md", "report": "report.md" },
+  "remaining_tasks": [
+    { "item": "完整训练及训练间波动", "condition": "后续目标需要重训比较时单独验证" }
+  ],
+  "next_step": "用 eval-attempt-02 交 code-idea-prepare 核清理前后的评测行为"
+}
+```
 
-## 模板使用说明
-
-- **机读区是契约**：`idea_kind` / `repro_strategy` / `eval_判定` / `training_判定` / `trustworthy_for_delta` / `evidence_strength` / `full_scale_alignment` / `target` / `frozen_components` / `mutable_components` / `noise_floor` / `ready_commands` / `checkpoint` / `reproduced_baseline_checkpoint` / `training_chain` / `determinism` / `dev_card_footprint` / `known_pitfalls` / `blocked` 这几个 key 下游直接读，**字段名稳定、值要真**（验证过才填，查不到标 unknown，不编）。
-- **两项验证结论用于 execution 的入场判断**：**eval 对齐 ≠ baseline 可信**。绝大多数 idea 要重训，execution 看 `training_判定`——它是 `not_trustworthy` 或停在 `blocked_需运行卡` 时，`trustworthy_for_delta=false`，execution 知道不能在这 repo 上重训做创新实验。只有 training-free 才退看 `eval_判定`。
-- **`repro_strategy` 让 execution 知道结论依据及使用限制**：`dev_full` = 训练链端到端在开发卡验过（可直接核对完整训练结果）；`scaled_b_plus_a` = 小 setting 对齐 + 大规模趋势对（可开始迭代，full 规模数字上运行服务器补）。`evidence_strength` 进一步标证据强度，`low` 时 execution 只排方向、重大决策回 full。
-- **`target.frozen` 是指标契约的冻结标记**：冻结后 metric 口径 / 评测协议 / 数据 split 只读，execution 改协议 = 语义改动即停。
-- **metric 定义不能只写名字**：`mAP` 没用，要写 `mAP@[.5:.95] (pycocotools 官方 eval)`（trust-traps ① 落地）。
-- **按验证进度更新 report.md**：spec 确认后建立、随验证逐节回填（目的/做了什么/预期/实际/是否成功），Step 6 只定稿「推理和评测验证、训练复现验证结论」和「handoff」两节——不最后一次性补写。
-- **报告与 JSON 同步**：`reproduction.json` 和 `report.md` 描述同一事实的两面，改动任何结果时同步更新两份文件。run 产物由 json `artifacts` 引用，不复制进正文。
-- **恢复入口**：`reproduction.json`（尤其 `artifacts`）就是 reproduction 中断后的恢复总纲，配合扫 `runs/*/run.log` / `EXIT_CODE` / metric 文件定位断点（见 `dl-assistant/references/long-run-ops.md`）。
+交付前用 JSON 解析器检查机读记录。从每条交付用途回查目标、协议、run、命令与证据路径，并与人读报告里的数字、单位、状态和未决项逐条核对。
