@@ -1,84 +1,85 @@
-# 验证策略（coverage 收集 + smoke + 性能验证 + 失败回退）
+# 按改动和保留用途验证
 
-> 先收集覆盖率确认哪些代码实际执行，再在每批清理或优化后做 smoke 测试。完成后用后续迭代的实际配置核对性能是否严格相等（±0.1%）。验证失败时定位并回滚相关改动。
-> 契约：清理/优化后性能与 reproduction 基准**严格相等（±0.1%）**。
+本文件说明怎样为每项代码改动选择能发现退化的检查，记录改前与改后的可比证据，并在发现差异时决定补查、修正还是撤销。
 
-## 1. coverage 收集（三分类的基础 + 迭代命令执行到的模块与位置）
+在[运行手册 Step 2](workflow.md#step-2-调查源码入口和保留用途)按需收集执行观察，在 Step 4 做逐批检查，在 Step 5 用下游实际配置复核。
 
-按 `reproduction.json` 的内容选 coverage 命令——用于确定代码分类，并记录迭代命令执行到的模块及位置。性能另在第 3 节验证：
+## 1. 固定比较对象和要观察的结果
 
-| 情形 | coverage 命令 |
-|---|---|
-| 有 `reduced_setting`（要重训且 full 超迭代预算） | `reduced_setting.command`——**首选**：短，且覆盖训练 + 评测整条链 |
-| training-free（无训练链） | `ready_commands.eval`——eval 链就是全部核心路径 |
-| 无 reduced、有 `train_scaled`（分流 C 缩规模 b） | `ready_commands.train_scaled` |
-| 无 reduced、full 在迭代预算内 | `ready_commands.train`（覆盖到即可，可提前截断） |
+1. 从已确认的方案找到改动、保留用途、拟改变的行为和检查 ID。为每项写成可检查的预期，例如「同一批样本 ID 各计一次，使用 EMA 参数，正确数仍为 392」。有意修复另写旧行为、新预期及正常输入仍要保持什么。
+2. 确认改前 commit 和相关 diff、环境、有效配置、工作目录、数据、权重和实际输入。复用 setup 或 reproduction 的证据时，先核条件和观测范围。若旧证据只有总指标，按需补样本 ID、输出、更新或加载记录，再改受影响的代码。
+3. 为改前和改后各自保存实际命令及 run 引用。记录预期、观察、状态和未覆盖范围。逐批检查覆盖当前变更的直接影响，最终复核覆盖约定交付的用途。
+
+## 2. 按需要收集执行观察
+
+先用已有命令、日志和输出定位真实入口。需要确认某一 Python 路径是否实际执行时，再选能触发该路径的命令和输入，使用覆盖工具或定向观察。例如，实际环境已有 coverage.py，项目评测入口由单个 Python 进程直接执行时，可按下面的方式采集。命令和路径为虚构示例，运行前按实际环境、入口和获准配置替换。
 
 ```bash
-python -m coverage run --source=<pkg> <上表选出的命令>
-python -m coverage report --show-missing    # 哪些代码没跑到
+repo=/srv/research/edge-vision
+python_bin=/srv/envs/edge-vision/bin/python
+coverage_dir="$repo/docs/code-idea-prepare/edge-vision-2026-11-24/coverage/edge-eval-before"
+cd "$repo" || exit 1
+mkdir -p "$coverage_dir" || exit 1
+"$python_bin" -m coverage --version || exit 1
+export COVERAGE_FILE="$coverage_dir/.coverage"
+"$python_bin" -m coverage run tools/eval.py --config configs/eval.yaml
+run_status=$?
+printf '%s\n' "$run_status" > "$coverage_dir/EXIT_CODE"
+if [ -f "$COVERAGE_FILE" ]; then
+    "$python_bin" -m coverage report --show-missing > "$coverage_dir/report.txt"
+fi
+exit "$run_status"
 ```
 
-三分类：
+用实际日志、退出状态和覆盖报告确认这次运行达到了拟观察的阶段。中断或失败后留下的覆盖范围按实际进度记录。同一尝试保存实际命令、工具版本、原始覆盖数据和报告。覆盖采集可能改变运行开销，性能判断使用对应的性能测量。
 
-- **核心路径**（coverage 覆盖）→ CIP 可清理 + 优化（动完重验性能）
-- **未覆盖 + 静态无引用**（grep/import 图/动态 import 排查都无）→ 死代码，删
-- **未覆盖 + 有引用**（不确定）→ 用途未确认，原样保留并记入 uncovered
-- **保护后续命令所需的文件和开关**：`ready_commands` / `reduced_setting` 命令链触及的文件与缩放开关（模型大小档位 / 数据子集），即使未覆盖也按核心路径对待，不删不改（见 SKILL.md「保护迭代所用的文件、配置和开关」）
+分布式训练、多进程 loader 或编译扩展先核本次工具实际支持和采到的进程范围。需要查其他进程或算子时，可从各进程日志、框架记录、实际算子选择或能触发相关路径的定向检查补证。模块导入记录只覆盖导入行为。保留或移除决定同时依据实际用途、配置、动态注册、调用方和历史兼容性。
 
-把模块或文件级覆盖率报告存到 `coverage/`，并在 `hot-path.md` 记录迭代命令会执行哪些模块，以及这些模块在训练流程中的位置。后续实现前查这份文件。若改动涉及迭代命令未覆盖的模块，需要补充相应验证。
+在 `coverage/operation-paths.md` 记录操作或 run ID、实际命令、配置和输入、工具和进程范围、观察到的入口与模块、证据位置、仍未观察到的条件。未命中说明本次没观察到该路径。性能热点需另有计时证据。
 
-> **coverage 失真警示（非纯 Python 项目）**：C++/CUDA 扩展里的 kernel、多进程 dataloader 的子进程代码，Python coverage 统计不到——跑出来"未覆盖"可能是假阴性。此时改用 **import 级覆盖**（哪些模块真被 import 到）+ **人工标注不可覆盖区**（扩展算子、子进程路径逐个确认用途），别把假阴性当死代码删。
+## 3. 为每批改动选能发现退化的检查
 
-## 2. smoke 分级（每批清理/优化后检查受影响的命令和代码能否运行）
+命令优先从相同用途的 setup 检查、reproduction run 或已审方案取得。先用最小输入触发受影响的行为，保留实际证据。短跑覆盖不足时，在最终复核安排所需的正式评测或训练阶段。
 
-首选 `setup.json` 的 `ready_commands.train_smoke`（CPS 验过的分钟级试运行命令）；命令不存在或粒度不够时，按下表选择测试范围：
+| 本批改了什么 | 执行什么检查 | 看什么、存什么 |
+| --- | --- | --- |
+| 删除脚本、配置或 CLI 入口 | 复查已批准的退役范围及实际引用，运行一条可能受影响的保留入口 | 核调用方、配置与文档处理情况。保存检索及跑到实际功能的日志。纯文档可用引用与 diff 审阅 |
+| 精简依赖 | 在独立环境按项目实际安装或构建入口执行，再跑涉及的应用、插件、命令或扩展 | 保存安装输出、实际环境和受影响操作的结果。核原先的依赖是否从其他入口间接进入 |
+| 重构配置、函数或模型包装 | 使用正式配置和一份带相关覆盖参数的输入。涉及序列化时加载要保留的旧 checkpoint，再核必要的保存和读回 | 保存生效配置、关键接口与输出，以及参数或状态键、加载日志和读回结果 |
+| 改 loader、预处理或评测聚合 | 用能覆盖受影响分支的固定样本跑真实入口，涉及全量覆盖或最后一批时安排对应范围 | 保存 ID、顺序或出现次数、标签、实际输入、筛选与分组，以及进入指标的分子和分母 |
+| 改训练或恢复流程 | 从同一初始化及输入出发，至少运行到受影响的更新、调度节点或保存恢复阶段 | 保存实际 loss、相关参数和梯度、更新计数、学习率、保存与恢复状态。需要核最终指标时安排已审配置的后续阶段 |
+| 有意修复错误或数值行为 | 用触发原问题的输入核新行为，再用正常输入核保留行为 | 保存原问题、实际错误消息或退出状态、计算结果及边界覆盖。注明受影响的旧复现结论 |
+| 改实验日志或记录 | 在实际入口和适用的任务角色核初始化、指标写入与结束行为 | 项目已用 W&B 时，记录 run 身份、指标与 step、同步及分布式主进程等实际观察 |
 
-| 改动类型 | smoke 粒度 | 耗时 |
-|---|---|---|
-| 删独立脚本 | 主入口 `--help`（无 ImportError） | 10s |
-| 删函数/类 | 跑到第一个 batch（forward + backward） | 1-3min |
-| 删依赖 | 重装 + import 检查 + 一个 batch | 5-10min |
-| 删模型组件 | 加载模型 + forward 一个 batch | 2-5min |
-| 质量优化（简化不必要的抽象层/健壮性） | 同"删函数/类"粒度 | 1-3min |
+## 4. 用实际配置复核并记录结论
 
-**通过标准**：无 ImportError / AttributeError / NameError，能完成 forward + backward。**smoke 不验性能**（留给完整验证）。
-**失败**：回滚该批 + spec 标不可删/不可改。
+- **离散条件逐项核对。** 依据方案检查样本身份与出现次数、标签、配置键及值、权重选择、关键接口和 checkpoint 键。顺序属于约定行为时另核原始顺序。
+- **数值按实际依据比较。** 说明比较量、单位、计算精度、是否预期精确保持及依据。可用算法误差要求、同条件重复或实际测量解释浮点差异。需要重复时先明确要区分评测随机性、训练波动、抽样还是运行条件，并记录逐次结果。证据不足时标明比较的限制。
+- **按实际用途交付。** 用下游实际需要的配置复核。只检查了 reduced 或短训练时，明确所测配置、数据和训练阶段。正式规模入口只做了静态保护时，也明确哪些行为尚未实跑。数值、输入及行为检查可引用 setup 的[组件行为与数值检查](../../code-project-setup/references/numeric-sanity.md)。
 
-## 3. 用后续迭代的实际配置验证性能
+分别记录运行状态和判断。成功退出的 run 也可能发现差异。有意改变行为的检查单独核对批准的预期。
 
-性能要求严格相等（±0.1%）。使用后续实际迭代的配置进行验证，配置和复现基准按下表选取。
+| 记录项 | 可用判断 |
+| --- | --- |
+| 运行状态 | 记录未开始、运行中、完成、失败或受阻，附实际退出码、日志和产物 |
+| 保留行为的比较 | `no_difference_observed`、`difference_observed`、`insufficient_evidence`、`not_assessed` 或 `not_applicable`，附范围、依据和未决项 |
+| 有意改变的行为 | `matches_expected`、`conflicts_with_expectation`、`investigate`、`not_checked` 或 `not_applicable`，附批准的预期和实际观察。相关保留用途另给比较结果 |
 
-| 情形 | 验证配置 | 基准 | 噪声判断 |
-|---|---|---|---|
-| 有 `reduced_setting` | 同 reduced 配置、同 seed | `reduced_setting.baseline_result` | `reduced_setting.noise_floor` |
-| training-free | eval 链（official eval） | 冻结 `target` 块的 `eval_reproduced`（±`tolerance_band`） | eval 确定性即可（对照 `determinism`） |
-| 无 reduced、full 在迭代预算内 | full 训练 | 冻结 `target` 块的 `training_reproduced`（±`tolerance_band`） | `noise_floor`（跨 seed std） |
+## 5. 从最早出现的差异查起
 
-- 同 seed/配置重跑（对照 `reproduction.json` 的 `determinism`：seeds / cudnn / worker seed）
-- 清理/优化后数字 vs 基准，全部在容差范围内 → 通过
-- 验证级别显式记进 `cleanup.json` 的 `performance.verification_level`（`reduced` / `eval` / `full`）；迭代命令 post-cleanup 可用且数字对齐 → `handoff.iteration_verified: true`
-- full / reduced 多 seed 是小时级长任务：tmux 托管，机制见 `dl-assistant/references/long-run-ops.md`（session 前缀 `cip-<repo>-`）
+1. 核命令、有效配置、环境、数据和权重身份，以及证据采集本身是否一致。若原版本也出现异常，回查改前证据和实际运行条件。
+2. 按执行路径比较，找首次出现差异的位置。例如 loader 的输出一致而聚合收到的 ID 不同，就先核两者之间的传递。对可分离批次，可在隔离或可恢复的版本上逐批比较。关联紧密的改动先核具体依赖，再选择定位办法。
+3. 在已审范围内修正或只撤销可明确归属本轮的改动，重跑受影响的检查。保留用户已有改动、原始产物和失败记录。若涉及范围或预算变化，或改动无法安全分离，记录实际状态并回到方案确认。无可区分原因的下一项检查时，交付已有的限定证据和未决项。
 
-## 4. 失败回退（循环，直到通过或退回原基线）
+## 示例 · 总数相同，实际样本不同
 
-性能不符时，**循环**处理（不是一次走完）：
+沿用[运行手册里的 edge-vision 示例](workflow.md#贯穿示例--edge-vision-的评测入口整理)。改前、改后均为 392/500，日志都显示加载 EMA。要核实际参与指标的 500 个 ID 是否一致，将以下变量分别设为改前基准和改后的 `outputs/evaluated-ids.txt` 路径。文件约定每行一个 ID。
 
-1. **检查差异是否来自随机波动**：对照 `determinism`（seed/cudnn）多 seed 跑，用 `noise_floor`（或 `reduced_setting.noise_floor`）判是不是噪声（单个 seed 的差异落在容差范围内时，可能只是随机波动）
-2. **二分定位**。确认差异超出随机波动后，按提交或批次定位引入偏差的改动
-3. **回滚引入偏差的改动**：cleanup-spec / quality-spec 标"不可删/不可改"，重验
-4. **重验仍失败时继续定位**。按提交或批次二分定位下一项改动，回滚后再次验证，可重复多轮
-5. **底线（退出条件）**：定位不到根因 / 回滚到 `baseline-reproduced` 仍失败 → **整轮退回 `baseline-reproduced`**，CIP 本轮失败，不打 `baseline-prepared`，execution 从 `baseline-reproduced` 切
+```bash
+test -r "$before_ids" && test -r "$after_ids" || exit 2
+diff -u <(LC_ALL=C sort "$before_ids") <(LC_ALL=C sort "$after_ids")
+```
 
-> 无法定位或修复清理引入的偏差时，回退整轮改动，保留复现已验证的起点。
+排序保留同一个 ID 的每次出现。退出码 0 表示两份排序后的清单相同，退出码 1 表示存在差异；更大的退出码要检查命令或输入错误。执行前确认两份文件可读且确实来自指定 run。若需核原始顺序，再直接比较未排序清单。
 
-### 常见失败根因
-
-| 症状 | 可能根因 | 处理 |
-|---|---|---|
-| 清理后 metric 偏 | 误删动态 import/registry 引用的代码 | 二分定位 + 回滚 + 标不可删 |
-| 优化后 metric 偏 | 鲁棒性优化（epsilon/clamp）改了数值 | 回滚该优化 + 标语义风险 |
-| 容差范围内的随机波动 | 单 seed 噪声 | 多 seed + noise_floor 确认，非真差不回滚 |
-| 精简依赖后崩 | 传递依赖（被删包间接提供的） | 恢复依赖 |
-| reduced 命令跑挂 | 误动迭代设施（数据子集开关 / reduced config） | 恢复 + 列入保护清单 |
-| 找不到根因 | 复杂交互 / 环境漂移 | 整轮退回 baseline-reproduced |
+第一次改后运行在清单中多了一个重复 ID，少了另一个 ID。即使总数和正确数相同，也在该次检查写 `difference_observed`，在报告附上差异。定位到聚合前的 ID 传递后，修正并另建 run。复跑确认 500 个预期 ID 各计一次、实际加载 EMA、Top-1 正确数为 392，再写所查范围的比较结论。交付该评测配置和可重跑证据，训练范围仍留待对应检查。
