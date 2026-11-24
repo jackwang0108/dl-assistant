@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "run_id": "<本次运行标识>",
+  "cli_version": "<hf version 的实际输出>",
+  "requests": [
+    {
+      "id": "001",
+      "kind": "list",
+      "command": ["hf", "papers", "ls", "--date", "2025-01-23", "--limit", "50", "--format", "json"],
+      "user_scope": "指定日的 HF 论文",
+      "window_type": "daily",
+      "requested_window": "2025-01-23",
+      "user_timezone": null,
+      "window_basis": "HF 日报日期，平台边界尚未核实",
+      "query": null,
+      "sort_arg": null,
+      "limit": 50,
+      "observed_at_utc": null,
+      "exit_code": null,
+      "status": "not_run",
+      "returned_count": null,
+      "raw_path": null,
+      "error_ref": null,
+      "coverage_notes": []
+    }
+  ]
+}

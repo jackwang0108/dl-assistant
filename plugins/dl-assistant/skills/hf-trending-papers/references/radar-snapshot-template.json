@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "run_id": "<与请求记录匹配的运行标识>",
+  "request_log": "request-log.json",
+  "sample_request_id": "001",
+  "window": {
+    "type": "daily",
+    "value": "2025-01-23",
+    "basis": "HF 日报日期，平台边界尚未核实",
+    "window_closed": null
+  },
+  "query": {"kind": "list", "text": null, "sort_arg": null, "limit": 50, "submitter": null},
+  "coverage": {
+    "returned_count": null,
+    "unique_paper_count": null,
+    "sample_status": "not_run",
+    "details_requested_ids": [],
+    "details_checked_ids": [],
+    "details_failed_ids": [],
+    "limitations": []
+  },
+  "papers": [],
+  "topics": []
+}
