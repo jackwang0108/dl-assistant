@@ -1,35 +1,33 @@
-# LaTeX 落地工艺：论文根（= papers/ 下 Overleaf git clone）→ 本地编译 → 关键节点同步
+# LaTeX 编译、渲染与同步
 
-writing-paper 的落地工艺。**论文根 = `<方向根>/papers/<slug>/` 下的一个 Overleaf git clone**：用户先在 Overleaf 从会议 author toolkit 建项目（含模板 主 tex（名字随 kit）/sty/cls），再把**项目官方 git 链接**（Overleaf 项目菜单 Menu → Git 里拿）给 agent，agent `git clone` 到方向根的 `papers/` 下（slug 默认 = 项目名）。论文根是 git 仓库，当 git 仓库管：fetch/整合/commit/push。skill 在论文根里工作——`.md` 源在 `_draft/content/`、转译的 `.tex` 按文件组织纪律落位、图落 `figures/`、bib 落 `refs.bib`。
+在实际论文根工作。现有本地工程沿用主文件和构建命令。需要 Overleaf 时按已确认的官方项目链接接入。在配置中记录各节实际编辑来源。用 Markdown 时按项目约定转写至 TeX。
 
-**落地分两层，频率差一个量级**：
-
-- **本地验证（默认，高频）**：每次内容变更后做——本地编译（`latexmk`）→ 本地渲染（`pdftoppm`）审阅 → 本地 commit。**不 push、不调 overleaf-mcp**。写作主线全程只跟本地工具打交道，上下文不被远端编译 log/同步噪音淹没。
-- **Overleaf 同步（关键节点，低频）**：只在三种时机做——① **里程碑**（full-draft、finalize 前——Overleaf 是协作真相源，定稿交接必须远端编译绿）；② **用户显式要求**（"推上去看看"）；③ **协作需要**（远端有新 commits 必须整合时，整合完顺带 push）。动作：fetch+整合 → push → `overleaf_compile` 确认**远端也绿**（协作者可能动了别的文件；Overleaf 的 TeX Live 版本和本地可能差一两年，本地绿 ≠ 远端绿）→ 远端渲染回归。
+- **本地验证**。用实际工具链编译和渲染，记录页数、失败位置与未覆盖项。
+- **Overleaf 同步**。需要而且已经获授权时，比对已有远端修改、整合可确认的改动，再按项目约定推送并核对应远端编译及渲染。
 
 落地时机绑定各目标操作：
 
 - **write-section 的 ④⑧**：④ 每写完一节初稿、⑧ 本节定稿后——各做一次**本地验证**（转译该节 `.tex` → 本地编译 → 渲该节 PDF 给用户审，WYSIWYG）。
 - **make-visual / ingest-results 的占位替换**：示意图复刻完、实验数据回填成正式表格后，替换占位框/占位表，做**本地验证**。
-- **里程碑 / finalize**：走 **Overleaf 同步**全文复核编译 + 视觉回归。
+- **里程碑或定稿**。按实际交付方式核全文编译与视觉检查。需要 Overleaf 同步时按授权执行。
 
-> `_draft/` 是 skill 作者工作区（.md 源/蓝图/实验计划/图脚本/config/log/`paper-state.json`/本地编译产物），**`.gitignore` 不推 Overleaf**——根目录只留 LaTeX 该有的（模板 + `sections/` + `tables/` + figures 输出 + refs.bib）。Overleaf 云能力（编译/渲染/评论/历史）只在同步节点调 `overleaf-mcp`，本文只讲**转译与编译工艺**。
+> 按项目约定保存、备份及同步 `_draft/` 的工作记录。构建缓存与内部记录明确各自的保存范围。
 
 ## 核心纪律
 
 - **调的是呈现，不是内容**：转译只改格式（md → latex、svg → pdf、挂引用风格），不改语义。内容问题（该有的图没有、该拆的段没拆、强调缺失）**标出来回 write-section**，不在 LaTeX 落地里改内容。
 - **正文结构跟论文草稿走，格式规范跟模板走**：模板不提供"空槽位"——按 `content/` 的真实 section 组织正文，用模板的命令 / 环境 / 引用风格排版。
-- **本地编译常绿**：**本地编译绿了才 commit**——编译红了**先修红再继续**，不带红 commit，更不带红 push（远端是协作方也在看的共享状态）。
+- **核实交付版本的编译**。编译受阻时写明范围，可按已有授权保存标明未验证的工作稿。交付及同步按确认的版本办理。
 - **上下文卫生**：本地编译失败只把 **log 尾部错误摘要**（`grep "^!"` + 前后几行）带进上下文，不整篇 log 倒进来——log 全文在 `_draft/build/` 里，需要再查。
 - **pending 占位不跳过**：示意图等还没齐的产物留占位框 + TODO，不阻塞编译，汇报里标出。
 
-## Step A：git clone Overleaf 项目到 `papers/` 下（op-1-init-setup 起手做）
+## Step A · 按需接入 Overleaf
 
 用户**已**照 author kit 指导在 Overleaf 建好项目（含模板），并从**项目菜单拿到官方 git 链接**给 agent。
 
 1. **clone 用官方 git 链接**：Overleaf 项目菜单（Menu → Sync → Git，或项目设置页）里有形如 `https://git.overleaf.com/<project_id>` 的官方 git 链接，用户复制给 agent；方向根没有 `papers/` 先建，agent `git clone <链接> papers/<slug>`（slug 默认 = Overleaf 项目名）。**认证按 `overleaf-mcp` SKILL的认证与 Git 说明做一次性的 git 凭证配置**（credential helper 配一次，之后 clone/push 都走缓存凭证），不再以 session cookie 排 git 的障。clone 出来的目录即论文根（模板 主 tex（名字随 kit）/sty/cls 就在根下）。
 2. **本地编译工具链探测**（op-1 做）：`latexmk`/`pdflatex` 在不在 → 在，用 kit 原地**试编一次 baseline**（模板 demo 能编绿 = 工具链可用）→ `config.json` 记 `compile_mode: local`。本地没有 TeX 工具链 → 记 `compile_mode: overleaf`，**诚实降级**：本地验证层改走 `overleaf-mcp` 编译（老路，调用频率降不下来，告诉用户装 MacTeX/BasicTeX 即可解锁本地模式）。
-3. 论文根建 `_draft/`（作者工作区）+ 写 `.gitignore` 排除 `_draft/`（不推 Overleaf）。
+3. 核已有 `_draft/`、忽略配置和共享范围，按项目授权保管内部记录与构建缓存。
 
 > skill **不建** Overleaf 项目——用户从 author toolkit 建（保证模板正宗）。skill 只 `git clone` + 在论文根里工作（当 git 仓库管）。
 
@@ -37,10 +35,10 @@ writing-paper 的落地工艺。**论文根 = `<方向根>/papers/<slug>/` 下�
 
 Overleaf 项目是**共享远端**：协作方在网页端写作时，Overleaf 会**频繁自动 commit**——远端几乎一直有新 commit。论文根这个本地 clone 不同步就会落后，下次 push 必然被拒。纪律：
 
-- **每次会话开始先同步**：`git fetch` + 整合（rebase 或 merge，跟远端对齐后再动手）。不 fetch 就写等于在过期基线上改。会话开始同步只 pull 不 push——保持本地新鲜，控制的是**分歧窗口**。
-- **每次 Overleaf 同步前再同步**：同步节点的固定动作是 fetch → 整合 → push，不是攒完直接 push。
-- **push 被拒就循环**：`push` 因远端新 commit 被拒 → `fetch` → 整合（rebase/merge）→ 再 push，**循环重试直到成功**。这是协作常态，不是错误。
-- **提交切小**：本地一次验证一个提交粒度（一节初稿、一次占位替换），写完即本地 commit——本地历史细粒度，回滚/查账都方便；push 集中在同步节点（一批本地 commit 一起上）。
+- **续做时核共享环境**。已接入共享远端的项目，通过获授权的 Git 查读核远端改动。先看工作树并保留用户改动，按项目约定整合。
+- **同步时先核远端更新**。整合后复核实际稿件和授权范围，再推送。
+- **push 被拒时先查原因**。若是远端新增提交，重新比较变动并按项目约定整合后再试。遇同处冲突、权限问题或持续拒绝时报告具体阻塞。
+- **提交切小**：本地一次验证一个提交粒度（一节初稿、一次占位替换），已获授权时保存本地 commit——本地历史细粒度，回滚/查账都方便；push 集中在同步节点（一批本地 commit 一起上）。
 - **同一处冲突即停交用户**：只自动合并**不重叠**的改动（不同节、不同段落）；同一处（同段落/同行）冲突**立即停下，把冲突双方摆给用户裁决**，agent 不猜谁的版本对。
 - **协作方高频写时错峰**：发现远端 commit 很密（协作方正在线写），提醒用户跟协作方错峰，或由用户协调分工（各写各的节），别硬顶着冲突窗口写。
 
@@ -115,7 +113,7 @@ refs.bib                      →  挂模板引用风格              →  \bibl
   → grep 本节新增内容的 label/\ref（纪律见上）
   → 本地渲染审阅（pdftoppm 出 PNG，逐页看）
   → 报当前页数
-  → git add（排除 _draft/）→ 本地 commit（切小，一次验证一个粒度）
+  → 按已确认的保存范围和授权记录版本
 ```
 
 **本地编译**（`compile_mode: local`）：
@@ -138,7 +136,7 @@ latexmk -pdf -interaction=nonstopmode -outdir=_draft/build <主tex>.tex   # 自�
 ```
 git fetch → 整合（rebase/merge，冲突同一处即停交用户）
   → 本地编译确认绿（本地常绿：红了先修红）
-  → push（被拒 → fetch/整合/push 循环重试）
+  → 按授权 push（被拒时先查原因）
   → overleaf_compile → 读 log（远端必须也绿——本地绿 ≠ 远端绿）
   → overleaf_download_output 下载指定 compile_id 的 output.pdf → overleaf_render 渲染同一轮
 ```

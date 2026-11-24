@@ -8,7 +8,7 @@
 
 - `references/craft/self-check.md`（一致性 lens 清单——纯内容一致性，给子 agent）。
 - `references/craft/section-self-audit.md`（润色 lens 协议 + 「为什么要子 agent」）。
-- `_draft/blueprint.md` + `paper-state.json`（蓝图↔成稿一致性）+ `_draft/experiments/plan-vN.json`（expected_signal，诚实性对照）+ `_draft/venue-contract.md`（合规）+ `_draft/visuals/manifest.json`（图表台账）。
+- `_draft/blueprint.md` + `paper-state.json`（蓝图↔成稿一致性）+ `_draft/experiments/plan-vN.json`（interpretation 与实际回包，核表述依据）+ `_draft/venue-contract.md`（合规）+ `_draft/visuals/manifest.json`（图表台账）。
 
 ## 检查项的 owner 划分（每样恰好一个 owner）
 
@@ -24,7 +24,7 @@
     | lens | 查什么 | 给什么 |
     |---|---|---|
     | **一致性/完整性** | 跑 `self-check.md` 清单：claim 回扣（uncited_assertions / claim_drifts）/ 三位一体 / 数值 canonical / 引用完整 / 图表内容完整（caption 三段式·正文引用句·风格 palette 统一）/ 附录完整 / 符号一致 | 全文 `content/*.md` + self-check 清单 + blueprint + 已写节 digest + notation.md |
-    | **诚实性** | over-claim（claim ≤ 实验所示）/ **under-claim（claim ≥ 已证的——优势有没有被满强度主张：预防性示弱措辞、局部弱结果上升为整体否定、结论以局限收尾、摘要引言里优势没有明说）**/ 弱·负结果诚实报（对照 `expected_signal`，否定信号有没有老实写）/ limitations 实在不敷衍 | 全文 `content/*.md` + blueprint + `plan-vN.json`（expected_signal） |
+    | **诚实性** | over-claim（claim ≤ 实验所示）/ **under-claim（claim ≥ 已证的——优势有没有被满强度主张：预防性示弱措辞、局部弱结果上升为整体否定、结论以局限收尾、摘要引言里优势没有明说）**/ 弱·负结果诚实报（对照计划 `interpretation` 和实际回包，否定信号有没有老实写）/ limitations 实在不敷衍 | 全文 `content/*.md` + blueprint + `plan-vN.json`（interpretation）及 paper-results.json |
     | **润色** | 句段、字词和常见生成式写作问题三类写作要求（句段/字词/AI）+ 英文打磨；标出可能改变原意的修改（meaning-risk） | 协议见 `section-self-audit.md` 二 |
 
     诚实性 lens 报法：`## over-claim 命中` / `## under-claim 命中` / `## 弱负结果隐瞒` / `## limitations 不实` / `## 结论`——每条位置 + 问题 + 改法。同等重视夸大结论和低估已有证据的问题。

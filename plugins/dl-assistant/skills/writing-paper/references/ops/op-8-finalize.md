@@ -24,7 +24,7 @@
 
 ### 下半：定稿（交付物到位后）
 
-4. **替换 + 关键节点 Overleaf 同步**：PPT 终稿替换 `figures/<id>.pdf` + 正式 bib 落 `refs.bib` → 确认本地编译通过 → fetch+整合 → push → `overleaf_compile` 确认远程编译也通过 → 远端渲染回归（这是同步节点，finalize 前必做）。
+4. **替换已确认的交付材料并编译**。将核准的示意图和正式参考文献写入相应路径，按实际工具链编译和渲染。项目需要 Overleaf 且同步已获授权时，核远端改动后同步并验证对应版本。
 5. **定稿时压缩篇幅（在最终版面上做，一次到位）**——终稿图已插入、版面是最终的，此刻压缩才不会白压：
 
     1. **算缺口**：当前页数 vs venue 页限（venue-contract）——每次本地验证都在报页数，这里不该有惊喜。没超 → 跳到 6。
@@ -48,7 +48,7 @@
 
 ## 产出
 
-最终 `content/*.md` + `sections/*.tex`（Overleaf 编译出 PDF）、`figures/`（PPT 终稿 + 用实际数据绘制的图）、正式 `refs.bib`、竣工版 blueprint、压缩定案（state）、里程碑 tag、汇报。
+最终稿件源文件及按实际工具链验证的 PDF、`figures/`（PPT 终稿 + 用实际数据绘制的图）、正式 `refs.bib`、竣工版 blueprint、压缩定案（state）、里程碑 tag、汇报。
 
 ## 状态更新
 

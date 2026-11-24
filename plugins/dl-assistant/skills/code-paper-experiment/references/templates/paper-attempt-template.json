@@ -1,0 +1,26 @@
+{
+  "batch_id": "<批次 ID>",
+  "exp_id": "<实验 ID>",
+  "attempt_id": "attempt-01",
+  "replicate_id": "pair-1",
+  "seed": null,
+  "run_spec_revision": 1,
+  "run_spec_ref": {
+    "path": "run-spec.json",
+    "sha256": "<执行时规格 SHA-256>"
+  },
+  "status": "in_progress",
+  "git_commit": "<实际 commit>",
+  "diff_ref": null,
+  "command": "<实际命令>",
+  "working_directory": "<实际目录>",
+  "config_ref": "<生效配置>",
+  "data_refs": [],
+  "model_refs": [],
+  "environment": "<实际环境>",
+  "device": "<实际设备>",
+  "started_at": "<实际开始时间>",
+  "ended_at": null,
+  "log_ref": null,
+  "exit_status_ref": null
+}

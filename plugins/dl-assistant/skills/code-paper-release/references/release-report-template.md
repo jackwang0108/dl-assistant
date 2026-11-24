@@ -24,7 +24,7 @@ release 的验证报告，放 release repo 根，记录全过程（节点认定 
 
 <用一行给出出处 + 口径说明：基准来自哪个 CPE 数据包、哪些 exp_id 进了主表、由谁确认容差。>
 
-- 基准：`docs/perf-baseline.json`（status=fullscale_final，来自 CPE `paper-data-pkg-v1`）
+- 基准：`docs/perf-baseline.json`（status=fullscale_final，来自 CPE `handoffs/rev-1`）
 - 主表口径：exp-main（3 seed mean±std）；容差：top-1 ±0.3（由用户确认 2026-07-28）
 
 ## 三关回归结果（标准 = 复现论文主表性能）
@@ -56,7 +56,7 @@ release 的验证报告，放 release repo 根，记录全过程（节点认定 
 ## 权重发布
 
 - 权重：<HF Hub / 云盘链接>（sha256: <校验值>）
-- 来源：CPE `experiments/exp-main/runs/seed-1/`（pkg-meta.json 中记录的路径核对一致）
+- 来源：CPE `experiments/exp-main/runs/seed-1/`（paper-results.json 中记录的路径核对一致）
 
 ## 防泄露自查
 

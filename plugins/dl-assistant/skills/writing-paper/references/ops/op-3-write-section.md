@@ -19,20 +19,22 @@
 - `references/craft/visual-design.md`（图表意图登记 + 分类路由 + palette）。
 - `_draft/venue-contract.md`（该节相关合规项：匿名写法、强制章节要求等）。
 
-## 每节八子步循环
+## 章节写作和复核
+
+先核当前节的编辑来源和批准范围。现有 TeX 为编辑来源时直接改对应 TeX。项目明确维护 Markdown 源时，按已确认的映射转写。下图用于完整写作或重写，局部修改可以直接采用相关子步。已批准的方案、图表意图和预览要求沿用，实质变化再确认。
 
 ```mermaid
 flowchart TD
-    A1["① 读该节指南 + 提供写作需要的材料（蓝图/已写节摘要/符号表/句段、字词和常见生成式写作问题三类写作要求）→ 提写法方案"] --> A1G{"确认点：方案满意?"}
+    A1["① 读该节指南 + 提供写作需要的材料（蓝图/已写节摘要/符号表/句段、字词和常见生成式写作问题三类写作要求）→ 提写法方案"] --> A1G{"已有授权或方案已确认？"}
     A1G -->|不满意·改| A1
-    A1G -->|满意| A2["② 写 .md 初稿 + bib 当场构造"]
+    A1G -->|满意| A2["② 按实际编辑来源起草并核引用"]
     A2 --> A3["③ 写后自审（子 agent：论证 + 句段、字词和常见生成式写作问题三类写作要求 + 跨节一致性），修复同步 .md"]
     A3 --> LAND1["④ 初稿本地验证：转译 .tex + 本地编译 + 渲 PDF　第 1 次验证"]
-    LAND1 --> A5{"确认点：用户审 PDF 内容"}
-    A5 -->|不满意·改| A6["⑤ 会话里交互改 + 同步 .md（不重新验证）"]
+    LAND1 --> A5{"复核 PDF，实质调整交用户审"}
+    A5 -->|不满意·改| A6["⑤ 会话里交互修改并同步编辑来源（不重新验证）"]
     A6 --> A5
     A5 -->|满意| SPEC["⑥ 图表意图登记：读 visual-design<br/>→ 要不要、几张、每张回答什么问题 → 写 visuals/<id>.md（意图字段）+ manifest（intent）"]
-    SPEC --> SPECG{"确认点：用户审意图清单"}
+    SPEC --> SPECG{"需确认新增图表意图？"}
     SPECG -->|不满意·改| SPEC
     SPECG -->|不需要图| LAND2["⑧ final 本地验证（方框占位）"]
     SPECG -->|确定| A7["⑦ 改正文：加轻占位（figure 方框+caption+label / table 注释占位）"]
@@ -41,13 +43,13 @@ flowchart TD
 ```
 
 1. **① 方案（确认点）**：读该节论证指南 + 从蓝图拿这节的叙事任务与页数参考（量级，不硬卡） + **提供写作需要的材料**（已写节 digest、符号表、目标会议要求相关项、句段、字词和避免常见生成式写作问题的原则）→ 提 2-3 个写法方案（**按叙事任务写全**——写作期不预砍；方案里觉得可以删减或移入附录 的内容照写，只登记进 state 的 `compress_candidates`）。用户选/讨论。
-2. **② 写初稿 + bib**：写 `_draft/content/<节>.md`，只文字，不渲染真图。每条引用 `paper-search` 取元数据当场构造 bib 落根 `refs.bib`，标 role（core/supporting）。**Method 节**：先按 `method-writing.md` 的符号体系构建节建/更新符号表，再写正文；训练细节（超参/优化器/schedule）不写进 Method，归实验节 setup。
-3. **③ 写后自审（子 agent，general-purpose 禁 Explore）**：派未参与写作的子 agent，跑该节论证 checklist + 句段、字词和常见生成式写作问题三类写作要求 + **跨节一致性**（术语/符号/gap/named-abstraction/contribution 跟蓝图 + 已写节 digest）+ **引用覆盖** + 公式检查（Method：下标/维度/与符号表一致）。不过回 ②，修复同步 .md。
-4. **④ 初稿本地验证（第 1 次）**：按 `latex-landing.md` Step E——转译该节 `.tex` → 本地 `latexmk` 编译（**编译失败时先修复**，只带错误摘要进上下文）→ grep label/\ref → `pdftoppm` 渲该节 PDF → 报当前页数 → 本地 commit（切小）。**不 push、不调 overleaf-mcp**。
-5. **⑤ 用户审 PDF 内容（确认点）→ 不满意改**：会话里交互改 + 同步 .md（不重新验证，定稿后 ⑧ 统一验）→ 回审；满意 → ⑥。
+2. **② 写初稿 + bib**：按记录的编辑来源写 TeX 或 Markdown 草稿。已有用户改动时先对照实际文件。每条引用 `paper-search` 取元数据当场构造 bib 落根 `refs.bib`，标 role（core/supporting）。**Method 节**：先按 `method-writing.md` 的符号体系构建节建/更新符号表，再写正文；训练细节（超参/优化器/schedule）不写进 Method，归实验节 setup。
+3. **③ 写后自审（子 agent，general-purpose 禁 Explore）**：派未参与写作的子 agent，跑该节论证 checklist + 句段、字词和常见生成式写作问题三类写作要求 + **跨节一致性**（术语/符号/gap/named-abstraction/contribution 跟蓝图 + 已写节 digest）+ **引用覆盖** + 公式检查（Method：下标/维度/与符号表一致）。发现问题回 ②，修正实际编辑来源并同步受影响内容。
+4. **④ 初稿本地验证（第 1 次）**：按 `latex-landing.md` Step E——转译该节 `.tex` → 本地 `latexmk` 编译（**编译失败时先修复**，只带错误摘要进上下文）→ grep label/\ref → `pdftoppm` 渲该节 PDF → 报当前页数。版本记录与同步按项目授权。
+5. **⑤ 用户审 PDF 内容（确认点）→ 不满意改**：会话里交互修改并同步编辑来源（不重新验证，定稿后 ⑧ 统一验）→ 回审；满意 → ⑥。
 6. **⑥ 图表意图登记（确认点）**：文字定稿后，读 `visual-design.md`，逐 claim 判断这节要不要图/表、几张、每张**回答什么问题**（支撑哪个 claim、key takeaway 几条）、放哪 → 写 `_draft/visuals/<id>.md`（只填意图字段）+ manifest 条目（status=intent）→ 用户审**意图清单**（要不要这几张、各自回答什么——文字层面可判断）。**不做详细设计**——布局/结构/元素留到产出时刻根据实际方法、数据和示例做（make-visual / ingest-results，见 `visual-design.md`）。palette 未锁时先锁：渲染色卡图（含语义色小套）给用户看图确认，确认才锁。该节不需要任何图/表 → 跳过 ⑥⑦，直接 ⑧。
 7. **⑦ 改正文加轻占位**：figure——通用方框 + caption 初稿（三段式）+ `\label{fig:<id>}`；table——注释占位（`% TODO: tab-<id> 结构待数据到达后定`）+ caption 初稿 + `\label{tab:<id>}`，**不锁 booktabs 结构**（结构根据实际实验数据定；例外：数据本就在手，可直接定结构落 `tables/<id>.tex` 骨架，正文 `\input`）。
-8. **⑧ final 本地验证（第 2 次）**：同 ④ 流程——转译 + 本地编译 + 渲 PDF（figure 位置是方框占位）+ 本地 commit。
+8. **⑧ final 本地验证（第 2 次）**：同 ④ 流程——转译 + 本地编译 + 渲 PDF（figure 位置可保留待审占位）。
 
 ## 产出
 
@@ -59,7 +61,7 @@ flowchart TD
 
 ## 确认点
 
-每节三个：① 方案、⑤ 审 PDF 内容、⑥ 审图表意图清单。每节两次本地验证（④ 初稿、⑧ final）；Overleaf 同步不绑节，只在关键节点（里程碑/用户要求/协作需要，见 `latex-landing.md`）。
+有新或实质改变的章节写法、图表意图或改稿含义时交用户确认。已有授权内连续执行。按改动范围选择初稿及最终验证，Overleaf 同步按实际授权办理（见 `latex-landing.md`）。
 
 ## 蓝图脱节规则
 

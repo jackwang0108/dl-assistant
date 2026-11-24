@@ -9,7 +9,7 @@
     "status": "intent（意图登记+轻占位，write-section ⑥：figure=通用方框+caption 初稿+label，table=注释占位不锁结构）→ designed（详细设计+预览图，用户看图拍板，make-visual / ingest-results）→ draft（落地正文：占位替换/填真完成）→ final（终稿替换，finalize——示意图用户 PPT 终稿导出 PDF）。",
     "label": "LaTeX label：fig:<id> 或 tab:<id>。占位与正文 \\ref 都用它，禁止手写裸编号。",
     "section": "归属节（paper-state.json 里 sections 的 key）。",
-    "data_ref": "仅 dataviz：数据来源——指向实验批（experiments.batches 的 version / exp_id）、数据文件或文献来源。示意图为 null。",
+    "data_ref": "仅 dataviz。记录实验批次 ID、回包修订、实验 ID 及对应统计或读数 ID，或指向具体数据文件、文献出处。示意图为 null。",
     "version": "该资产的改动版本号，整数递增；详细设计大改、数据重填都 +1。"
   },
   "visuals": [

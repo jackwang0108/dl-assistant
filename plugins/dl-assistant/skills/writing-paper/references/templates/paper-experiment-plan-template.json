@@ -1,38 +1,152 @@
 {
-  "_notes": {
-    "是什么": "_draft/experiments/plan-vN.json 的 schema——实验计划包的机读区（code-paper-experiment 消费的唯一读取源）。人读区（验证覆盖矩阵/依赖拓扑/批次说明）在同名 plan-vN.md，两者由 op-4 一起产出。版本化递增：v1 只装长周期必做项（配置未冻结则配置选定批优先），写作中新增需求攒成 vN+1，plan_version 与文件名 N 对应。",
-    "config_frozen": "中期收口时配置是否已冻结；false → 本批必须先含 decides_config 实验（配置未冻结主表不开跑）",
-    "experiments[].type": "main | ablation | analysis | comparison | efficiency | qualitative",
-    "experiments[].priority": "must（必跑·正文核心）| should（可选·锦上添花）| appendix（进附录）。跟 blueprint 页数参考对齐——页数紧时 should/appendix 可挪可砍（压缩工序用户裁决），must 不能砍",
-    "experiments[].decides_config": "结果影响配置冻结（组件消融/超参选定）→ 必须先于主表跑完，配置冻结确认点（用户拍板）后主表批才开跑。一次实验多处消费：组件消融（全量+多 seed 正规协议）既是配置依据又是论文消融表；超参搜索进附录敏感性分析。test peeking 红线：配置决策只用 validation split",
-    "experiments[].depends_on": "拓扑依赖（其他 exp_id）——CPE 按它在多卡机器上排程：无依赖并行、有依赖等待。漏标 = 该并行的串行等，GPU-hours 白烧。定性实验 depends_on 主 run（用其 checkpoint）",
-    "experiments[].expected_signal": "预注册 success bar——什么结果支持 claim / 什么结果否定；bar 的依据写清（同类工作同类改动的典型幅度 + bar 与 claim 强度匹配）。防 post-hoc cherry-pick；否定信号触发回 blueprint 重审 contribution，不硬写",
-    "experiments[].fairness": "main/comparison 必填——baseline 公平条件（同数据/预处理/training budget/调参力度；baseline 用原文最佳超参不弱化；同期 SOTA 必比；官方报告数字 vs 自复现说清，自复现注明条件）。防 reviewer 头号攻击；进 CPE 契约",
-    "experiments[].output_to_paper": "数据回 writing-paper 后填哪（主表/消融表/附录敏感性/定性图位）——一处实验多处消费在这里体现"
-  },
+  "schema_version": 1,
   "plan_version": 1,
-  "paper_repo": "<writing-paper 的论文根路径（papers/<slug>/）>",
-  "generated_at": "YYYY-MM-DD",
-  "storytelling_ref": "_draft/blueprint.md",
-  "config_frozen": false,
+  "batch_id": "edge-vision-latency",
+  "approval": {
+    "ref": "<实际批准记录>",
+    "experiment_ids": [
+      "exp-target-latency",
+      "exp-second-device-latency"
+    ]
+  },
   "experiments": [
     {
-      "exp_id": "exp-ablation-A",
-      "paper_claim": "Contribution 1 的消融：模块 A 有效",
-      "claim_cids": ["C2", "C2a"],
-      "priority": "must",
-      "type": "ablation",
-      "decides_config": true,
+      "exp_id": "exp-target-latency",
+      "title": "复核目标设备上的配置收益及重复间波动。",
+      "operation": "measurement",
+      "paper_claim": "在指定设备及所测输入下，组合配置的端到端延迟低于原版。",
+      "claim_ids": [],
+      "purpose": "复核目标设备上的配置收益及重复间波动。",
+      "priority": "required",
+      "paper_locations": [
+        "主结果的目标设备行"
+      ],
       "depends_on": [],
-      "config": "<去掉模块 A / 换 baseline / 不同数据集 等（full config 基础上的变动）>",
-      "purpose": "证明模块 A 带来 X% 提升；同时作为配置冻结依据",
-      "expected_signal": "模块 A ≥2% 提升（依据：同类工作同类改动典型 2-4%）；<1% 则 claim 不成立 → 回 blueprint 重审",
-      "fairness": {
-        "same_as_ours": ["数据集", "预处理", "training budget", "调参力度"],
-        "notes": "baseline 用其原文最佳超参，不弱化；同期 SOTA 必比；自复现注明条件"
+      "comparison": {
+        "groups": [
+          "baseline",
+          "combined"
+        ],
+        "target_conditions": [
+          "edge-dev-01",
+          "同一固定单张输入"
+        ],
+        "controls": [
+          "输入",
+          "预热",
+          "同步边界",
+          "计时关闭轨迹"
+        ]
       },
-      "expected_cost": "~12 GPU-hours (4 seed × 3h)；deadline 倒推：须 M-D 前开跑",
-      "output_to_paper": "论文消融表 Table 3 第 2 行（+ 配置冻结依据）"
+      "measurements": [
+        {
+          "id": "latency",
+          "unit": "ms",
+          "analysis": "逐对用 combined 减 baseline，汇总配对差。"
+        }
+      ],
+      "replicates": {
+        "unit": "独立计时会话，每个会话内配对比较",
+        "items": [
+          {
+            "id": "pair-1",
+            "seed": null
+          },
+          {
+            "id": "pair-2",
+            "seed": null
+          },
+          {
+            "id": "pair-3",
+            "seed": null
+          }
+        ]
+      },
+      "interpretation": {
+        "supports": "有效配对显示组合延迟更低",
+        "weakens": "有效配对稳定反向",
+        "inconclusive": "缺组或差值方向不稳定",
+        "invalid": "实际计时条件失配",
+        "basis": "同协议的基准计时波动及配对证据"
+      },
+      "resources": {
+        "limit": "原指定设备，30 分钟",
+        "basis": "按同协议已有核查估算",
+        "stop": "时间用完或关键比较条件失效"
+      },
+      "required_artifacts": [
+        "逐次延迟",
+        "实际生效配置"
+      ]
+    },
+    {
+      "exp_id": "exp-second-device-latency",
+      "title": "检查换设备后配置差异的方向和量级。",
+      "operation": "measurement",
+      "paper_claim": "第二台设备用于核查收益的适用范围。",
+      "claim_ids": [],
+      "purpose": "检查换设备后配置差异的方向和量级。",
+      "priority": "optional",
+      "paper_locations": [
+        "附录的跨设备比较"
+      ],
+      "depends_on": [],
+      "comparison": {
+        "groups": [
+          "baseline",
+          "combined"
+        ],
+        "target_conditions": [
+          "edge-dev-02",
+          "同一固定单张输入"
+        ],
+        "controls": [
+          "输入",
+          "预热",
+          "同步边界",
+          "计时关闭轨迹"
+        ]
+      },
+      "measurements": [
+        {
+          "id": "latency",
+          "unit": "ms",
+          "analysis": "逐对用 combined 减 baseline，汇总配对差。"
+        }
+      ],
+      "replicates": {
+        "unit": "独立计时会话，每个会话内配对比较",
+        "items": [
+          {
+            "id": "pair-1",
+            "seed": null
+          },
+          {
+            "id": "pair-2",
+            "seed": null
+          },
+          {
+            "id": "pair-3",
+            "seed": null
+          }
+        ]
+      },
+      "interpretation": {
+        "supports": "有效配对显示组合延迟更低",
+        "weakens": "有效配对稳定反向",
+        "inconclusive": "缺组或差值方向不稳定",
+        "invalid": "实际计时条件失配",
+        "basis": "同协议的基准计时波动及配对证据"
+      },
+      "resources": {
+        "limit": "原指定设备，30 分钟",
+        "basis": "按同协议已有核查估算",
+        "stop": "时间用完或关键比较条件失效"
+      },
+      "required_artifacts": [
+        "逐次延迟",
+        "实际生效配置"
+      ]
     }
   ]
 }

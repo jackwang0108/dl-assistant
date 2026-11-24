@@ -40,18 +40,19 @@
   "experiments": {
     "batches": [
       {
-        "version": 1,
+        "batch_id": "edge-vision-latency",
+        "plan_version": 1,
         "plan": "_draft/experiments/plan-v1.json",
         "status": "drafting",
         "sent": null,
-        "received": null
+        "handoffs": []
       }
     ],
     "data_dependencies": [
       {
         "waiting": "section:experiments",
-        "exp_id": "exp-main",
-        "batch": 1,
+        "batch_id": "edge-vision-latency",
+        "exp_id": "exp-target-latency",
         "status": "pending"
       }
     ],
@@ -60,7 +61,7 @@
         "need": "写作中发现的实验需求（例：Method 写到一半发现需要一个机制分析撑着）",
         "raised_by": "write-section:method",
         "status": "queued",
-        "batch": null
+        "batch_id": null
       }
     ]
   },

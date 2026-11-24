@@ -11,7 +11,7 @@ description: 在论文写完或接收后，将最终方法和复现所需代码�
 
 论文写完或接收后，使用 GPU 服务器上已经由 `code-paper-experiment` 跑过实验的研究仓库，将最终方法和复现所需的基线代码整理到新 Git 仓库。新仓库独立建立提交历史，读者应能理解实现并在允许的误差内复现论文主表。
 
-整个发布流程在 GPU 服务器上完成。依次确认最终方法版本、整理代码、准备 conda 和 Docker 环境、从实验数据包汇总基准、验证论文主表、定稿公开文档并发布权重、检查内部信息并发布到 GitHub。基准使用 `code-paper-experiment` 数据包中 `results.json` 的全量实验实测结果。论文实验直接在研究仓库运行，无需先建发行版。
+整个发布流程在 GPU 服务器上完成。依次确认最终方法版本、整理代码、准备 conda 和 Docker 环境、从实验数据包汇总基准、验证论文主表、定稿公开文档并发布权重、检查内部信息并发布到 GitHub。基准使用 `code-paper-experiment` 数据包中 `paper-results.json` 的全量实验实测结果。论文实验直接在研究仓库运行，无需先建发行版。
 
 ## 整理时可查阅的记录与公开内容
 
@@ -51,7 +51,7 @@ flowchart LR
 
 - **完整中期 repo**（GPU 服务器）：iterate 收口、CPE 跑过实验的 repo。release 从它抽。
 - **确认最终方法版本**（用户，必需）：哪个分支/tag 是锁定的最终方法。agent 查阅研究仓库的内部记录推荐，**由用户确认**（发布前核对该版本与论文方法一致）。
-- **CPE 实验数据包**（基准来源）：`results.json` + `experiments-actual.json` + `pkg-meta.json`（主表 mean±std + 权重路径 + GPU 小时用量记录），release 汇总成基准记录。
+- **CPE 实验数据包**（基准来源）：`paper-results.json` 及对应运行证据，release 汇总成基准记录。
 - **论文 PDF**。公开内容以论文为依据，验收时将复现结果与论文主表逐项核对。
 
 > 解耦：跨机器交接（中期 repo → GitHub）由用户做，不绑 scp/ssh。
@@ -111,7 +111,7 @@ release repo = 全新 git 仓库（GPU 服务器，位置用户定），第一�
 - **大数据/大权重不进镜像、不进 repo**——数据留准备说明 + 挂载；权重发 HF Hub 给链接。
 - **不要抽错最终方法节点**——发哪个 idea/tag 由用户确认，agent 只推荐。
 - **发行版须自带回归测试**。将 `scripts/perf-regression.sh` 和 `docs/perf-baseline.json` 纳入仓库，交付前验证能在确认的容差内复现论文主表。
-- **基准用 CPE 全量实验实测结果**——从 CPE 数据包 results.json 汇总，不做占位。
+- **基准用 CPE 全量实验实测结果**——从 CPE 数据包 paper-results.json 汇总，不做占位。
 - **README 每条命令必须真跑过**——README.md 和 AGENTS.md的运行命令就是 Step 5 回归实测的命令，一条都不许凭记忆写。
 - **开源前清理 RELEASE_REPORT + history**——`RELEASE_REPORT.md` 含内部信息（节点名/排除记录/防泄露自查），开源前必删 + 删除 `.git` 后重新初始化。别直接 push 带 RELEASE_REPORT 的 repo。
 - **不要在会话里用 `$...$` LaTeX**——会话符号用 Unicode（见 `dl-assistant` 的 `SKILL.md`「所有技能共用的规则」）。

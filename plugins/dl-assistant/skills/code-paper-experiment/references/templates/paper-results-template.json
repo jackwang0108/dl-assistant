@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "batch_id": "edge-vision-latency",
+  "revision": 1,
+  "previous_sha256": null,
+  "plan": {
+    "path": "plan-v1.json",
+    "sha256": "<获批计划的 SHA-256>"
+  },
+  "run_spec": {
+    "path": "run-spec.json",
+    "sha256": "<实际执行规格的 SHA-256>"
+  },
+  "changes": [],
+  "experiments": [
+    {
+      "exp_id": "exp-target-latency",
+      "execution": {
+        "status": "not_started",
+        "reason": "尚未执行",
+        "attempts": [],
+        "resource_usage": []
+      },
+      "measurement": {
+        "validity": "unassessed",
+        "conditions": [],
+        "limitations": []
+      },
+      "evidence": {
+        "summary": "等待实际数据",
+        "limitations": []
+      },
+      "deviations": [],
+      "statistics": [],
+      "artifacts": []
+    },
+    {
+      "exp_id": "exp-second-device-latency",
+      "execution": {
+        "status": "blocked",
+        "reason": "示例：第二台设备原版入口受阻",
+        "attempts": [],
+        "resource_usage": []
+      },
+      "measurement": {
+        "validity": "unassessed",
+        "conditions": [],
+        "limitations": []
+      },
+      "evidence": {
+        "summary": "缺少同设备的原版对照，无法估计配置差值。",
+        "limitations": []
+      },
+      "deviations": [],
+      "statistics": [],
+      "artifacts": []
+    }
+  ]
+}

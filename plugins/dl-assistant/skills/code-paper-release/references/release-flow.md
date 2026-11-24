@@ -68,8 +68,8 @@ agent 自己读懂仓库（查阅研究仓库的内部记录，对内视角）�
 
 **基准从 CPE 数据包汇总**（全量实验实测结果，无需在原研究仓库重新测量）：
 
-1. 读 code-paper-experiment 数据包的三个文件：`results.json`（逐实验 mean±std + signal 判定）+ `experiments-actual.json`（实际跑了哪些）+ `pkg-meta.json`（权重及日志路径 + GPU 小时用量记录），schema 见 `code-paper-experiment/references/templates/data-pkg-schema.json`。主表对应的 exp_id 汇总 mean±std 成基准。
-2. **基准记录** `docs/perf-baseline.json`：按 `perf-baseline-template.json` 生成（`metrics[]` + `reproduce` + `provenance`）。checkpoint 下载地址：发布后的下载链接（Step 6 回填）；CPE 侧 GPU 路径从 `pkg-meta.json` 核对。
+1. 读 `paper-results.json` 的批次和修订，按论文主表对应的 exp_id 查已核统计、实际执行、配置及原始读数，取适用于所发布版本的结果。
+2. **基准记录** `docs/perf-baseline.json`：按 `perf-baseline-template.json` 生成（`metrics[]` + `reproduce` + `provenance`）。checkpoint 下载地址：发布后的下载链接（Step 6 回填）；CPE 侧 GPU 路径从 `paper-results.json` 核对。
 3. **回归脚本** `scripts/perf-regression.sh`：一键跑——复现主表 → 读 `perf-baseline.json` 比对 → 逐项报告 pass/fail（落容差内）。
 
 ## Step 5：跑回归验论文主表性能（用户确认容差）
@@ -91,7 +91,7 @@ agent 自己读懂仓库（查阅研究仓库的内部记录，对内视角）�
 
 ## Step 6：定稿 README.md 和 AGENTS.md + 权重发布
 
-1. **README.md / AGENTS.md 定稿**：更新 Step 2 的初稿——运行命令逐条换成 Step 5 回归实测过的命令，主表数字照 PDF（已核过），训练资源从 `pkg-meta.json` GPU 小时用量记录拿。两份文件命令必须一致。
+1. **README.md / AGENTS.md 定稿**：更新 Step 2 的初稿——运行命令逐条换成 Step 5 回归实测过的命令，主表数字照 PDF（已核过），训练资源从 `paper-results.json` GPU 小时用量记录拿。两份文件命令必须一致。
 2. **权重发布**：发布用 checkpoint 上传 Hugging Face Hub（或用户指定存储），记录下载链接 + sha256；链接回填 README / AGENTS.md / `perf-baseline.json` 的 `reproduce.checkpoint`。
 3. **LICENSE**：由用户确认哪种（MIT / Apache-2.0 / ...），落 `LICENSE` 文件；README 附上 BibTeX 引用。
 
@@ -138,7 +138,7 @@ agent 自己读懂仓库（查阅研究仓库的内部记录，对内视角）�
 
 ## 验证原则（贯穿）
 
-- **基准用 CPE 全量实验实测结果**：从 CPE 数据包 results.json 汇总，不做占位。
+- **基准用 CPE 全量实验实测结果**：从 CPE 数据包 paper-results.json 汇总，不做占位。
 - **conda 是必须首先通过的验证**：HPC 无 Docker 权限，发行版必须 conda 独立跑通主表。
 - **A/B 验证不对称**：A 检查短程训练能否正常运行、B（挂权重）核对推理指标能否复现主表。
 - **容差**：agent 按 metric 类型推荐默认，**由用户确认**。

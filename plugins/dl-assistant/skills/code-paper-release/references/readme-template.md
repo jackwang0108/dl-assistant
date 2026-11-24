@@ -102,4 +102,4 @@ docker build -f docker/Dockerfile.train -t <repo>-train .
 - **一句话简介**：能独立看懂，不依赖读全文。浅（差）：「This is the official implementation of our paper.」深（好）：「我们提出 X，用 <一句话机制> 解决 <什么问题>，在 <数据集> 上把 <指标> 从 A 提到 B。」
 - **主要结果**：照抄论文主表数字，和 PDF 一致（Step 5 对外验收已核过）。不要把消融表也堆进来。
 - **Quickstart 运行命令**：装环境 → 备数据 → 推理 → 训练 → 回归，顺序就是 外部读者 的实际操作顺序。每条命令都带具体参数，不写 `<见文档>` 式占位。
-- **训练资源参考**：外部读者判断跑不跑得起的依据，从 CPE `pkg-meta.json` 的 GPU 小时用量记录获取实际用量。
+- **训练资源参考**：外部读者判断跑不跑得起的依据，从 CPE `paper-results.json` 的 GPU 小时用量记录获取实际用量。
