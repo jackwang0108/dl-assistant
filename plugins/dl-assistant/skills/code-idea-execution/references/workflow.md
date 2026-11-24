@@ -38,7 +38,7 @@ git diff --cached --stat
 
 首轮将已确认内容保存为 `research-spec.md` 和 `research-plan.md` 的版本快照，写明来源及批准记录。根据[共享论点模板](../../dl-assistant/references/claims-template.json)保存 `claims.json` 的版本信息和初始论点 ID。后续沿用 iterate 放在正式轮次目录的快照。设计变化按批准记录保留修订，原方案可回查。
 
-首轮按[研究轮次登记与 Git 交接](../../dl-assistant/references/research-rounds.md)补建缺少的项目背景和索引，核实 `main` 上的实际起点并登记轮次。已有轮次先核对并沿用。
+首轮按[研究轮次登记与 Git 交接](../../dl-assistant/references/research-rounds.md)补建缺少的索引，核实 `main` 上的实际起点并登记轮次。项目背景缺少时按[项目背景模板](../../dl-assistant/references/project-context-template.md)补建。已有轮次先核对并沿用。
 
 ## Step 2 核对方案能否落地
 

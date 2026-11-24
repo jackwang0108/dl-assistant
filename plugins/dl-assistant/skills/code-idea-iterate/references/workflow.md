@@ -13,7 +13,7 @@ git log -1 --oneline
 rg --files docs/research -g conclusion.json -g conclusion.md -g claims.json -g index.json
 ```
 
-文件列表用于定位。用用户指定的研究轮次、实际记录里的版本与代码、设计及运行来源确定本次正在讨论哪一轮。
+文件列表用于定位。确认研究项目后，读取 `docs/research/PROJECT_CONTEXT.md`，了解长期研究问题、采用的基线及资料位置。再用用户指定的轮次、实际记录里的版本与代码、设计及运行来源确定这次正在讨论哪一轮。背景文件暂缺时，从本轮研究说明和已有上游记录补齐判断所需的信息。
 
 | 从哪里读 | 核什么 |
 | --- | --- |

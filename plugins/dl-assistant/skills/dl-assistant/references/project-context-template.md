@@ -1,35 +1,32 @@
-# 项目背景（PROJECT_CONTEXT）
+# 项目背景模板
 
-> 项目级、少改、不随版本。住 `ideas/PROJECT_CONTEXT.md`。
-> 每次 server 端 session 开头，execution / iterate 先读它（加 claims.json + 当前代码），
-> 渲染 session 开头恢复记忆的四节小结（我们在干啥 / 我们在哪 / 代码长这样 / 准备干啥）。
-> 详见 `session-recovery.md`。
->
-> **本文件是导航枢纽，不重抄别处已有的内容**——环境 / 代码 / 数据 / checkpoint / ready 命令
-> 都在 Project Setup Report 里（`code-project-setup` 产），baseline 可信度 + reduced 配置在
-> Reproduction Report 里（`code-paper-reproduction` 产）。本文件只放这些 report 没有的：
-> 研究框架 + baseline 身份一行 + docs 中的调研资料索引。
+本文件提供 `docs/research/PROJECT_CONTEXT.md` 的可复制模板。用它保存项目级稳定背景和资料指针，按[会话恢复说明](session-recovery.md)去实际记录核本轮状态。
 
-## 研究框架
+首次准备研究仓库时由 `code-idea-prepare` 创建，跳过 prepare 时由 `code-idea-execution` 开立首轮时补建。已有文件沿用。只填已核内容，暂不清楚时标记待核。长期研究方向、已确认目标、采用的基线或资料位置发生变化时再更新。
 
-- **要解决的问题**：一句话（每版的假设看当前版本的 `01-idea-spec.md` §0）
-- **目标会议 / 截稿**：
+## 可复制模板
 
-## baseline 身份
+```markdown
+# 项目背景
 
-- **当前使用的可信 baseline**：哪个 repo、可信 baseline 在哪个分支/tag（`baseline-prepared` CIP 产 / 全退则 `baseline-reproduced`）、复现关键指标（如 refcoco val cIoU 77.49）
-- **可信度 + reduced 配置**：见 Reproduction Report（含 baseline 可信度四档 + `reduced_setting`）——路径：`<repro-report 路径>`
+## 长期研究问题
 
-## 环境 / 代码 / 数据 / checkpoint
+- **研究问题**　{一句话说明项目长期要回答的问题。}
+- **研究对象与范围**　{稳定的研究对象、目标条件、适用范围或约束。}
+- **长期目标**　{已确认的目标会议、截止日期或其他长期交付目标，尚未确定可省略。}
 
-Project Setup Report 已有：conda env、ready 命令、数据 / checkpoint 路径、编译依赖、seed / determinism 设置。要细节去读它——路径：`<setup-report 路径>`
+## 采用的基线
 
-> 汇报新会话的「当前代码」时，读取 Setup Report 中的 ready_commands 和当前 spec 附录 A 的代码位置，再打开当前代码核对。
+- **代码身份**　{实际仓库及已核 commit，可附用于定位的 tag。}
+- **基线用途**　{本项目采用它做什么，在哪些已核条件下可用。详见复现或准备记录。}
 
-## docs 中的调研资料索引（按需派子 agent 读）
+## 资料位置
 
-- literature-survey 报告：`docs/...`
-- idea-find 分析：`docs/...`
-- baseline-survey 报告：`docs/...`
+- **研究依据与首轮交接**　{已有调研、关键论文笔记、idea-find 交接目录。}
+- **基线选型**　{如有，记录实际选型报告的位置。}
+- **环境、模型和数据**　{setup 的机读记录或报告路径。}
+- **基准实测与配置**　{reproduction 记录路径，按需注明协议或目标 ID。}
+- **代码准备与入口**　{如有，记录 cleanup 或代码阅读材料的位置。}
+```
 
-> 需要查证细节时，例如基线选择的理由或文献对某个问题的结论，请子 agent 阅读相关文档并返回摘要。
+项目内路径以项目根为起点。外部材料注明机器或可取得的位置，以及实际使用的版本。需要查轮次、运行和批准时，按[轮次登记说明](research-rounds.md)从 `docs/research/research-rounds.json` 找对应记录。
