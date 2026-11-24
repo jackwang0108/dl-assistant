@@ -3,7 +3,7 @@
     "release repo 的性能基准记录，落 docs/perf-baseline.json。",
     "scripts/perf-regression.sh 读本文件逐项比对：复现值落 tolerance 内 = pass。",
     "基准是 CPE 的 full-scale 真数（从数据包 results.json 汇总），不是 reduced 占位、不是凭记忆誊写。",
-    "metrics[] 每一项对应论文主表一个指标；reproduce 块是最终方法的复现命令（从 04-conclusion.md 可复现信息来）。",
+    "metrics[] 每一项对应论文主表一个指标。reproduce 块是最终方法的复现命令，从 execution-conclusion.md 或 execution-conclusion.json 引用的实际 run 记录核对。",
     "checkpoint 权重：作者发布的写下载链接；同时记 CPE 侧 GPU 路径指针（pkg-meta.json）备查。"
   ],
   "status": "fullscale_final",

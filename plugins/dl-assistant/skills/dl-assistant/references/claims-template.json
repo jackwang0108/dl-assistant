@@ -44,10 +44,10 @@
 
   "_notes": {
     "purpose": "本模板记录每个研究命题、实际证据对它的支持程度，以及判断适用的条件与限制，供实验执行和下一轮研究判断使用。",
-    "这是什么": "claims.json 保存本版本的两层论点及其证据判断。execution 从 idea-find 草案建立 v1 记录。独立核查提供带出处的建议，execution 主会话核对后更新子论点证据字段。iterate 与用户依据实际证据修订研究判断。",
-    "version/parent_version": "version=本版本号；snapshot_date=本快照定格时间；parent_version=上一版（链表），v1 为 null，v2+ 填 v<N-1>-<slug>",
+    "这是什么": "docs/research/<轮次>/claims.json 保存本轮的两层论点及其证据判断。execution 从 idea-find 草案建立 v1 记录。独立核查提供带出处的建议，execution 主会话核对后更新子论点证据字段。iterate 与用户依据实际证据修订研究判断。",
+    "version/parent_version": "version 是研究轮次 ID。snapshot_date 记当前快照日期。parent_version 是研究上的上一轮，按 research-rounds.json 的 previous_round 填写，首轮为 null。同轮补证继续使用原 version 和 parent_version。",
     "重要规矩": [
-      "每版保存完整快照，保留历史子论点和对应证据。后续条件改变或出现反向结果时，分别注明观察的版本、实际条件和解释范围。",
+      "每个研究轮次保存完整快照。同轮收到新证据时，更新相关命题并保留已有证据、条件和限制。条件不同或发现反例时，记该证据来自哪一轮、什么条件及能解释到哪里。改判时保留前一判断的出处与理由。",
       "claim ID 一旦分配永不变义；要改含义 = 使用新 ID 并记录与旧论点的关系",
       "证伪的 claim 保留 ID（status: refuted），不删——留历史 / rebuttal / Related Work",
       "运行是否完成、数据和测量是否有效、证据对命题意味着什么，分别记录。运行状态和失败原因留在实验记录，论点引用相关结果以及这些事实对判断的影响。",
@@ -62,21 +62,21 @@
       "type": "hypothesis（核心假设）/ mechanism（机制）/ performance（性能）",
       "status": "active / refuted（证伪，保留 ID；只归 iterate-v<N> / human 写，且须先分析原因属于执行、设计选择还是机制前提——验收子 agent 永远不动 status）/ superseded（被细化取代）",
       "evidence_assessment": "pending 表示正式取证尚未开展或尚未作出判断。supported 表示有效且相关的证据支持有明确条件的命题。plausible 表示已有可信观察指向该命题，但仍有重要限制。insufficient_evidence 表示已经评估，现有证据仍不足以支持或削弱命题，包括缺关键对照、无法区分解释、测量偏差或执行失败导致缺数据。contradicted 表示有效且可比的观察与命题预测相反。",
-      "evidence_assessment_source": "写实际判断来源。acceptance-v<N> 引用独立核查记录，由 execution 主会话核证后写入。执行主会话自行作出的判断记 execution-v<N>，同时写实际核查范围。iterate-v<N> 和 human 分别指向迭代研究决定与用户判断。",
+      "evidence_assessment_source": "写可定位的实际来源，项目内用相对项目根的路径，可附观察或命题定位。独立核查引用对应执行批次的 execution-result-review.md，由 execution 主会话核实后写入。主会话自查引用对应结论或实验报告的位置，注明核查范围。研究判断与用户决定引用 next-step-decision.md。若被引用的记录还会更新，补可回查的修订或 Git commit。",
       "is_innovation": "默认 false，表示贡献尚未确认。由 iterate 与用户独立判断，仅在已确认贡献时记 true，并引用研究决定中的最接近工作、实际新增和证据边界。",
       "method_tag": "用于回查对应实现的代码标签，例如 claim-C1 和 claim-C1-v2。标签用于定位代码版本。",
       "evidence_strength": "strong / medium / weak / none，描述对当前命题的证据强度。论文中的呈现根据证据在科学论证里的作用决定。",
-      "evidence": "每条证据记录 exp_id、实际 run_ids、原始 path、comparison 和 conditions。数值结果写 metric、value 与 unit，定性观察写实际行为或推导依据。comparison 写明实际对照、已核条件和失配。无对照的观察注明适用范围。role 用 supports、contradicts、mixed 或 limits，说明对当前命题的作用。",
+      "evidence": "每条证据记录 exp_id、实际 run_ids、原始 path、comparison 和 conditions。新增证据的项目内 path 从项目根解析，引用已有轮次相对路径时注明它所属的轮次，使证据继承后仍能回查原产物。数值结果写 metric、value 与 unit，定性观察写实际行为或推导依据。comparison 写明实际对照、已核条件和失配。无对照的观察注明适用范围。role 用 supports、contradicts、mixed 或 limits，说明对当前命题的作用。",
       "evidence_quality": "data_validity 可用 unassessed、valid、limited、invalid，说明当前使用的证据在所查数据和测量范围内能用到哪里。issues 写实际缺项或偏差。不同对照是否可比，在相关证据的 comparison 和 conditions 写清所用组及条件。",
-      "lineage": "derived_from=拆分自哪个 claim（如 C2a derived_from C2）；emerged_from=从哪冒出来（exp-002 / reviewer-2-Q3 / v2-insight）；superseded_by=被哪个新 claim 取代",
+      "lineage": "derived_from=拆分自哪个 claim（如 C2a derived_from C2）；emerged_from=从哪冒出来（exp-configuration-comparison / reviewer-2-Q3 / 对应研究决定）；superseded_by=被哪个新 claim 取代",
       "inference_limits": "写当前证据能支持的范围、无法区分的替代解释和待补对照。可引用实验记录或独立核查的具体位置。"
     },
-    "证伪示例": "{ id: C3, status: refuted, evidence_assessment: contradicted, evidence_assessment_source: iterate-v4, is_innovation: false, method_tag: \"\", lineage: { superseded_by: [C3a] }, notes: \"v4 验收写 contradicted（status 保持 active），iterate 分析确认机制前提不成立后才标为 refuted，v5 拆成 C3a\" }",
+    "证伪示例": "{ id: C3, status: refuted, evidence_assessment: contradicted, evidence_assessment_source: docs/research/<轮次>/decisions/<决定-slug>/next-step-decision.md, is_innovation: false, method_tag: \"\", lineage: { superseded_by: [C3a] }, notes: \"v4 验收写 contradicted（status 保持 active），iterate 分析确认机制前提不成立后才标为 refuted，v5 拆成 C3a\" }",
     "拆分示例": "使用新 ID 并记录与旧论点的关系：{ id: C3a, statement: \"C3 的细化……\", status: active, evidence_assessment: pending, lineage: { derived_from: C3 } }",
     "method 迭代示例": "C1 命题不变时保留 ID，新实现记录 method_tag、对应对照及本轮证据判断。即使新实现获得 supported，也单独复核相对已有工作的新增及其科学意义。",
     "edge_vision_examples": {
-      "说明": "以下为 T0 和 T1 的子论点记录节选。实际使用时替换成真实实验、运行和证据路径。",
-      "T0 完成后": {
+      "说明": "以下为 baseline-timing 和 configuration-comparison 后的子论点节选。同轮获批补做固定分派诊断时，继续使用 C1 和已有证据。仅核可测性或分派前提时，在对应实验报告和结论里记录诊断结果，相关条件可写入 inference_limits。",
+      "baseline-timing 完成后": {
         "id": "C1",
         "evidence_assessment": "pending",
         "evidence_quality": {
@@ -85,14 +85,14 @@
         },
         "evidence": [],
         "inference_limits": [
-          "T0 已核计时和轨迹可测性，固定算子、改变写回量的正式对照仍待运行。"
+          "baseline-timing 已核计时和轨迹可测性，固定算子、改变写回量的正式对照仍待运行。"
         ]
       },
-      "T1 只有配置收益": {
+      "configuration-comparison 只有配置收益": {
         "id": "C1",
         "evidence_assessment": "insufficient_evidence",
-        "evidence_assessment_source": "acceptance-v1",
-        "notes": "核查依据见 acceptance-review.md 的 C1 记录。",
+        "evidence_assessment_source": "docs/research/v1-edge-vision/executions/configuration-comparison/execution-result-review.md",
+        "notes": "独立核查限于本批的配置比较及 C1。固定分派诊断只核隔离前提，正式比较仍待取证。",
         "evidence_quality": {
           "data_validity": "valid",
           "issues": [
@@ -101,12 +101,12 @@
         },
         "evidence": [
           {
-            "exp_id": "exp-002-configuration-comparison",
+            "exp_id": "exp-configuration-comparison",
             "run_ids": [
               "baseline-01",
               "combined-01"
             ],
-            "path": "experiments/exp-002-configuration-comparison/analysis/latency-comparison.json",
+            "path": "docs/research/v1-edge-vision/experiments/exp-configuration-comparison/analysis/latency-comparison.json",
             "metric": "单张请求端到端延迟差（组合减基线）",
             "value": -1.8,
             "unit": "ms",

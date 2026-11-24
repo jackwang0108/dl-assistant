@@ -16,7 +16,7 @@ description: 在论文写完或接收后，将最终方法和复现所需代码�
 ## 整理时可查阅的记录与公开内容
 
 - **公开内容**。假设读者只有论文 PDF，据此组织代码、README、AGENTS.md、文档和镜像。公开仓库不包含研究阶段的探索记录、未发表方案或提交历史。
-- **整理时可查阅的内部记录**。用 `idea_tree.json` 确定候选发布版本，用 `03-claim-code-map.md` 定位与论文论点对应的实现。参考 `04-conclusion.md` 的 `golden_metrics` 核对基准信息，并查阅 `code-project-setup` 和 `code-paper-reproduction` 的产物，确认环境和基线的验证范围。
+- **整理时可查阅的内部记录**。用 `docs/research/research-rounds.json` 确定候选发布轮次，用 `claim-code-map.md` 定位与论文论点对应的实现。用 `execution-conclusion.md` 和 `execution-conclusion.json` 找到对应实验和实际读数，再查运行记录及 setup、reproduction 的产物，核对环境、命令和基线的验证范围。
 
 整理发行版时，可以查阅用户自己的研究记录。模拟审稿的 `writing-paper-review` 只使用模拟审稿人可见的材料，不能查阅内部论点记录。
 
@@ -122,7 +122,7 @@ release repo = 全新 git 仓库（GPU 服务器，位置用户定），第一�
 
 ```mermaid
 flowchart TD
-    S1["Step 1 确认最终方法版本<br/>用户指认 tag → 查阅研究仓库的内部记录（idea_tree/claim-code-map/conclusion golden）"]
+    S1["Step 1 确认最终方法版本<br/>用户确认目标提交 → 查轮次索引、代码映射和执行结论"]
     S1 --> S2["Step 2 分层抽取 + 逐层验证<br/>新建 Git 仓库 · 保留原目录结构 · 每层整理后与原仓库对照验证（对照中期 repo）"]
     S2 --> S3["Step 3 conda + Docker A/B<br/>可独立复现的 conda 环境（HPC 必过）+ 训练镜像 A（smoke）+ 推理镜像 B（核对推理指标能否复现主表）"]
     S3 --> S4["Step 4 基准汇总 + 回归测试<br/>从 CPE 数据包汇总 全量实验实测结果 · 建 perf-regression.sh"]
@@ -136,8 +136,8 @@ flowchart TD
 
 八步（细节见 `references/release-flow.md`）：
 
-1. **确认最终方法版本**：读 `idea_tree.json` + git log 梳理各版本的分支关系 → **用户指认**最终方法 tag → 查阅研究仓库的内部记录（版本目录 01~04 + claims.json + `04-conclusion.md` 可复现信息 + CPS/CPR 产物）。
-2. **分层抽取 + 逐层验证**：GPU 服务器全新仓库 `git init`（不沿用研究仓库的提交历史），将原研究仓库作为只读参考，依据 `03-claim-code-map.md` 整理相关实现，并按公开读者可获得的信息编写；保留所需代码的原目录结构；按环境→数据→模型→推理→训练分五层，**每层整理后立即与原研究仓库对照验证**（核心是模型层的权重等价 + 前向一致），不过不进下一层；起草 README.md 和 AGENTS.md。
+1. **确认最终方法版本**。用 `docs/research/research-rounds.json` 和 Git 记录定位候选提交，由用户确认发布的 commit 或 tag。再对照轮次中的 `claims.json`、`claim-code-map.md`、执行结论、实际 run 和工程准备报告。
+2. **分层抽取 + 逐层验证**。GPU 服务器全新仓库 `git init`，将原研究仓库作为只读参考，依据 `claim-code-map.md` 整理相关实现，并按公开读者可获得的信息编写。保留所需代码的原目录结构。按环境 → 数据 → 模型 → 推理 → 训练分五层，**每层整理后立即与原研究仓库对照验证**，通过后再进入下一层。模型层重点核对权重等价和前向一致。起草 README.md 和 AGENTS.md。
 3. **conda + Docker A/B**：可独立复现的 conda 环境（`environment.yml`，HPC 第一必过关）+ 训练镜像 A（smoke 检查短程训练能否正常运行）+ 推理镜像 B（挂权重核对推理指标能否复现主表）。
 4. **基准汇总 + 回归测试**：从 code-paper-experiment 数据包的三个文件汇总 全量实验实测结果成 `docs/perf-baseline.json` + 建 `scripts/perf-regression.sh`。
 5. **跑回归验论文主表性能**（用户确认容差）：conda 复现主表（必过）+ Docker B 复现 + Docker A smoke + 对外比对 PDF 主表。

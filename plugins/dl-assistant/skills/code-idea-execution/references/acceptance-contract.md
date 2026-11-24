@@ -40,7 +40,7 @@
 
 在 `execution-result-review.md` 给每个子论点的建议及核查出处。建议包含 `evidence_assessment`、`evidence_strength`、`evidence`、`evidence_quality` 和 `inference_limits`。每条证据包含实际实验和 run、路径、对照与条件、读数及单位或定性依据，按其对命题的作用填 `supports`、`contradicts`、`mixed` 或 `limits`。数据有效性写入 `evidence_quality.data_validity`，并在 `issues` 具体说明缺项及偏差。
 
-主会话保留原核查报告，回查各建议引用的实际运行、数据、设计和适用范围，再串行写回相关子论点。采纳独立判断时，来源写 `acceptance-v<N>` 并引用核查位置。遇到分歧时，记录未采纳建议、相应证据和理由。若本轮未开展或尚未完成独立核查，交接时标明实际范围，主会话的判断按其实际来源记录。命题内容、ID、研究状态、总论点和贡献由 iterate 与用户处理。
+主会话保留原核查报告，回查各建议引用的实际运行、数据、设计和适用范围，再串行写回相关子论点。采纳独立判断时，在 `evidence_assessment_source` 写对应批次核查文件的项目根相对路径，可附命题或段落位置。遇到分歧时，记录未采纳建议、相应证据和理由。若本轮未开展或尚未完成独立核查，交接时标明实际范围，主会话的判断按其实际来源记录。命题内容、ID、研究状态、总论点和贡献由 iterate 与用户处理。
 
 ## 可复制的 execution-result-review.md
 

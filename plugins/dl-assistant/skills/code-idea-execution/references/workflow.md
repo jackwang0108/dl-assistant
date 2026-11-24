@@ -147,7 +147,7 @@ bash "$execution_skill_dir/scripts/check-exp-artifacts.sh" --all "$experiments_d
 ## Step 6 记录判断与边界并交接
 
 1. 按[共享论点记录](../../dl-assistant/references/claims-template.json)更新实际检验的子论点。写 `evidence_assessment`、来源、证据指针、对照质量、支持范围和仍未知的解释。保留原命题和历史证据。研究状态、总论点与科学贡献由 iterate 和用户结合本轮结果判断。
-2. 每批交回时，按[结论模板](conclusion-template.md)更新本轮 `conclusion.md` 和 `conclusion.json`。保留早前批次的观察出处和核查，标明本次更新所覆盖的批次，引用各项 `report.md` 和已完成的批次核查。从用户最需要知道的观察写起，给出实际比较值与条件，分别写执行、测量和证据判断。注明本轮版本、实际基准、全部相关尝试、偏差与缺项，并标明哪些运行可以复查或续做。
+2. 每批交回时，按[结论模板](execution-conclusion-template.md)更新本轮 `execution-conclusion.md` 和 `execution-conclusion.json`。保留早前批次的观察出处和核查，标明本次更新所覆盖的批次，引用各项 `report.md` 和已完成的批次核查。从用户最需要知道的观察写起，给出实际比较值与条件，分别写执行、测量和证据判断。注明本轮版本、实际基准、全部相关尝试、偏差与缺项，并标明哪些运行可以复查或续做。
 3. 交接前回查实际代码与配置、原始结果、命题引用、批准范围及未解决问题。向用户说明观察如何影响本轮假设、最强替代解释是什么、建议下一步补什么。把本轮结论和记录交 iterate。每次运行引用实际 commit，有未提交改动时保留对应 diff。整轮收尾时按[研究轮次交接](../../dl-assistant/references/research-rounds.md#3-沿-main-推进用-tag-标记交接代码)核交接 commit，按授权登记 tag。只交回一批结果时更新本轮产物。提交或同步按实际授权。
 
 交接前逐条核对：

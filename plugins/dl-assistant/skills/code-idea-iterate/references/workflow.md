@@ -10,14 +10,14 @@
 git rev-parse --show-toplevel
 git status --short --branch
 git log -1 --oneline
-rg --files docs/research -g conclusion.json -g conclusion.md -g claims.json -g index.json
+rg --files docs/research -g execution-conclusion.json -g execution-conclusion.md -g claims.json -g index.json
 ```
 
 文件列表用于定位。确认研究项目后，读取 `docs/research/PROJECT_CONTEXT.md`，了解长期研究问题、采用的基线及资料位置。再用用户指定的轮次、实际记录里的版本与代码、设计及运行来源确定这次正在讨论哪一轮。背景文件暂缺时，从本轮研究说明和已有上游记录补齐判断所需的信息。
 
 | 从哪里读 | 核什么 |
 | --- | --- |
-| 本轮 `conclusion.json`、`conclusion.md` | 读本轮状态、实际观察、`measurement_quality`、`evidence_updates`、独立核查范围和 `handoff.remaining_tasks` |
+| 本轮 `execution-conclusion.json`、`execution-conclusion.md` | 读本轮状态、实际观察、`measurement_quality`、`evidence_updates`、独立核查范围和 `handoff.remaining_tasks` |
 | `research-spec.md`、`research-plan.md`、`claims.json` | 还原本轮科学问题、假设与可区分预测，核批准设计、当前命题与留下的证据 |
 | `experiments/index.json`、对应 `meta.json`、运行和原始产物 | 由观察定位实际 run、基准、分组、统计和偏差。核失败、受阻和未跑事项会影响哪项判断 |
 | 上轮和历史记录 | 从 `docs/research/research-rounds.json` 查上一研究轮次、实际代码起点和决定引用，再读相关的诊断及反向证据 |
@@ -50,7 +50,7 @@ rg --files docs/research -g conclusion.json -g conclusion.md -g claims.json -g i
 | 要核的内容 | edge-vision 的一条证据链 |
 | --- | --- |
 | 原先预测 | C1 预期在实际算子实现固定时，改变写回量会改变延迟。核研究说明、configuration-comparison 设计和命题的实际条件 |
-| 实测与条件 | 从 `conclusion.json` 的 OBS-02 找到 `exp-configuration-comparison` 的 `baseline-01` 与 `combined-01`，回查各自命令、生效配置和轨迹。正式计时均关闭轨迹，同设备、输入、预热与同步边界。配对读数为 12.6 和 10.8 ms，见该实验的 `analysis/latency-comparison.json` |
+| 实测与条件 | 从 `execution-conclusion.json` 的 OBS-02 找到 `exp-configuration-comparison` 的 `baseline-01` 与 `combined-01`，回查各自命令、生效配置和轨迹。正式计时均关闭轨迹，同设备、输入、预热与同步边界。配对读数为 12.6 和 10.8 ms，见该实验的 `analysis/latency-comparison.json` |
 | 判断变化 | 组合低 1.8 ms，支持所测配置的结果。C1 仍为 `insufficient_evidence`，引用 `executions/configuration-comparison/execution-result-review.md` 的 C1 核查 |
 | 最强替代解释 | 两组实际算子发生切换。运行时实现的变化也可能造成同方向的延迟差 |
 | 仍缺什么 | 核现有几个组里有没有实际算子相同、写回量不同的配对。若没有，再判断目标条件下能否构造该对照 |

@@ -8,9 +8,9 @@
 
 agent 自己读懂仓库（查阅研究仓库的内部记录，对内视角）：
 
-1. 读 `idea_tree.json` + `git log --oneline --graph --all`，把 idea 树摆出来。
-2. **由用户确认最终方法版本**。结合 `claims.json` 中最终保留的论点及各版本的 `01-idea-spec.md` 推荐分支或标签。用户确认要发布的版本后，核对它对应论文中的最终方法。
-3. 读最终方法节点的版本目录（`01-idea-spec.md` / `02-research-plan.md` / **`03-claim-code-map.md`（定位相关实现的代码索引）** / `04-conclusion.md`）+ claims.json。**重点读 `04-conclusion.md`「可复现信息」**（复现命令 + 环境 + tag/commit）。
+1. 读 `docs/research/research-rounds.json` 和 Git 记录，找到候选发布轮次及对应代码。
+2. **由用户确认最终方法版本**。结合 `claims.json`、`research-spec.md` 和相关实验，提供可定位的 commit 或 tag。用户确认后，核对它与论文中的最终方法是否一致。
+3. 读所选轮次的 `research-plan.md`、`claim-code-map.md`、`execution-conclusion.md` 和 `execution-conclusion.json`。沿观察引用查实际 run 的命令、配置、环境和 commit。
 4. 读 CPS/CPR 产物拿环境与 baseline 可信度：`setup.json` + `report.md`（conda env、ready 命令、数据/checkpoint 路径）、`reproduction.json` + `report.md`（双轨可信度判定）。
 
 > 若最终方法节点的 baseline 在 `reproduction.json` 里判「不可信/未复现」，先告知用户——发行版会把不可信 baseline 一起发出去。是否继续用户定。
@@ -19,11 +19,9 @@ agent 自己读懂仓库（查阅研究仓库的内部记录，对内视角）�
 
 来自 `code-idea-execution` 的产物结构：
 
-- **idea = git 分支树**：根是 baseline，版本是分支 `idea/v<N>-<slug>`，method 锚点是 tag。
-- **`ideas/idea_tree.json`** —— 谱系入口，认节点用它。
-- **每个版本目录**：`01-idea-spec.md` / `02-research-plan.md` / `03-claim-code-map.md`（claim ID → file:line → 验证逻辑，**定位相关实现的代码索引**）/ `04-conclusion.md`（claim-证据 + golden_metrics）/ `00-from-previous-version.md`（v2+）。
-- **`claims.json`** —— claim tree 脊柱，认存活 claim。
-- **三方绑定**：git tag ↔ experiments/ 目录 ↔ conclusion 小节。checkpoint/runs 不进 git，靠 conclusion 与 pkg-meta.json 记路径。
+- **`docs/research/research-rounds.json`** 记录研究轮次、实际代码起点和交接 commit 或 tag。研究过程默认沿 `main` 推进。
+- **每轮目录**保留研究说明、plan、代码映射、论点记录、执行结论及实际实验。用 `claim-code-map.md` 定位实现，用 `execution-conclusion.{md,json}` 追到支撑结论的实验和 run。
+- **运行与资产位置**以实际运行记录为准。发布清单引用复核过的命令、配置、代码与权重。
 
 ## Step 2：分层抽取 + 逐层验证（按公开读者可获得的资料整理）
 
@@ -31,9 +29,9 @@ agent 自己读懂仓库（查阅研究仓库的内部记录，对内视角）�
 
 > 新仓库是独立仓库（不塞进中期 repo 项目根，否则 history 缠在一起泄露）。位置由用户定——动手前确认。
 
-**抽什么**（`03-claim-code-map.md` 当地图）：baseline 跑最终方法必需的主干 + 最终方法实现存活 claim 的增量 + 主表对应的 train/eval 入口、config、data loader、metric 实现。
+**抽什么**（`claim-code-map.md` 当地图）：baseline 跑最终方法必需的主干 + 最终方法实现存活 claim 的增量 + 主表对应的 train/eval 入口、config、data loader、metric 实现。
 
-**不抽什么**（避免带入内部资料及无关代码）：其他分支 / 被否 idea / 未发表方向的代码目录注释；实验脚手架、`experiments/` 残留、版本目录内部研究文件（`00-04-*.md`）、`claims.json`、`idea_tree.json`、`runs/` 残留、死代码；任何 commit history。
+**仅保留发布所需文件**。内部研究记录（`docs/research/`）、未发表方向、无关实验脚手架、运行残留和原仓库提交历史留在研究仓库。
 
 **保留所需代码的原目录结构**。去除上面列出的内容后，保留其余代码的原有位置。统一搬入 `src/` 等目录需要修改导入路径，可能影响复现。若有必要局部重组，例如用论文概念为模块改名，由助手提议、用户确认。删除未使用的代码，并在 README.md 和 AGENTS.md 中说明目录及模块与论文组件的对应关系。
 
@@ -103,7 +101,7 @@ agent 自己读懂仓库（查阅研究仓库的内部记录，对内视角）�
 
 - Git 提交历史不含内部信息（全新仓库、开发期 commit 无内部信息）。
 - 无其他分支 / 被否 idea / 未发表方向的代码目录注释。
-- 无内部研究文件：`claims.json` / `00-04-*.md` / `idea_tree.json` / `experiments/` 台账。
+- 无内部研究文件，包括 `docs/research/` 的轮次索引、执行结论、决定和实验台账。
 - 无 `runs/` 残留、无死代码、无定义未用参数。
 - **自动扫描项目**（开源前必跑，结果记进 RELEASE_REPORT）：
   ```bash

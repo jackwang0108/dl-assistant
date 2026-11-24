@@ -211,8 +211,8 @@ GPU 机器：
 │       │   ├── experiments/     # 实验台账、单实验报告和运行
 │       │   ├── executions/      # 各执行批次的独立核查
 │       │   ├── decisions/       # 基于本轮证据作出的决定
-│       │   ├── conclusion.md
-│       │   └── conclusion.json
+│       │   ├── execution-conclusion.md
+│       │   └── execution-conclusion.json
 │       └── paper-package.md     # 用户决定进入写作时生成
 └── [baseline 自己的源码 …]
 

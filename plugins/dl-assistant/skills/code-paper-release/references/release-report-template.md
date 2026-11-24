@@ -64,7 +64,7 @@ release 的验证报告，放 release repo 根，记录全过程（节点认定 
 
 - [x] git history：全新仓库，开发期 commit 无内部信息（开源前仍重新初始化 Git 仓库）
 - [x] 无其他分支 / 被否 idea / 未发表方向的代码与注释
-- [x] 无内部研究文件：claims.json / 00-04 版本文件 / idea_tree.json / experiments/ 台账
+- [x] 无 `docs/research/` 的内部轮次、执行结论、决定和实验台账
 - [x] 无 runs/ 残留、无死代码、无定义未用参数
 - [x] secret 扫描：gitleaks / grep（token|api_key|password）→ 0 命中
 - [x] 内部路径扫描：grep（/home/|/data/集群路径|内网 IP）→ 0 命中

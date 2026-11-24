@@ -20,7 +20,7 @@
    ```bash
    rg --files docs/research docs/idea-find \
        -g 'research-rounds.json' -g 'research-plan.md' -g 'next-step-decision.md' \
-       -g 'conclusion.json' -g 'spec.json'
+       -g 'execution-conclusion.json' -g 'spec.json'
    ```
 
 3. **核本次允许做什么。** 打开本轮 `research-spec.md`、`research-plan.md` 和实际批准记录。逐项核方案修订、任务 slug、比较条件、资源和停止点。首轮批准来自 `docs/idea-find/` 中对应草案及 `spec.json` 的决定。已建的后续轮从索引的 `approval_ref` 查来源决定，再核当前 plan。遇到同轮补证，以该任务实际绑定的 plan 修订和决定为准。只获准复查已有材料时，继续读、核或复算已有证据。需重新运行或采新读数时，核是否有对应任务及批准。
@@ -28,7 +28,7 @@
 
 | 要确认什么 | 先读哪些记录 |
 | --- | --- |
-| 本轮问题、预测和当前证据 | `research-spec.md`、`claims.json`、`conclusion.md` 和 `conclusion.json` |
+| 本轮问题、预测和当前证据 | `research-spec.md`、`claims.json`、`execution-conclusion.md` 和 `execution-conclusion.json` |
 | 哪些批次已交回，哪些运行仍在继续 | `experiments/index.json` 的批次和实验条目，实验及 run 的 `meta.json`。从 `report.md` 回查实际条件和原始读数 |
 | 哪一份结果做过独立核查 | 台账或结论引用的 `executions/<批次-slug>/execution-result-review.md`，核其实际覆盖的实验、run 和命题 |
 | 最近相关的决定允许继续到哪里 | 本轮 `decisions/<决定-slug>/next-step-decision.md` 或索引引用的上一轮决定，再核实际 plan 修订、任务、预算及停止点 |

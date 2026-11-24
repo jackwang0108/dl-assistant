@@ -24,7 +24,7 @@
 | 一批执行包含哪些实验和运行 | `experiments/index.json` 的批次登记和对应实验、尝试元记录。单实验报告、配置和运行证据在 `experiments/<experiment-id>/` |
 | 哪一批结果做过独立核查 | `executions/<批次-slug>/execution-result-review.md`。每份覆盖的实验和 run 以报告列出的范围为准 |
 | 看完本轮证据后决定做什么 | `decisions/<决定-slug>/next-step-decision.md`。复查材料或待审草案与该决定一同保存。确认开新轮时，从决定链接到新轮的获批方案 |
-| 各批证据合起来支持到哪里 | 本轮 `conclusion.md` 和 `conclusion.json`，再沿出处回查单实验报告、原始读数及独立核查 |
+| 各批证据合起来支持到哪里 | 本轮 `execution-conclusion.md` 和 `execution-conclusion.json`，再沿出处回查单实验报告、原始读数及独立核查 |
 
 例如，v1 完成配置比较后，用户批准在 v1 补采缺失轨迹。这次追加相应的 plan 修订和执行批次，索引仍只有 v1。若随后确认开 v2 核固定分派，把决定留在 v1 的决定目录，再登记 v2。
 

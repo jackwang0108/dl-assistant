@@ -2,7 +2,7 @@
 
 本文件说明怎样汇总本轮实际执行、有效观察和逐项命题的证据判断，并把可复查的结果、未决解释和下一步建议交给 iterate。
 
-在[运行手册 Step 6](workflow.md#step-6-记录判断与边界并交接)填写本轮的 `conclusion.md` 和 `conclusion.json`。发生中止、受阻或部分完成时，同样保存实际结果和限制。每批交回时更新两份文件，两份均使用相同的观察、命题、实验和运行 ID。保留此前的观察及核查来源，新增批次补上本次依据。详细执行记录从实验台账和各项元记录回查，独立判断引用实际完成的核查。
+在[运行手册 Step 6](workflow.md#step-6-记录判断与边界并交接)填写本轮的 `execution-conclusion.md` 和 `execution-conclusion.json`。发生中止、受阻或部分完成时，同样保存实际结果和限制。每批交回时更新两份文件，两份均使用相同的观察、命题、实验和运行 ID。保留此前的观察及核查来源，新增批次补上本次依据。详细执行记录从实验台账和各项元记录回查，独立判断引用实际完成的核查。
 
 ## 怎样组织整轮结论
 
@@ -11,7 +11,7 @@
 - **把可能解释写到证据支持的范围。** 写原先要区分哪些解释、观察实际支持什么，以及还有哪条解释与观察相容。原因已有核查证据时给路径。意外或事后观察写出来源和待验证条件。
 - **让下一轮知道缺哪条证据。** 写明缺少的对照、测量或条件。若有跨规模问题，按实际报告已测规模、成对观察的方向及升档条件。未测范围标为待核。取证建议及其用途交 iterate 与用户判断。
 
-## 可复制的 conclusion.md
+## 可复制的 execution-conclusion.md
 
 ```markdown
 # {研究版本} · 本轮实验结论
@@ -47,7 +47,7 @@
 - 取证建议 | {建议优先核哪项及其理由，交 iterate 和用户决定}
 ```
 
-## conclusion.json 起点与字段说明
+## execution-conclusion.json 起点与字段说明
 
 路径相对本轮目录。外部材料注明实际位置或起点。按实际核查填写，尚无结果时保留空值或待评估状态。
 
@@ -97,7 +97,7 @@
 
 沿用[运行手册](workflow.md#示例--edge-vision-的计时与轨迹)和[独立证据核查](acceptance-contract.md)的虚构案例。以下是 configuration-comparison 的四组配置比较已获批并实际执行后的本轮交接。baseline-timing 已完成，备选解析器检查曾获准但失败，正式机制隔离对照待确定。
 
-### conclusion.md
+### execution-conclusion.md
 
 ```markdown
 # v1-edge-vision · 本轮实验结论
@@ -135,7 +135,7 @@
 - 取证建议 | 优先查运行时能否在目标条件下固定实际算子。若能落实，再用同设备和计时协议核写回量变化。由 iterate 与用户决定是否采用。
 ```
 
-### conclusion.json
+### execution-conclusion.json
 
 ```json
 {
@@ -221,7 +221,7 @@
     {
       "claim_id": "C1",
       "evidence_assessment": "insufficient_evidence",
-      "source": "acceptance-v1",
+      "source": "docs/research/v1-edge-vision/executions/configuration-comparison/execution-result-review.md",
       "review_ref": "executions/configuration-comparison/execution-result-review.md",
       "observation_ids": ["OBS-02"],
       "inference_limits": ["观察支持所测条件的配置收益。C1 仍需固定实际算子实现、只改变写回量的对照。"]

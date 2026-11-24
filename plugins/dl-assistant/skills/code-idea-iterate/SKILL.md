@@ -74,7 +74,7 @@ flowchart TD
 | --- | --- |
 | [运行手册](references/workflow.md) | 开始或续做时，按六步复核证据、比较下一步并交接 |
 | [会话恢复说明](../dl-assistant/references/session-recovery.md) | 核当前版本、实际任务和运行状态时 |
-| [上轮结论结构](../code-idea-execution/references/conclusion-template.md) | 回查实际观察、测量质量、证据判断和未完成事项时 |
+| [上轮结论结构](../code-idea-execution/references/execution-conclusion-template.md) | 回查实际观察、测量质量、证据判断和未完成事项时 |
 | [研究讨论](references/research-dialogue.md) | 给用户讲实际结果和下一步建议时 |
 | [证据复核与原因调查指引](references/autopsy-guide.md)、[调查记录模板](references/autopsy-template.md) | 选择调查动作并保存各次检查时 |
 | [研究说明](../dl-assistant/references/spec-template.md)、[取证方案](../dl-assistant/references/plan-template.md) | 在运行手册 Step 5 写下一轮交接材料时 |

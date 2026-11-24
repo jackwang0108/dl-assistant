@@ -33,13 +33,13 @@
 
 ## 填写示例 · edge-vision
 
-示例沿用[上轮结论中的虚构项目](../../code-idea-execution/references/conclusion-template.md)。下方路径以示例项目为准。
+示例沿用[上轮结论中的虚构项目](../../code-idea-execution/references/execution-conclusion-template.md)。下方路径以示例项目为准。
 
 ```markdown
 # 先复查已有轨迹与实际算子
 
 - **讨论范围**　v1-edge-vision 的 Q2。根据 configuration-comparison 结果决定如何继续区分写回量（C1）和实际算子（C2）的作用。
-- **证据位置**　conclusion.json 中的 OBS-02。实验 exp-configuration-comparison 的 baseline-01、combined-01 及 analysis/latency-comparison.json。独立核查见 executions/configuration-comparison/execution-result-review.md 的 C1，现有轨迹和源码复核见同目录 autopsy.md 的 CHECK-02、CHECK-03。
+- **证据位置**　execution-conclusion.json 中的 OBS-02。实验 exp-configuration-comparison 的 baseline-01、combined-01 及 analysis/latency-comparison.json。独立核查见 executions/configuration-comparison/execution-result-review.md 的 C1，现有轨迹和源码复核见同目录 autopsy.md 的 CHECK-02、CHECK-03。
 
 ## 认识变化
 
