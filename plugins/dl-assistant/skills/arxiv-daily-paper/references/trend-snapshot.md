@@ -1,32 +1,49 @@
-# trend-snapshot.json 格式（arxiv-daily-paper）
+# 跨日话题统计
 
-每次运行结束时，把 `trend-snapshot.json` 保存到当天的产出目录。下一次运行时读取历史快照，用于跨日比较。它与 `raw.json` 和第 2 轮的评估记录一样，都是每次运行保存的文件。全局运行状态不在这里维护。
+统计对象是 `raw.json` 中全部抓取论文的标题与摘要，不是推荐名单。每篇至少有一个话题分类；允许多标签，但统计时每个话题内按稳定 arXiv ID 去重，并说明各话题占比之和可能超过 100%。保留逐篇分类便于复查。
 
-第 5 步撰写简报时，按话题整理的每组论文对应 `clusters` 中的一项。
-
-## 模板
+## 快照示例
 
 ```json
 {
+  "schema_version": 2,
   "date": "2026-07-09",
+  "date_basis": "submittedDate",
+  "timezone": "UTC",
+  "fetched_at": "2026-07-10T12:00:00+00:00",
   "categories": ["cs.CV"],
-  "clusters": [
-    {"name": "文档解析 OCR-VLM", "keywords": ["document parsing", "OCR", "VLM"], "top_ids": ["2507.12345"]}
+  "coverage": "all_fetched",
+  "complete": true,
+  "incomplete_reasons": [],
+  "returned_count": 2,
+  "papers": [
+    {"id": "2607.00001", "version_id": "2607.00001v1", "topics": ["document-understanding"]},
+    {"id": "2607.00002", "version_id": "2607.00002v1", "topics": ["document-understanding"]}
   ],
-  "orgs": {"DeepSeek": 3, "Google": 2}
+  "topics": [
+    {
+      "key": "document-understanding",
+      "name": "文档理解",
+      "definition": "理解文档图像、布局及其中的语义内容",
+      "keywords": ["document understanding", "layout"],
+      "count": 2,
+      "share": 1.0,
+      "representative_ids": ["2607.00001"]
+    }
+  ]
 }
 ```
 
-## 字段说明
+示例 ID 仅用于展示格式。`complete` 表示查询未达上限、获取时日期已结束，且已给全部返回论文分类。保留获取时间，用于解释可能的收录延迟。当前日期尚未结束、抓取达上限或分类未完成时设为 false，在 `incomplete_reasons` 写出具体原因。分母为 `raw.json` 中 `total_count` 个去重论文，零篇时比例写 null。合法空结果仍保留日期和分类，查询失败不生成零篇趋势。
 
-| 字段 | 必填 | 含义 / 来源 |
-| --- | --- | --- |
-| `date` | 是 | 当天日期（YYYY-MM-DD） |
-| `categories` | 是 | 开场确认的 arXiv 分类，用来选择同分类的历史快照 |
-| `clusters[]` | 是 | 当天的话题分组，撰写简报时一并记录 |
-| `clusters[].name` | 是 | 用于展示的话题名称，跨日比较时忽略该字段 |
-| `clusters[].keywords` | 是 | 从该组论文标题或摘要提炼的英文关键词，是跨日比较的主要依据 |
-| `clusters[].top_ids` | 是 | 从通过第 2 轮的论文中选择代表论文的 arXiv ID，用作判断话题重叠的辅助依据 |
-| `orgs` | 否 | 各机构对应的论文篇数。arXiv 没有专门的机构字段，仅在 comment 或摘要中可直接取得时填写，否则省略 |
+## 比较规则
 
-> 跨日比较话题时，使用 `keywords` 和 `top_ids` 的重叠情况。例如，「Agent 自进化」和「LLM Agent」可能对应同一组论文。`orgs` 是可选补充信息。
+- 只将分类集合、日期口径、时区一致且 `complete: true` 的快照纳入同一统计。部分结果可展示，但不直接用于升降判断。
+- 同日期同范围重跑只选最新的完整快照，不将多个运行重复累加；跨分类合并时按论文 ID 去重。ID 用于去重与查原文，不用其跨日重叠识别话题。
+- 根据话题定义、关键词及研究问题对应分类，不只匹配名称。定义发生实质变化时重新统一分类或说明不可比，不能把分类变化当作趋势。
+- 每个话题同时展示篇数与当日论文占比；区间占比按该区间话题论文数除以全部论文数计算，不直接平均每日比例。
+- 最近 7 或 30 个自然日内比较，报告实际有效日期和缺失日期；只有间断记录时说“最近几次观察”，不声称连续多日。
+- 历史少时描述观察，不断言“真趋势”。比较周或月变化时列出两个可比区间及覆盖情况，没有足够历史就不报告增长。
+- 引用代表论文支持话题解释；不从论文数量推断研究质量、机构战略或长期发展方向。
+
+旧版没有覆盖标识、主要来自推荐结果的快照只作为历史推荐记录，不混入本统计。机构信息不作为必填统计项，元数据通常不足以做可靠机构归属。

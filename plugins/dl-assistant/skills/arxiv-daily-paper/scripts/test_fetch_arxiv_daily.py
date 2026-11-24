@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import sys
 import types
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -125,6 +126,58 @@ def test_paper_to_dict_handles_missing_comment():
     d = mod.paper_to_dict(_fake_result(comment=None))
     assert d["comment"] is None
     assert d["pages"] is None
+
+
+def test_paper_to_dict_preserves_legacy_archive_in_versioned_id():
+    paper = mod.paper_to_dict(_fake_result(entry_id="http://arxiv.org/abs/hep-th/9901001v2"))
+    assert paper["id"] == "hep-th/9901001"
+    assert paper["version_id"] == "hep-th/9901001v2"
+
+
+@pytest.mark.parametrize("value", ["2026-6-29", "2026-02-30", "2026-06-29-extra"])
+def test_resolve_date_rejects_invalid_iso_dates(value):
+    with pytest.raises(ValueError):
+        mod.resolve_date(value)
+
+
+def test_empty_result_keeps_requested_date_and_records_query_basis(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["fetch", "--date", "2026-06-29", "--categories", "cs.CV"])
+    calls = []
+
+    def fake_fetch(categories, date, max_results):
+        calls.append((categories, date, max_results))
+        return [], 0
+
+    monkeypatch.setattr(mod, "fetch", fake_fetch)
+    mod.main()
+    result = json.loads(capsys.readouterr().out)
+    assert calls == [(["cs.CV"], "2026-06-29", 500)]
+    assert result["date"] == "2026-06-29"
+    assert result["date_basis"] == "submittedDate"
+    assert result["timezone"] == "UTC"
+    assert datetime.fromisoformat(result["fetched_at"]).tzinfo is not None
+    assert result["total_count"] == 0
+    assert result["truncated"] is False
+
+
+def test_cap_is_checked_before_deduplication(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", [
+        "fetch", "--date", "2026-06-29", "--categories", "cs.LG", "cs.CV", "cs.CV", "--max", "2",
+    ])
+    monkeypatch.setattr(mod.arxiv.Client, "results", lambda self, search: iter([_fake_result(), _fake_result()]))
+    mod.main()
+    result = json.loads(capsys.readouterr().out)
+    assert result["categories"] == ["cs.CV", "cs.LG"]
+    assert result["total_count"] == 1
+    assert result["raw_count"] == result["max_results"] == 2
+    assert result["truncated"] is True
+
+
+def test_nonpositive_cap_is_rejected_before_fetch(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["fetch", "--date", "2026-06-29", "--categories", "cs.CV", "--max", "0"])
+    with pytest.raises(SystemExit) as exc:
+        mod.main()
+    assert exc.value.code == 2
 
 
 if __name__ == "__main__":

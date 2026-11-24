@@ -15,18 +15,17 @@ Key properties:
     categories comes back once, not once per category.
   * Paginates by submittedDate until the day is exhausted (or --max cap),
     instead of silently truncating at a fixed page size.
-  * Carries the `comment` and `journal_ref` fields — arXiv's objective
-    quality signals ("Accepted to CVPR 2026", "Code: github.com/...") that
-    paper-search drops.
+  * Carries author-provided `comment` and `journal_ref` metadata,
+    such as acceptance statements and code links.
 
 Run (zero setup, deps auto-installed by uv):
     uv run fetch_arxiv_daily.py --date today --categories cs.CV cs.LG
     uv run fetch_arxiv_daily.py --date 2026-06-29 --categories cs.CV --max 400
 
 Date semantics: filters by arXiv *submittedDate* (UTC), which is the
-submission timestamp, not the public announcement day. arXiv announces on
-weekday schedules, so a date with no results usually means "not announced
-yet / weekend / holiday", not an error.
+submission timestamp, not the public announcement day. An empty response
+is not an API error and does not establish why no records were returned.
+Never substitute a different date automatically.
 """
 
 from __future__ import annotations
@@ -62,6 +61,8 @@ def resolve_date(date_arg: str) -> str:
     if date_arg == "yesterday":
         return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
     # Validate explicit date
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_arg):
+        raise ValueError("Expected YYYY-MM-DD")
     datetime.strptime(date_arg, "%Y-%m-%d")  # raises ValueError if malformed
     return date_arg
 
@@ -77,9 +78,9 @@ def build_query(categories: list[str], date: str) -> str:
 
 
 def paper_to_dict(result: arxiv.Result) -> dict:
-    """Normalise an arxiv.Result into a plain dict, keeping quality signals."""
-    arxiv_id = result.entry_id.split("/")[-1]  # e.g. 2606.28322v1
-    base_id = arxiv_id.split("v")[0]  # strip version for stable key
+    """Normalise an arxiv.Result into a plain dict, keeping author-provided metadata."""
+    arxiv_id = result.entry_id.split("/abs/", 1)[-1]
+    base_id = re.sub(r"v[0-9]+$", "", arxiv_id)
     comment = (result.comment or "").strip().replace("\n", " ") or None
     return {
         "id": base_id,
@@ -111,8 +112,8 @@ def dedup(papers: list[dict]) -> list[dict]:
     return out
 
 
-def fetch(categories: list[str], date: str, max_results: int) -> list[dict]:
-    """Query arXiv and return a de-duplicated list of paper dicts."""
+def fetch(categories: list[str], date: str, max_results: int) -> tuple[list[dict], int]:
+    """Return the unique papers and the count before de-duplication."""
     query = build_query(categories, date)
     client = arxiv.Client(page_size=100, delay_seconds=3.0, num_retries=3)
     search = arxiv.Search(
@@ -122,7 +123,7 @@ def fetch(categories: list[str], date: str, max_results: int) -> list[dict]:
         sort_order=arxiv.SortOrder.Descending,
     )
     papers = [paper_to_dict(r) for r in client.results(search)]
-    return dedup(papers)
+    return dedup(papers), len(papers)
 
 
 def main() -> None:
@@ -146,6 +147,8 @@ def main() -> None:
         help="Safety cap on total papers fetched (default 500).",
     )
     args = parser.parse_args()
+    if args.max_results <= 0:
+        parser.error("--max must be positive")
 
     try:
         date = resolve_date(args.date)
@@ -157,17 +160,23 @@ def main() -> None:
         )
         sys.exit(1)
 
+    categories = sorted(set(args.categories))
     try:
-        papers = fetch(args.categories, date, args.max_results)
+        papers, raw_count = fetch(categories, date, args.max_results)
     except Exception as exc:  # network / API failure — report, don't crash silently
         print(json.dumps({"error": f"arXiv fetch failed: {type(exc).__name__}: {exc}"}))
         sys.exit(1)
 
     result = {
         "date": date,
-        "categories": args.categories,
+        "date_basis": "submittedDate",
+        "timezone": "UTC",
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
+        "categories": categories,
         "total_count": len(papers),
-        "truncated": len(papers) >= args.max_results,
+        "raw_count": raw_count,
+        "max_results": args.max_results,
+        "truncated": raw_count >= args.max_results,
         "papers": papers,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
