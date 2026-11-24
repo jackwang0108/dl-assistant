@@ -1,65 +1,95 @@
-# 验收子 agent 契约
+# 独立证据核查契约
 
-> execution 在 Step 9 派发的独立验收者。只看实验产出的客观数据，
-> 不读 execution 的实现过程和解释，把每个 claim 的裁决直接写进 claims.json。
+本文件说明怎样独立核查实验执行、数据和测量质量，以及证据对具体命题的支持范围，并把有出处的判断交回主会话复核。
 
-## 角色
+在[运行手册 Step 5](workflow.md#step-5-核查执行测量和证据)使用。核查者先阅读批准设计、实际实现和原始证据，形成自己的判断后再与主会话对照。输出保存为本轮的 `acceptance-review.md`。
 
-你负责独立验收子论点。
-依据实验记录独立判断每个子论点的证据是否充分、实验之间是否可比，并把结论写入 claims.json。
-下一版做什么由 iterate 和用户决定。
+## 1. 准备核查范围和材料
 
-**验收只更新证据结论，不改子论点状态。** verdict 使用 supported / plausible / insufficient_evidence / contradicted。contradicted 表示证据与预测相反，交由 iterate 分析原因。`status` 的 active / refuted / superseded 由 iterate 和用户决定。设为 refuted 前须分析未达预期的原因并判断问题出在哪一层。一次实现没有产生效应，只能说明该次实现的结果。
+主会话说明待核的任务、命题、时间和产物范围，以及返回路径。需要委派时按已获授权安排，提供事实、文件位置和已知缺项。主会话的结论草稿与原始材料分开，供核查者形成独立判断后对照。
 
-## 输入（只读这些）
+| 读取顺序 | 给核查者的材料 |
+| --- | --- |
+| 研究问题与批准范围 | `01-idea-spec.md`、`02-research-plan.md`、批准记录和修订、`claims.json` 中实际要核的子论点 |
+| 拟执行的设计与实际实现 | `design.json` 或获批副本、`03-claim-code-map.md`、实际代码 commit 与 diff、生效配置，以及数据、测量和统计代码 |
+| 全部相关运行和偏差 | `experiments/index.json`、各实验 `meta.json`、命令、日志、退出状态、失败和恢复记录、实际配置、数据及模型引用。注明部分运行或缺失材料 |
+| 支撑判断的原始证据 | 逐样本或逐次读数、聚合数据和计算脚本。若 W&B 查回结果用于判断，给实际快照和所核步数范围 |
 
-- `01-idea-spec.md`：claim 的来源，本版要验证什么
-- `claims.json`：本版要裁决的 claim（本版新 claim 全是 `pending`）
-- `experiments/`：每个实验的 `meta.json` + `报告.md` + 产出（`runs/` 里的 metrics / log，`analysis/` 里的 report / data / figures）+ 台账 `index.json`。产物目录与文件要求的齐全性已由 execution 主 agent 用 `check-exp-artifacts.sh --all` 机器验过（查不过不派你）——你不用再查存在性，专注证据质量；但若发现契约之外的存放混乱，在对应 claim 的 `evidence_quality.issues` 里点出
-- git 状态（commit / branch / tag）：验证可追溯
+产物检查脚本的结果可用于定位文件和缺项。部分完成、失败和受阻的任务也可核查已有记录，按实际结果注明限制。需要澄清时先回查版本、代码或原始材料。复算若已在批准范围内，写清使用的数据、脚本、命令和结果；需要新增运行或改变研究设计时，交回执行流程确认。
 
-## 禁止读
+## 2. 按三个问题独立核查
 
-- execution 主 agent 的对话历史、debug 过程、对实验的任何解释
-- `04-conclusion.md`（还没写）
-- 任何"为什么这样设计"的主观叙述
+**运行是否完成、数据和测量是否有效、证据对命题意味着什么。**
 
-## 输出：直接写进 claims.json 的各**子论点**节点
+1. **核实际执行。** 按批准设计、台账和各次尝试对照原计划组、实际完成组、失败或缺失组。核命令、代码版本、生效配置、数据和权重实际来源，以及偏差记录。分清独立重复、重试和 checkpoint 恢复。退出码和文件状态写在执行结论里。
+2. **核数据与测量。** 用实际数据或日志检查样本身份和划分、纳入与排除、缺失、指标及单位、分母与聚合、测量条件、对照和重复关系。依据批准设计说明哪些量可以比较、哪些组或范围受限。复算优先选能区分问题的检查，例如用同一批原始读数和原聚合规则核结果。注明实际复算范围及所用脚本。
+3. **核对每条命题。** 对照预测及其适用条件，给实测值或推导依据、证据路径、已满足的条件、最强替代解释和未覆盖范围。保留支持、反向和限制证据。若运行失败、测量异常或缺少隔离对照，写该问题影响哪条比较，以及什么证据会改变判断。
+4. **记跨实验发现。** 如果复用基准、指标实现或同一缺项影响多项比较，在核查报告中单列，指明受影响任务和判断范围。尚未核到的版本、原始文件或组别列为未覆盖。
 
-> **只裁子论点（claims.json 的 `claims[]`），不裁总论点（`paper_claim`）**——总论点 verdict 归 iterate + 用户（研究判断），不归你。你只看每个子论点的实验证据够不够、对比公不公平。
+## 3. 给出子论点证据建议
 
-对每个 `pending` 的**子论点**，填这些字段：
+按[共享论点模板](../../dl-assistant/references/claims-template.json)使用以下判断。
 
-- `verdict`：supported / plausible / insufficient_evidence / contradicted
-- `verdict_source`：`acceptance-v<N>`
-- **保持 `status` 原值**。是否设为 active、refuted 或 superseded 由 iterate 和用户决定。设为 refuted 前须先分析原因并判断问题所属层次。
-- `is_innovation`：`verdict=supported` 时设 `true`（升格创新点，进 paper method）；否则 `false`
-- `method_tag`：`supported` 时填 `claim-C<id>`（首次成立）或 `claim-C<id>-v2`（method 迭代）—— execution 据此打 git tag 锁 method；未成立则空
-- `evidence_strength`：strong / medium / weak / none
-- `evidence[]`：哪个实验、哪个 metric、数值、path、role（supports / contradicts / mixed）
-- `evidence_quality`：comparable（这个子论点的证据公不公平可比）+ issues（具体问题）
+| 建议的 `evidence_assessment` | 适用情况 |
+| --- | --- |
+| `pending` | 正式取证还未开展，或该命题尚未核查。准备任务可以只报告可测性及后续条件 |
+| `supported` | 在声明的条件和核查范围内，有效证据支持该命题。写清支持哪个预测，以及剩余范围 |
+| `plausible` | 已有可信观察指向该命题，仍有重要限制。说明哪条事实提供初步支持、为何还不足以确定 |
+| `insufficient_evidence` | 已经核查，所获证据不足以支持或削弱命题。写清缺关键对照、测量受限、无法区分解释或执行失败导致缺数据等具体原因 |
+| `contradicted` | 有效且可比的观察与该命题在所测条件下的预测相反。记录对照、观察及适用条件，交 iterate 进一步分析 |
 
-**跨 claim 的共性问题（如"所有实验的 split 都不对"）不归你写** —— 那由 execution 主 agent 读完你的结果后，汇总进 `conclusion.json` 的 `evidence_quality_issues[]`。你只写每个 claim 自己的。
+在 `acceptance-review.md` 给每个子论点的建议及核查出处。建议包含 `evidence_assessment`、`evidence_strength`、`evidence`、`evidence_quality` 和 `inference_limits`。每条证据包含实际实验和 run、路径、对照与条件、读数及单位或定性依据，按其对命题的作用填 `supports`、`contradicts`、`mixed` 或 `limits`。数据有效性写入 `evidence_quality.data_validity`，并在 `issues` 具体说明缺项及偏差。
 
-## 验收标准
+主会话保留原核查报告，回查各建议引用的实际运行、数据、设计和适用范围，再串行写回相关子论点。采纳独立判断时，来源写 `acceptance-v<N>` 并引用核查位置。遇到分歧时，记录未采纳建议、相应证据和理由。若本轮未开展或尚未完成独立核查，交接时标明实际范围，主会话的判断按其实际来源记录。命题内容、ID、研究状态、总论点和贡献由 iterate 与用户处理。
 
-- 每个 claim 必须有**明确**裁决，不许"可能支持"这种模糊话。
-- 裁决必须**引具体实验 ID + 数值**（例："exp-002: cIoU 78.71 vs baseline 77.49，差 1.22"），不许空泛。
-- **判据对照**：每个实验的 `meta.json` 里有 execution 预登记的 `decision_rule`（什么结果算 keep）和 `anchor_run`（对照运行）——先核对这个实验是不是按预登记规则判的（确认没有在看到结果后更换判据），再独立判断证据够不够。delta < 2×`noise_floor`（见 `reproduction.json`）的"提升"不算 supported，最多 plausible。
-- **contradicted 的证据标准**。引用具体实验 ID 和数值，先确认指标口径、数据划分和对照运行一致。只有可比的实验结果才可作为反证。出现 contradicted 时，交由 iterate 分析原因。
-- **复杂度权衡**：keep 的不只是"指标涨了"——+0.X 但引入大量新代码/新依赖/新概念的变体，在 issues 里点出复杂度代价；同等指标下更简的变体优先（简洁性判据，见 SKILL 迭代纪律）。
-- 可比性检查覆盖关键维度：数据集 / metric 实现 / 训练 schedule / seed / 锚点（是否从 `reproduced_baseline_checkpoint` 或上一 supported tag 切，而不是从未裁决的变体 ckpt 续训）。
-- 问题必须**具体**（例："baseline 用论文数 78.71，我们复现 77.49，差 1.22，对比可能不公平"），不许"可能有问题"。
+## 可复制的 acceptance-review.md
 
-## 派发方式（execution 主 agent 执行）
+```markdown
+# {研究版本} · 独立证据核查
 
-execution 主 agent 在 Step 9 用 Agent 工具派一个子 agent（**general-purpose，禁 Explore**；全新上下文，**不传自己的对话历史**），
-prompt 只含：上面的角色说明 + 输入文件的路径 + 本契约。子 agent 自己读文件，把裁决写回 `claims.json`。
+- 核查范围 | {实际任务与命题，已查和未查的范围}
+- 来源 | {批准设计和修订、代码 commit/diff、实际配置、台账、运行和原始数据位置}
 
-验收子 agent 使用新上下文，执行方只给出上述材料。
+## 1. 实际执行和数据质量
 
-## 写回机制（裁决怎么落进 claims.json）
+| 任务与实验 | 原计划及实际执行 | 数据、测量及对照 | 偏差、缺项、证据路径 |
+| --- | --- | --- | --- |
+| {任务与实验 ID} | {已查的尝试，以及完成、失败、受阻或未运行的组} | {样本、比较条件、读数、统计或对应复算} | {实际影响和可复查位置} |
 
-- **子 agent 用 Edit 工具直接改 `claims.json`**——验收期间 claims.json 只有这一个写者（execution 主 agent 此时不动它），无并发冲突。
-- **返回时只汇报裁决摘要**（每个子论点的 verdict + 一句依据），不回传全文；真相源是 claims.json 本身。
-- **主 agent 收工后照 `dl-assistant/references/claims-template.json` 校验 schema**：必填字段齐（verdict / verdict_source / is_innovation / evidence_strength / evidence / evidence_quality）、枚举值合法（verdict / status / evidence_strength 在模板枚举内）、evidence 指针存在（指向的 `experiments/` 路径真实有文件）。**校验失败由主 agent 修（小缺漏补字段 / 指针改对）或重派验收**（结构性错误），不把脏 claims.json 交给 iterate。
+## 2. 子论点证据建议
+
+| 命题及预测条件 | 证据和作用 | 建议、依据与限制 |
+| --- | --- | --- |
+| {C1 与对应条件} | {实际 run、对照、读数与单位或推导、原始路径、证据角色} | {evidence_assessment、evidence_strength、data_validity、issues 和 inference_limits} |
+
+## 3. 跨实验发现与待核项
+
+{共性数据或设计问题、最强替代解释、未核实材料、什么补证能改变判断。}
+```
+
+## 完整填写示例 · edge-vision 的 T1 核查
+
+沿用[执行手册的虚构案例](workflow.md#示例--edge-vision-的计时与轨迹)。本例假设 T1 已获批准并执行了配置比较，机制隔离条件未能落实。所列路径用于示范填写。
+
+```markdown
+# v1-edge-vision · 独立证据核查
+
+- 核查范围 | T1 中的四组配置计时，以及这些读数能否用于判断 C1。C2 的独立核查未开展。
+- 来源 | 02-research-plan.md 的 T1、exp-002-configuration-comparison 的已批准设计副本、03-claim-code-map.md、实际算子分派 diff、四组有效配置、台账和原始计时及轨迹记录。
+
+## 1. 实际执行和数据质量
+
+| 任务与实验 | 原计划及实际执行 | 数据、测量及对照 | 偏差、缺项、证据路径 |
+| --- | --- | --- | --- |
+| T1 · exp-002-configuration-comparison | 原版、仅裁剪、仅融合、组合四组均完成。所查计时和轨迹使用同一设备、输入、批大小及预热条件 | 正式延迟关闭轨迹采集，采用同一同步边界。基线 12.6 ms，组合 10.8 ms。按原方案汇总的差值为 −1.8 ms（组合减基线） | 计时可以支持该条件下的配置比较。轨迹显示实际算子与写回量同时改变，未取得固定算子的隔离对照。读数与条件见 experiments/exp-002-configuration-comparison/analysis/latency-comparison.json |
+
+## 2. 子论点证据建议
+
+| 命题及预测条件 | 证据和作用 | 建议、依据与限制 |
+| --- | --- | --- |
+| C1 · 在实际算子固定的条件下，减少写回量预期降低延迟 | baseline-01 与 combined-01 的延迟差 −1.8 ms。所用数据及算子见 experiments/exp-002-configuration-comparison/analysis/latency-comparison.json。对 C1 的证据作用为 limits | evidence_assessment 为 insufficient_evidence，evidence_strength 为 none。所查延迟的 data_validity 为 valid。issues 记实际算子和写回量同时变化。inference_limits 说明可描述组合配置收益，仍需用同一算子实现、不同写回量的对照区分解释 |
+
+## 3. 跨实验发现与待核项
+
+运行时实现切换也可能解释延迟变化。若能在相同设备、输入和计时条件下确认两组实际使用同一算子，再分别核写回量及延迟，才有证据更新 C1。其他设备、其它输入和 C2 的证据留待各自核查。
+```

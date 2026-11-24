@@ -1,29 +1,104 @@
 {
-  "version": "v<N>-<slug>",
-  "experiments": [
-    {
-      "experiment_id": "exp-001-<name>",
-      "claim_cids": ["C1"],
-      "plan_phase": "Phase-1",
-      "anchor_run": "reproduction.json reduced_setting.baseline_result",
-      "primary_metric": "refcoco val cIoU",
-      "primary_value": 78.71,
-      "anchor_value": 77.49,
-      "verdict_local": "keep",
-      "reason": "超锚点 +1.22，大于 2×noise_floor.std（0.30），且新增代码仅 20 行",
-      "status": "completed",
-      "date": "2026-01-01"
-    }
-  ],
+  "schema_version": 2,
+  "version": null,
+  "experiments": [],
   "_notes": {
-    "这是什么": "实验台账。ideas/v<N>-<slug>/experiments/index.json，execution 维护——每跑完一个实验记一行；验收子 agent 看全景、iterate 看尝试地形（keep/discard 率是收口判断的客观信号）都读它。",
-    "粒度": "一轮实验一行（含自治带内试过的工程级变体）——全景地形靠它，细节去对应 exp 目录读 meta.json + 报告.md",
-    "experiment_id": "与 experiments/ 下的目录名一致",
-    "claim_cids": "这个实验验证哪些子论点（C1 等，见 claims.json）",
-    "anchor_run": "对比锚点——台账横向可比的前提是所有行锚点口径一致",
-    "primary_value / anchor_value": "主指标的本实验值与锚点值，并排写，一眼看 delta",
-    "verdict_local": "keep / discard / pending——按该实验 meta.json 预登记的 decision_rule 判",
-    "reason": "一句话原因，写清依据（delta vs noise_floor、复杂度权衡）",
-    "status": "completed / failed / in_progress——failed 的行也留着，失败的尝试地形同样重要"
+    "purpose": "本模板记录本轮计划和实际尝试过的取证任务，帮助接手方快速查到实验进度、可用结果、未完成原因和原始证据。",
+    "登记和更新": "每项计划实验或准备任务登记一条。启动、暂停、恢复、失败或完成时回填实际状态和更新时间。保留尚未执行、受阻、取消以及失败的项目。待批准的任务可先登记，写明待决项。开跑前关联实际元记录和设计。",
+    "标识和引用": "experiment_id 在本轮唯一，有目录时与目录名一致。plan_task_id 对应本轮取证方案的任务编号。用 research_question_ids、hypothesis_ids 和 claim_cids 关联实际检验对象。准备任务可留空假设及子论点数组，在 purpose 写它要确认的条件。meta_path 从 experiments/ 解析，尚未建立元记录时为 null。",
+    "状态": "status 使用 not_started、in_progress、completed、blocked、failed 或 cancelled，描述实验实际执行状态。status_reason 说明待批准、执行偏差、失败或停止原因。未执行的读数留空。读取时从元记录和运行确认台账状态。",
+    "数据与解释": "data_validity 使用 unassessed、valid、limited 或 invalid，描述当前任务实际测量的有效范围。inference_status 概括该实验按其设计能得出的解释。尚无判断时写 pending，准备任务的科学推断不适用时写 not_applicable。正式实验的判断及适用条件与 meta.json 对齐。命题的证据判断由 claims.json 记录。",
+    "结果摘要": "result_summary 可为 null。已有读数时，列与本任务有关的条件、比较对象、读数和单位，给出 evidence_paths 和 limitations。路径从 experiments/ 解析，外部证据记实际位置。描述证据明确支持的用途和仍待核的解释。诊断记录可以只引用日志和已取得的观察。",
+    "运行与版本": "同项实验的独立重复、重试、恢复记录在 meta.json，使用各自尝试与实际产物路径。若科学设计实质改变，使用新实验 ID 或明确的新设计版本，保留原台账项和运行。每项按其设计核对基准和条件。",
+    "下一步": "next_action 写具体的补查、恢复或待确认事项。台账摘要可用于阶段汇报和接续，原始数据、完整参数和运行依据从元记录及实际产物回查。",
+    "示例": {
+      "说明": "以下为 edge-vision 的虚构台账示例。复制使用时填入实际版本、条件、身份和产物。示例中的备选解析器诊断单独获准，T0 已用原工具取得主记录。",
+      "version": "v1-edge-vision",
+      "experiments": [
+        {
+          "experiment_id": "exp-001-baseline-timing",
+          "plan_task_id": "T0",
+          "type": "diagnostic",
+          "design_mode": "exploration",
+          "purpose": "核原模型的计时可测性和轨迹采集对计时的影响",
+          "research_question_ids": ["Q2"],
+          "hypothesis_ids": [],
+          "claim_cids": [],
+          "meta_path": "exp-001-baseline-timing/meta.json",
+          "status": "completed",
+          "status_reason": "完成 D3 批准的一台目标设备上的准备检查，并到达 T0 的停止点。",
+          "data_validity": "valid",
+          "inference_status": "not_applicable",
+          "result_summary": {
+            "conditions": "目标设备上的同一原模型、单张请求、相同预热和同步计时边界。",
+            "readings": [
+              {
+                "label": "关闭轨迹采集",
+                "metric": "端到端延迟",
+                "values": [12.5, 12.6, 12.7],
+                "unit": "ms"
+              },
+              {
+                "label": "开启轨迹采集",
+                "metric": "端到端延迟",
+                "values": [15.3, 15.4, 15.6],
+                "unit": "ms"
+              },
+              {
+                "label": "T0 实际耗时",
+                "metric": "总运行耗时",
+                "values": [18],
+                "unit": "min"
+              }
+            ],
+            "evidence_paths": ["exp-001-baseline-timing/runs/attempt-01/metrics.json"],
+            "limitations": ["本次用于核可测性。正式配置收益和机制对照待 T1。"]
+          },
+          "next_action": "建议正式计时与轨迹分开采，交用户确认 T1 的对照、口径和预算。",
+          "updated_at": "2026-11-24T10:20:00+08:00"
+        },
+        {
+          "experiment_id": "exp-002-configuration-comparison",
+          "plan_task_id": "T1",
+          "type": "ablation",
+          "design_mode": "confirmation",
+          "purpose": "比较原版、仅裁剪、仅融合和组合，核是否具备隔离机制的对照",
+          "research_question_ids": ["Q2"],
+          "hypothesis_ids": ["H2", "H3"],
+          "claim_cids": ["C1", "C2"],
+          "meta_path": null,
+          "status": "not_started",
+          "status_reason": "D3 只批准 T0，正式取证的组别、隔离对照及预算仍待确认。",
+          "data_validity": "unassessed",
+          "inference_status": "pending",
+          "result_summary": null,
+          "next_action": "提交 T0 的读数和实际成本，待 T1 获批后登记正式元记录及运行。",
+          "updated_at": "2026-11-24T10:20:00+08:00"
+        },
+        {
+          "experiment_id": "exp-003-trace-reader-smoke",
+          "plan_task_id": "T0",
+          "type": "diagnostic",
+          "design_mode": "exploration",
+          "purpose": "核备选轨迹解析器能否读取主准备任务保存的轨迹",
+          "research_question_ids": ["Q2"],
+          "hypothesis_ids": [],
+          "claim_cids": [],
+          "meta_path": "exp-003-trace-reader-smoke/meta.json",
+          "status": "failed",
+          "status_reason": "解析器读到当前轨迹格式时提前退出，完整分组统计未生成。",
+          "data_validity": "unassessed",
+          "inference_status": "not_applicable",
+          "result_summary": {
+            "conditions": "使用 T0 留存的同一份轨迹做单独的离线解析检查。",
+            "readings": [],
+            "evidence_paths": ["exp-003-trace-reader-smoke/runs/attempt-01/run.log"],
+            "limitations": ["日志可用于定位解析失败。原工具取得的 T0 测量另有证据。"]
+          },
+          "next_action": "若 T1 需要此解析器，先核轨迹版本兼容性，再据实际情况决定是否重试。",
+          "updated_at": "2026-11-24T11:05:00+08:00"
+        }
+      ]
+    }
   }
 }
