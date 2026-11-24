@@ -19,26 +19,19 @@
 
 ## 启动：detached 跑长任务（agent 永不 attach）
 
-**首选封装脚本** `dl-assistant/scripts/run-long.sh`（模板 + mkdir + sentinel 已固化，少记少错）：
+单机或 SSH 直连机器使用 [run-long.sh](../scripts/run-long.sh) 启动。集群提交的任务用调度器托管，记录作业 ID、日志、退出状态和产物。
 
 ```bash
 bash <skills根>/dl-assistant/scripts/run-long.sh <前缀>-<task> <logdir> '<cmd>'
 # 产物: <logdir>/<session名>.log + <logdir>/<session名>.EXIT_CODE
-# 脚本会输出查看会话、日志和退出码的命令；命令在调用者当前目录执行，要换目录把 cd 写进 <cmd>
+# 启动记录: <logdir>/.<session名>.launch/
 ```
 
-手写模板（理解机制 / 脚本不在手边时；`<task>` = 任务 slug，`<cmd>` = 要跑的命令，`<logdir>` = log 落地目录）：
+命令由 Bash 在调用目录中执行，管道中任一命令出错会影响管道的退出码。任务需要特定环境时，显式指定解释器、容器入口或项目认可的环境启动方式。凭据通过已有私有配置提供，命令会保存在启动记录里。
 
-```bash
-tmux new-session -d -s <前缀>-<task> \
-  'cd <repo> && mkdir -p <logdir> && ( <cmd> ) > <logdir>/<task>.log 2>&1; echo $? > <logdir>/<task>.EXIT_CODE'
-```
+会话名用字母、数字、下划线或连字符，以字母或数字开头。名称包含 skill 前缀、任务名和尝试编号。每次尝试使用新名称。同名会话、日志、退出码或启动目录存在时，脚本会拒绝再次启动。独占启动目录保留执行命令和路径，tmux 启动失败时也保留，供核查。
 
-- `-d` = 命令式 detach：会话一建出来就脱离，agent **不 attach**（没交互终端，attach 会卡住）。
-- `mkdir -p` 先建 log 目录——不预建的话重定向会静默失败。
-- stdout + stderr 落 `<task>.log`；退出码落 `<task>.EXIT_CODE` sentinel。
-- session 名带 **skill 前缀 + task slug**（见场景速查），多个长任务不撞名、跨 skill 区分。
-- 换别的 detach 工具（nohup / setsid / sbatch）同理，核心三件事不变：**进程脱离 Claude + 输出落文件 + 退出码落 sentinel**。
+脚本返回成功表示 tmux 接受启动请求。实际任务的标准输出和错误写入日志，结束后原子写入退出码。启动后查看会话、日志或已落盘退出码确认进展。任务很快结束时可能已经没有会话，仍可从退出码和日志核对结果。
 
 > 大文件下载优先 `aria2c -x 16`（多连接 + 断点续传），比 `wget` 稳；HF 权重用 `huggingface-cli download`
 > （自带断点续传 + 配 `HF_ENDPOINT` 镜像）。
@@ -48,17 +41,19 @@ tmux new-session -d -s <前缀>-<task> \
 | 文件 | 含义 |
 | --- | --- |
 | `<task>.log` | 任务进展（stdout + stderr）|
-| `<task>.EXIT_CODE` | 终态 sentinel：**不存在 = 还在跑**（或被强杀）；**存在 = 已结束**，内容 `0` 成功 / 非 `0` 失败 |
+| `<task>.EXIT_CODE` | 已保存的命令退出码。`0` 表示命令成功退出，非 `0` 表示命令或启动后的工作目录切换失败。文件缺失时需继续核查 |
+| `.<task>.launch/` | 本次尝试的启动记录。同名重试请用新会话名 |
 | 落地的产物（数据目录 / checkpoint / metric 文件） | 真实结果，验证/恢复要用 |
 
-一句话：**`EXIT_CODE` 文件在不在 = 任务还在不在跑。**
+退出码缺失时，结合会话、进程和日志判断状态。退出码为 `0` 后仍要检查预期产物完整性。
 
 ## 查看会话、日志和退出码（任何一轮对话均可执行）
 
 ```bash
-tmux has-session -t <前缀>-<task> 2>/dev/null && echo RUNNING || echo GONE   # session 还活着吗
-tail -n 30 <logdir>/<task>.log                                                  # 看进展（直接读文件）
-cat <logdir>/<task>.EXIT_CODE 2>/dev/null                                       # 终态（无输出 = 尚未结束）
+# session 和 log_dir 从本次尝试的启动输出或报告取得。
+tmux has-session -t "=$session" 2>/dev/null && echo SESSION_PRESENT || echo SESSION_GONE
+test ! -f "$log_dir/$session.log" || tail -n 30 "$log_dir/$session.log"
+test ! -f "$log_dir/$session.EXIT_CODE" || cat "$log_dir/$session.EXIT_CODE"
 ```
 
 多个并行任务时，`tmux ls 2>/dev/null | grep '^<前缀>-'` 看全部。
@@ -77,15 +72,12 @@ cat <logdir>/<task>.EXIT_CODE 2>/dev/null                                       
 2. **扫任务状态**：
    ```bash
    tmux ls 2>/dev/null | grep '^<前缀>-'        # 哪些还在后台跑
-   for d in <logdir>/*/; do                       # 逐任务看 sentinel + log 末尾
-     echo "== $d =="; cat "$d/EXIT_CODE" 2>/dev/null || echo "未结束"; tail -n 5 "$d"/*.log
+   for code in "$log_dir"/*.EXIT_CODE; do         # 列已有退出记录
+     [ -f "$code" ] && cat "$code"
    done
    ```
 
-3. **判别异常死亡**（长任务最常见的中断）：某任务 tmux session 已 GONE 但 `EXIT_CODE` 不存在
-   = 被 kill / OOM-killer / 节点重启杀掉，sentinel 没来得及写。**别当"还在跑"干等**——
-   读它 log 末尾确认任务中断的原因（OOM？NCCL？被抢占？no space？），按下一步续跑或改配置重跑，
-   **不把半截结果当数据**。
+3. **核查缺少退出码的尝试。** 会话仍存在时，查相关进程和日志是否还在更新。会话消失时，将状态保留为未知，核对节点、进程或作业记录，并从日志找中断线索。确认旧任务已停止后，从经验证的断点续跑或用新会话名重试。部分产物按实际覆盖范围记录。
 
 4. **定位断点 + 只补未完成的**：对照本 skill 的阶段（setup 的三层验证 / reproduction 的分流 /
    execution 的实验进度），**只补未完成的，不重跑已验证的**。

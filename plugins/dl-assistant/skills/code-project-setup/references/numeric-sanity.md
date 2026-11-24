@@ -1,90 +1,127 @@
-# 数值正确性检查（numeric-sanity）
+# 组件行为与数值检查
 
-> 三层验证都要达到各自的通过条件。下面列出需要检查的数值、异常表现和处理方式。
+本文件说明怎样根据入口和组件的预期行为设计最小检查，验证实际输入、计算和输出，并在发现异常时定位问题发生在哪一步。
 
-## 为什么"跑通"不等于"跑对"
+按[运行手册 Step 5](workflow.md#step-5-逐项实跑正式入口复跑受影响的检查)验证已审阅的入口。检查结论限定在实际使用的版本、输入和条件。下游根据需要用完整协议核参考性能。
 
-命令未报错时，程序也可能没有加载预期的权重、使用了不正确的设备映射，或采用了错误的预处理。以下现象需要在准备阶段排查。
+## 1. 先写清预期和依据
 
-| 问题 | 可观察到的现象 | 对结果的影响 |
+每项检查按以下顺序写。
+
+1. **检查对象。** 写入口编号、要核的组件、参数组、输出或指标，以及本轮为什么需要它。
+2. **输入和运行条件。** 写真实样本 ID 或合成规则、最终配置、模型和权重、设备、dtype、训练或推理模式，以及会影响结果的随机性。
+3. **预期行为和出处。** 从当前版本的原测试、代码定义、已知答案或可信参考提取可检验条件。缺少依据时记观察和待查项。
+4. **实际操作和观察。** 保存工作目录、解释器、命令、日志、退出状态、实际值和输出位置。
+5. **结果与范围。** 写明符合哪项预期，验证到哪里，以及还有哪些条件或结果待核。
+
+优先使用能隔离当前问题的最小输入。合成输入适合有明确约束和预期的组件检查。输入必须符合项目的形状、设备、dtype、值域和标注要求。需要真实场景、变长输入或特定分支时，从正式数据取可追溯的样本。
+
+## 2. 按操作选三层检查
+
+| 层次 | 怎么查 | 通过后能说明什么 |
 | --- | --- | --- |
-| checkpoint 只加载了部分权重 | `load_state_dict(strict=False)` 允许权重键缺失或多出，调用仍可能完成 | 未加载的层可能仍使用初始化权重，评测结果不可信 |
-| device map 错 | 能跑，慢 | 部分张量在 CPU、部分在 GPU，结果可能对但极慢；或实际使用的显卡与预期不一致 |
-| 预处理 mean/std 错 | forward 正常出数 | 输入分布偏移，输出全错但形状对 |
-| NaN 传播 | loss 打印出来是 `nan`，训练"在跑" | 学习率/初始化/数据问题，训练继续执行也不会消除 NaN |
-| 评测指标恰好为零或满分 | eval metric=0.0 或 =1.0 | 可能未实际加载数据、模型总预测同一类或存在标签泄漏 |
+| 环境与配置 | 用实际解释器检查项目导入、配置解析、依赖及入口指定的设备。按 CPU、GPU 或其他设备的实际要求验证 | 这套环境可解析配置并访问所需设备 |
+| 实际组件 | 调用项目的 loader、预处理、模型、损失或算子，检查其实际输入和输出。作者提供的编译算子在目标设备实调 | 该组件在已测条件下符合检查依据。扩展检查参见[编译型依赖](compile-deps.md#5-逐层验证最终使用的算子) |
+| 正式入口 | 用真实数据、权重和具体配置跑到预定输出。按需核样本覆盖、参数更新、指标或测量产物 | 这条命令完成了实际跑过的范围。帮助命令、dry run、合成检查、小样本和全量运行分别记录 |
 
-每一层都按下面的判据检查异常表现。
+各入口从下表选择应有的检查。不适用的层或组件说明理由，受阻或未覆盖的必要检查留待处理。
 
-## Layer 1（import/config）：轻量数值正确性检查
+| 入口 | 重点观察 |
+| --- | --- |
+| 推理 | 真实权重、配置、预处理、目标设备、输出结构和任务定义的数值行为。对可选编译算子核实际走的分支 |
+| 训练 | 实际批次、目标和损失定义，预期参与计算的参数组，以及真正发生的优化器更新。依计划核保存或恢复 |
+| 评测 | 样本 ID、标签与预测的对应，参与统计的数量或分母，指标输入、聚合和输出单位 |
+| 预处理 | 输入输出的身份、数量、标签、划分和单位，实际 loader 能否读取转换产物 |
+| 测量或其他实验 | 实际运行路径、所需字段、单位、事件和输出文件。计时按约定起止边界检查 |
 
-import 成功后确认 PyTorch、运行时和编译型算子使用的 CUDA 版本兼容。
+权重用[项目实际加载路径](dataset-prep.md#4-权重身份与实际加载)核对身份、加载位置和关键参数覆盖。若发布模型的某个必要组件仍用初始化权重，将该模型对应的推理或评测验收记为不通过。作者要求部分加载或替换组件时，按已确认的目的和条件判断。
+
+## 3. 看数值时先对照任务定义
+
+| 现象 | 先核什么 |
+| --- | --- |
+| 出现 NaN 或 Inf | 在输入、预处理、算子输出、损失、梯度和指标之间找第一个异常。根据定义对应该有限的位置检查。掩码处按设计使用的 `-inf` 单独处理 |
+| 输出全零或量级异常 | 核输入、权重、设备、归一化、掩码和输出定义。同一输入可用项目原测试或已知结果对照。预期为零的输出可以通过 |
+| loss 为零、为负或短跑波动 | 核实际损失项、系数、归约和目标，查看优化器是否按计划更新。短跑先记录观察，结合定义和输入判断 |
+| 梯度缺失或为零 | 核冻结状态、这批数据触发的分支、是否已经 backward、梯度累积和取样时机。检查应更新的参数，并分别观察梯度和更新 |
+| 指标在小样本上为零或满分 | 先查 ID、标签和预测的配对、样本数、分母、指标单位和聚合。结合实际样本解释结果，必要时补一个有已知答案的指标检查 |
+
+### 训练示例 · 检查真正发生的一次更新
+
+先从实际优化器的参数组、冻结配置和样本触发的分支，选出**在这次受控输入下预期会改变**的参数。把以下函数接到检查脚本，`model` 使用实际模型，`expected_to_change` 填已经核对的参数名，`run_update` 调用仓库已有的真实训练路径直到一次预期更新结束。梯度累积时观察在积累完成后更新的那一步，使用 AMP 时记录是否发生溢出并跳过更新。需要看梯度时，在实际 backward 后、清空梯度前取证。 [PyTorch AMP 训练示例](https://docs.pytorch.org/docs/stable/notes/amp_examples.html)
 
 ```python
+def check_parameter_update(model, expected_to_change, run_update):
+    names = tuple(expected_to_change)
+    if not names:
+        raise ValueError("先确定在本次输入下应改变的参数")
+    parameters = dict(model.named_parameters())
+    before = {name: parameters[name].detach().clone() for name in names}
+
+    run_update()
+
+    max_abs_delta = {
+        name: (parameters[name].detach() - before[name]).abs().max().item()
+        for name in names
+    }
+    print("max_abs_parameter_delta:", max_abs_delta)
+    return max_abs_delta
+```
+
+按项目的预期解释这些读数，并核结果是否有限。只对有依据的参数和值设验收标准。异常时先核学习率、优化器状态、步数、冻结和实际分支，再定位更新是否发生。
+
+### 评测示例 · 比较样本 ID 和出现次数
+
+`expected_ids` 取本轮固定试跑清单，`observed_ids` 从真正进入指标聚合的记录导出。用一致的 ID 类型。分片或分布式评测时，按实际指标定义在正确的聚合边界核对。下面示例适用每个选中样本应计一次的场景。
+
+```python
+from collections import Counter
+
+def compare_metric_coverage(expected_ids, observed_ids):
+    expected = Counter(expected_ids)
+    observed = Counter(observed_ids)
+    return {
+        "expected_count": sum(expected.values()),
+        "observed_count": sum(observed.values()),
+        "missing": dict(expected - observed),
+        "extra_or_repeated": dict(observed - expected),
+    }
+```
+
+同时保存 loader 输出的 ID，便于判断样本是在读取、批处理还是聚合时丢失。指标值另按其输入、分母和单位解释。
+
+## 4. 按需要测耗时和显存
+
+先写清设备、输入规模、batch、精度、预热次数及计时起止。训练按实际要测的阶段决定是否包含取数据、前向、反向和参数更新。推理或测量分别明确预处理、设备同步和结果回传是否在计时内。
+
+下面示例在单个 CUDA 设备上记录一段已确定边界的操作。用入口实际执行的 `run_measured_operation` 替换回调，在计时前按相同配置预热。需要冷启动数据时单独记录。多卡或端侧设备采用其实际同步与测量方式。
+
+```python
+from time import perf_counter
 import torch
-assert torch.cuda.is_available(), "CUDA 不可用——驱动/torch 装错"
-print(torch.cuda.get_device_name(0))            # 确认看到的是预期的卡（A100）
-print(torch.__version__, torch.version.cuda)    # 与 nvcc 对齐（详见 compile-deps.md）
-# 若有编译型算子，import 它并跑一次最小调用，确认不是 undefined symbol
+
+def measure_cuda_operation(device, run_measured_operation):
+    torch.cuda.synchronize(device)
+    torch.cuda.reset_peak_memory_stats(device)
+    start = perf_counter()
+    run_measured_operation()
+    torch.cuda.synchronize(device)
+    elapsed_s = perf_counter() - start
+    peak_allocated_bytes = torch.cuda.max_memory_allocated(device)
+    return elapsed_s, peak_allocated_bytes
 ```
 
-红线：`is_available()` 为 False、看到的卡不对、编译算子 import 报 undefined symbol → 回 `compile-deps.md`。
+这里记录的是同步后的墙钟时间和 PyTorch 张量分配的峰值。需要比较时保存多次读数、波动及实际运行条件。将测得范围写入报告，适用时同时填写 `setup.json` 的 `dev_card_footprint`。 [设备同步](https://docs.pytorch.org/docs/stable/generated/torch.cuda.synchronize.html) · [峰值统计重置](https://docs.pytorch.org/docs/stable/generated/torch.cuda.memory.reset_peak_memory_stats.html) · [已分配显存峰值](https://docs.pytorch.org/docs/stable/generated/torch.cuda.memory.max_memory_allocated.html)
 
-## Layer 2（synthetic smoke）：关键数值正确性检查
+## 5. 出现异常时怎么定位和记录
 
-运行 smoke script 调用真实组件后，显式检查并断言下列数值条件。
+1. **先核运行身份。** 对照命令、最终配置、代码与 diff、实际权重、数据及设备。用原条件复现最小失败输入。
+2. **找第一个偏离预期的位置。** 先取真实样本、标签和预处理结果，再查实际计算、损失与更新或预测。读到样本后仍有缺口时查批处理、筛选、聚合和落盘。已有同条件的原测试或已知答案时用来缩小范围。
+3. **明确接下来能做什么。** 按 workflow 在批准范围内修复并复跑受影响检查。需改训练、评测、加载或研究条件时，带着失败输入、来源、影响和拟复跑方法回 Step 3。保留原结果和修复后结果。
+4. **分开记录三个判断。** 进程退出状态记实际退出码。检查结果记符合预期、与预期冲突、待调查、未检查或不适用并说明理由。入口交付只写证据覆盖的范围。保存试跑配置、输入身份、脚本、命令和日志，供下游复查。
 
-```python
-# forward 输出
-out = model(dummy_batch)
-assert torch.isfinite(out).all(), "输出含 NaN/Inf —— 初始化或前向有问题"
-assert out.abs().sum() > 0, "输出全零 —— 权重没加载 / 前向断链"
-assert out.shape == expected_shape, f"形状不符：{out.shape} vs {expected_shape}"
+## 示例 · edge-vision 评测正常退出但漏了样本
 
-# loss
-loss = criterion(out, dummy_target)
-assert torch.isfinite(loss), "loss 是 NaN/Inf"
-assert loss.item() > 0, "loss 恰为 0 —— target 退化 / loss 没真算"
-print(f"smoke loss = {loss.item():.4f}")   # 人工瞄一眼量级是否合理（交叉熵初始 ~ln(类别数)）
+沿用[运行手册](workflow.md#贯穿示例--直接试跑论文仓库)的 E02。试跑固定 17 个验证样本、批大小 8，预期每个 ID 参与统计一次。原命令退出码为 0，生成了指标，但 ID 对照显示只统计了 16 个。
 
-# backward：梯度真的流动
-loss.backward()
-grad_norm = sum(p.grad.abs().sum() for p in model.parameters() if p.grad is not None)
-assert grad_norm > 0, "梯度全零 —— 计算图断了 / requires_grad 没开"
-```
-
-> **量级直觉**（瞄一眼用，不强卡）：N 类分类交叉熵初始 loss 约 `ln(N)`（10 类 ≈ 2.3）；
-> 检测/分割的初始 loss 看 repo 文档预期。明显偏离（如 1e6 或 1e-8）是信号。
-
-## Layer 3（官方命令 smoke run）：强数值正确性检查
-
-smoke 真实数据跑几步/一小轮后：
-
-- **损失呈下降趋势**：smoke train 几步内 loss 应有下降趋势（不是上涨、不是纹丝不动、不是 NaN）。
-- **评测指标数值合理**：tiny subset eval 的 metric **> 0 且已排除异常满分**。
-  - `metric == 0.0` → 数据没真加载 / 预测全错 / 标签对不上，**不是**"小子集太难"就能搪塞的。
-  - `metric == 1.0`（或恰好满分）→ 标签泄漏 / 评估了训练样本 / 度量实现 bug，应排查这些原因。
-- **checkpoint 加载完整性**（常见的未报错错误）：
-
-```python
-ckpt = torch.load(path, map_location='cpu')
-sd = ckpt.get('state_dict', ckpt)
-missing, unexpected = model.load_state_dict(sd, strict=False)
-print(f"missing keys: {len(missing)}", missing[:10])       # 模型要、ckpt 没给 → 这些层是随机初始化！
-print(f"unexpected keys: {len(unexpected)}", unexpected[:10])  # ckpt 有、模型不要 → 可能 key 命名没对上
-```
-  - `missing` 非空且非预期（不是 head 这种本就要重训的层）→ **权重没真加载进去**，eval 数字不可信。
-  - 大量 `unexpected` → 多半是 `module.` 前缀（DataParallel 存的）/ 命名规范不一致，需要 key remap。
-  - **注意**：`strict=False` 本身、以及任何 key remap，都是**语义改动即停点**——停下问用户，别在工程执行区悄悄做。
-
-- **单步显存峰值和耗时**（顺带记）：smoke run 时记开发卡（1×A100）单 step 显存峰值（`torch.cuda.max_memory_allocated()`）和耗时，写进 setup.json 机读区（dev_card_footprint），判断够不够支撑 execution 迭代。
-
-## 发现异常时的处理方式
-
-- **NaN / 全零 / 梯度未正常传递**：是 bug，agent 进 debug 循环（不是停顿点）——查初始化、数据、device、计算图。
-- **checkpoint missing keys 异常 / 需要 remap**：**语义改动即停**，把 missing/unexpected 列给用户，解释"这样加载会有层是随机的"，问怎么处理。
-- **eval 异常满分 / 恰好 0**：是危险信号，agent 自己先排查（数据路径、标签映射、是否评估了训练集），排查不出再上报。
-- **数值有限但量级异常**：记进 report 的"语义风险"，提示下游 reproduction 重点核对——不一定是 setup 能定的（可能是 repo 本身的预期）。
-
-> 与 baseline-survey 的衔接：survey 的"社区复现"若提到有人报 key mismatch / 复现不出数字，
-> 这里的 checkpoint 完整性检查就是验证那个预判——实测 missing keys，核对社区报告的问题能否重现，写进 report。
+先核配置仍指向同一个验证划分和 17 项清单，再比较 loader 与指标接收的 ID。此例评测路径丢弃了最后一个不满批的样本。说明保留最后一批会改变统计覆盖，回 Step 3 确认最小修复。获准后沿用原权重、同一清单和指标实现复跑，核缺失及额外 ID 均为空。执行报告保留两次日志、配置和修复 diff。结论限定为这 17 个样本的评测路径，完整参考结果交复现阶段核对。
