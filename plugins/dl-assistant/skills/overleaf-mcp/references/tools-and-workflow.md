@@ -1,6 +1,6 @@
 # 工具与编译流程
 
-## 25 个工具
+## 工具列表
 
 | 工具 | 用途 |
 |---|---|
@@ -18,6 +18,7 @@
 | overleaf_compile_status | 请求状态与已知限制，不虚构远端运行状态 |
 | overleaf_compiles | 按请求记录顺序列历史编译 |
 | overleaf_compile_report | 源码依据、构建 ID、诊断和产物校验信息 |
+| overleaf_export_review_bundle | 按编译 ID 保存 JSON 审阅报告及选定页截图 |
 | overleaf_read_log | 精确读取已验证日志行，支持续读 |
 | overleaf_download_output | 明确下载某次构建的产物并校验 |
 | overleaf_render | 渲染明确编译的已验证 PDF |
@@ -68,6 +69,12 @@ state 表示请求过程：requested、completed、failed 或 outcome_unknown；
 
 ## 日志、产物及比较
 
+检查 `raw_status`、`output_list_status` 及报告里的 `artifact_issues`。服务器结果未知时先核已有请求。服务器已经报告结果时，可继续核清单里可用、唯一的产物。日志提取、下载或清单缺项要写进编译证据。
+
+日志诊断用 `stream` 和 `log_line`–`log_end_line` 找原文，`excerpt` 含合并的关联行。TeX 给出 `l.12` 时可能只有行号。看到 `source_location_status="reported_line_only"` 时结合日志确认文件，再去核源码。可用的 `output.blg` 也参与诊断，区分 Biber/BibTeX 的错误和警告。
+
+单次编译状态与报告区分当前产物状态和 `recorded_validation`。当前状态为 `verified` 才表示该文件仍符合保存时的校验值。历史列表用 `not_checked` 标记未逐项重验的 PDF。
+
 诊断保留原始日志流、行号、报告的源文件/行号与严重性。报告的源路径不是本地路径执行指令；需与当前源码及编译版本对应。缺失日志、stderr 或下载错误单列，不能静默忽略后认证成功。
 
 图像名称绑定 PDF 校验值、页码、DPI 和区域，不同渲染不互相覆盖。单次最多十页，DPI 36–400，每页最多 3000 万像素。页码或 bbox 非法明确报错。图像比较只指出像素/页面变化，不解释科学结论，也不把排版位移当成内容错误。
@@ -75,6 +82,21 @@ state 表示请求过程：requested、completed、failed 或 outcome_unknown；
 产物先完整下载、格式检查并原子保存，记录字节数与校验值。已保存文件被修改或丢失时报告 ARTIFACT_CHANGED，不静默用另一份文件替换。普通产物的字节下载与 PDF 可读性分别记录；历史 ZIP 做完整性、文件数、展开尺寸和路径检查，不自动提取。
 
 清理先按 dry_run 候选核对。pin 和实际删除以数据库事务保护；下载旧记录不更改最新请求。清理只作用于该实例的托管编译产物，不删除用户仓库、凭证或保留的记录。
+
+## 导出可交接的编译审阅包
+
+例如，改完结果表后将第 3、4 页交给写作或回复环节复核。使用同一个明确的编译 ID。
+
+```python
+overleaf_compile_report(project_id=project, compile_id=run)
+overleaf_download_output(project_id=project, compile_id=run, filename="output.pdf")
+bundle = overleaf_export_review_bundle(project_id=project, compile_id=run,
+                                      pages="3-4", dpi=150)
+```
+
+保存返回的 ZIP 路径和校验值。ZIP 中的 `review.json` 保存服务器结果、源码依据、诊断、PDF 校验值和归档内的截图路径。截图位于 `pages/`。需要交接时复制 ZIP，并说明哪些页已核查及哪些源码对应关系仍待确认。
+
+导出只读取已保存的编译材料。省略 `pages` 可只导报告。指定页但 PDF 未下载、已缺失或校验失败时，报告仍可导出，`screenshots_status="verified_pdf_required"` 会说明截图缺项。
 
 ## 续读
 

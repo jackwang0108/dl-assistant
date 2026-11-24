@@ -1,8 +1,10 @@
 """Explicit live tests; mutate only a uniquely named dedicated test project."""
 
+import hashlib
 import json
 import os
 import uuid
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -38,6 +40,12 @@ def test_dedicated_project_compile_artifacts_feedback_and_cleanup(tmp_path):
         failed = service.compile(project, root_resource_path="mcp-missing-document.tex")
         result["missing_root_classification"] = failed["classification"]
         assert failed["classification"] == "failed"
+        failed_bundle = service.export_review_bundle(project, failed["compile_id"], pages="1")
+        assert failed_bundle["screenshots_status"] == "verified_pdf_required"
+        with zipfile.ZipFile(failed_bundle["path"]) as archive:
+            failed_report = json.loads(archive.read("review.json"))
+            assert failed_report["summary"]["classification"] == "failed"
+            assert archive.namelist() == ["review.json"]
         clean = service.compile(project)
         assert clean["state"] == "completed" and clean["classification"] in ("clean", "warnings")
         pdf = service.download(project, "output.pdf", clean["compile_id"])
@@ -46,6 +54,20 @@ def test_dedicated_project_compile_artifacts_feedback_and_cleanup(tmp_path):
         assert Path(image["path"]).is_file()
         newer = service.compile(project)
         service.download(project, "output.pdf", clean["compile_id"])
+        assert service.status(project)["compile_id"] == newer["compile_id"]
+        bundle = service.export_review_bundle(project, clean["compile_id"], pages="1", dpi=72)
+        assert bundle["screenshots_status"] == "included"
+        assert hashlib.sha256(Path(bundle["path"]).read_bytes()).hexdigest() == bundle["sha256"]
+        with zipfile.ZipFile(bundle["path"]) as archive:
+            report = json.loads(archive.read("review.json"))
+            assert report["summary"]["compile_id"] == clean["compile_id"]
+            assert report["summary"]["source_binding"] == clean["source_binding"]
+            assert (
+                report["pdf"]["sha256"] == pdf["sha256"] and report["pdf"]["status"] == "verified"
+            )
+            screenshot = report["screenshots"]["items"][0]
+            assert screenshot["sha256"] == image["sha256"]
+            assert hashlib.sha256(archive.read(screenshot["path"])).hexdigest() == image["sha256"]
         assert service.status(project)["compile_id"] == newer["compile_id"]
         assert service.read_log(project, clean["compile_id"])["items"]
         assert service.files(project)["items"]
@@ -65,6 +87,8 @@ def test_dedicated_project_compile_artifacts_feedback_and_cleanup(tmp_path):
             compile_classification=clean["classification"],
             pdf_pages=pdf["pages"],
             render_verified=True,
+            review_bundle_verified=True,
+            failed_review_bundle_without_screenshot=True,
             old_download_preserves_latest=True,
             source_binding=clean["source_binding"],
         )
@@ -73,6 +97,9 @@ def test_dedicated_project_compile_artifacts_feedback_and_cleanup(tmp_path):
             assert name.startswith("overleaf-mcp-v2-test-")
             service.delete_project(project, name)
             result["deleted"] = True
+            listed = service.client.projects()
+            assert all(p["id"] != project for p in listed)
+            result["absent_from_projects_after_cleanup"] = True
         path = os.getenv("OVERLEAF_LIVE_REPORT")
         if path:
             Path(path).write_text(json.dumps(result, indent=2))

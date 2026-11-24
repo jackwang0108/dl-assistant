@@ -1,5 +1,6 @@
 """Project binding, compile evidence and bounded feedback/artifact operations."""
 
+import hashlib
 import io
 import json
 import time
@@ -18,6 +19,37 @@ from .diagnostics import classify
 from .models import OverleafError, checksum, digest, filename, identifier
 from .paging import page
 from .store import Store
+
+REVIEW_BUNDLE_MAX_BYTES = 100_000_000
+
+
+def compile_outputs(value):
+    if not isinstance(value, list):
+        return [], [{"code": "OUTPUT_LIST_INVALID", "message": "Expected a list of build outputs"}]
+    outputs, duplicates, seen, issues = [], set(), set(), []
+    for index, output in enumerate(value):
+        name = output.get("path") if isinstance(output, dict) else None
+        if isinstance(name, str):
+            try:
+                filename(name)
+            except OverleafError:
+                name = None
+        if isinstance(name, str) and name in seen:
+            duplicates.add(name)
+        if isinstance(name, str):
+            seen.add(name)
+        if (
+            not isinstance(name, str)
+            or not isinstance(output.get("url"), str)
+            or not output["url"].strip()
+        ):
+            issues.append({"code": "OUTPUT_ENTRY_INVALID", "index": index})
+            continue
+        outputs.append(output)
+    issues.extend(
+        {"code": "OUTPUT_REFERENCE_AMBIGUOUS", "filename": name} for name in sorted(duplicates)
+    )
+    return [item for item in outputs if item["path"] not in duplicates], issues
 
 
 class Service:
@@ -190,6 +222,7 @@ class Service:
                 )
         return {
             **value,
+            "expected_commit": expected_commit,
             "binding_status": "unverified_compiled_revision",
             "note": "Local Git and history observations do not establish atomic compilation of that commit",
         }
@@ -197,7 +230,7 @@ class Service:
     def observe_history(self, project_id):
         try:
             response = self.client.json("GET", f"project/{project_id}/updates?min_count=1")
-            updates = response.get("updates")
+            updates = response.get("updates") if isinstance(response, dict) else None
             if not isinstance(updates, list):
                 raise OverleafError("API_SCHEMA", "History response lacks updates")
             first = updates[0] if updates else None
@@ -211,8 +244,16 @@ class Service:
         except OverleafError as error:
             return {"status": "unavailable", "error": error.result()["error"]}
 
-    @staticmethod
-    def summary(record):
+    def summary(self, record, *, verify_pdf=True):
+        item = record.get("outputs", {}).get("output.pdf")
+        if verify_pdf or not item:
+            artifact = self.store.artifact_status(record, "output.pdf")
+        else:
+            artifact = {
+                "status": "not_checked",
+                "recorded_validation": item.get("validation"),
+                "sha256": item["sha256"],
+            }
         result = {
             k: record.get(k)
             for k in (
@@ -226,11 +267,13 @@ class Service:
                 "pinned",
                 "source_binding",
                 "remote_build_ids",
+                "output_list_status",
             )
         } | {
-            "pdf_status": record.get("outputs", {})
-            .get("output.pdf", {})
-            .get("validation", "not_downloaded"),
+            "pdf_status": artifact.get("recorded_validation")
+            if artifact["status"] == "verified"
+            else artifact["status"],
+            "pdf_artifact": artifact,
             "diagnostics_count": len(record.get("diagnostics", [])),
         }
         if result["error"] is None:
@@ -287,14 +330,14 @@ class Service:
             if (
                 not isinstance(response, dict)
                 or not isinstance(response.get("status"), str)
-                or not isinstance(response.get("outputFiles"), list)
+                or not response["status"].strip()
             ):
                 raise OverleafError(
                     "REQUEST_OUTCOME_UNKNOWN",
                     "Compile response schema changed; do not blindly trigger another compile",
                 )
         except OverleafError as error:
-            unknown = error.code == "REQUEST_OUTCOME_UNKNOWN"
+            unknown = error.code in ("REQUEST_OUTCOME_UNKNOWN", "API_SCHEMA", "DOWNLOAD_LIMIT")
             record = self.store.patch(
                 project_id,
                 ident,
@@ -306,6 +349,9 @@ class Service:
                 release=not unknown,
             )
             return self.summary(record)
+        outputs, issues = compile_outputs(response.get("outputFiles"))
+        response = {**response, "outputFiles": outputs}
+        manifest_status = "partial" if issues else "reported"
         build_ids = sorted(
             {
                 match[1]
@@ -318,10 +364,15 @@ class Service:
         self.store.patch(
             project_id,
             ident,
-            {"response": response, "raw_status": response["status"], "remote_build_ids": build_ids},
+            {
+                "response": response,
+                "raw_status": response["status"],
+                "remote_build_ids": build_ids,
+                "output_list_status": manifest_status,
+                "artifact_issues": issues,
+            },
         )
-        issues = []
-        for name in ("output.log", "output.stderr"):
+        for name in ("output.log", "output.stderr", "output.blg"):
             if not any(f.get("path") == name for f in response["outputFiles"]):
                 if name == "output.log":
                     issues.append(
@@ -339,6 +390,17 @@ class Service:
                         "code": "ARTIFACT_UNAVAILABLE",
                         "filename": name,
                         "error": error.result()["error"],
+                    }
+                )
+            except (OSError, ValueError, TypeError) as error:
+                issues.append(
+                    {
+                        "code": "ARTIFACT_UNAVAILABLE",
+                        "filename": name,
+                        "error": {
+                            "code": "LOCAL_OR_INVALID_OUTPUT",
+                            "reason": type(error).__name__,
+                        },
                     }
                 )
         after = self.observe_history(project_id)
@@ -366,14 +428,21 @@ class Service:
     def reclassify(self, project_id, ident):
         record = self.store.get(project_id, ident)
         texts = {}
-        for name in ("output.log", "output.stderr"):
+        for name in ("output.log", "output.stderr", "output.blg"):
             item = self.store.verify_output(record, name)
             texts[name] = (
                 Path(item["path"]).read_text(encoding="utf-8", errors="replace") if item else None
             )
         classification, diagnostics = classify(
-            record.get("response") or {}, texts["output.log"], texts["output.stderr"]
+            record.get("response") or {},
+            texts["output.log"],
+            texts["output.stderr"],
+            texts["output.blg"],
         )
+        if classification == "clean" and (
+            record.get("output_list_status") == "partial" or record.get("artifact_issues")
+        ):
+            classification = "unknown"
         return self.store.patch(
             project_id, ident, {"classification": classification, "diagnostics": diagnostics}
         )
@@ -439,7 +508,12 @@ class Service:
                 ]
                 + [{"kind": "diagnostic", **d} for d in record.get("diagnostics", [])]
                 + [
-                    {"kind": "output", "filename": name, **value}
+                    {
+                        "kind": "output",
+                        "filename": name,
+                        **value,
+                        **self.store.artifact_status(record, name),
+                    }
                     for name, value in record.get("outputs", {}).items()
                 ]
             )
@@ -447,14 +521,124 @@ class Service:
             self.store, ["report", project_id, record["compile_id"]], records, cursor, max_chars
         )
 
+    def export_review_bundle(self, project_id, compile_id, pages=None, dpi=150):
+        identifier(compile_id)
+        if not 36 <= dpi <= 400:
+            raise OverleafError("INVALID_DPI", "DPI must be 36–400")
+        record = self.store.get(project_id, compile_id)
+        summary = self.summary(record)
+        artifact = summary.pop("pdf_artifact")
+        artifact_path = artifact.pop("path", None)
+        source = record.get("source", {})
+        report = {
+            "schema_version": 1,
+            "summary": summary,
+            "source_evidence": {
+                k: source[k]
+                for k in (
+                    "binding",
+                    "head",
+                    "expected_commit",
+                    "dirty",
+                    "tracking_head",
+                    "tracking_head_freshness",
+                    "source_manifest",
+                    "manifest_sha256",
+                    "manifest_partial",
+                    "symlinks",
+                    "remote_before",
+                    "binding_status",
+                    "note",
+                )
+                if k in source
+            },
+            "remote_after": record.get("remote_after"),
+            "compile_options": record.get("options"),
+            "artifact_issues": record.get("artifact_issues", []),
+            "diagnostics": record.get("diagnostics", []),
+            "logged_artifacts": {
+                name: {
+                    k: v for k, v in self.store.artifact_status(record, name).items() if k != "path"
+                }
+                for name in record.get("outputs", {})
+                if name != "output.pdf"
+            },
+            "pdf": artifact,
+            "screenshots": {"requested_pages": pages, "status": "not_requested", "items": []},
+        }
+        images = []
+        if pages is not None:
+            if artifact_path is None:
+                report["screenshots"]["status"] = "verified_pdf_required"
+            else:
+                images = render.render(self.store, record, artifact_path, pages, dpi=dpi)
+                if not self.store.verify_output(record, "output.pdf"):
+                    raise OverleafError(
+                        "ARTIFACT_CHANGED", "PDF changed while generating screenshots"
+                    )
+                report["screenshots"]["status"] = "included"
+                report["screenshots"]["items"] = [
+                    {**image, "path": f"pages/page-{image['page']}.png"} for image in images
+                ]
+
+        encoded = json.dumps(report, ensure_ascii=False, indent=2, sort_keys=True).encode()
+        size = len(encoded)
+        if size > REVIEW_BUNDLE_MAX_BYTES:
+            raise OverleafError(
+                "REVIEW_BUNDLE_LIMIT", "Compile evidence exceeds the bundle size limit"
+            )
+        bundle = io.BytesIO()
+        with zipfile.ZipFile(bundle, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr(
+                zipfile.ZipInfo("review.json"), encoded, compress_type=zipfile.ZIP_DEFLATED
+            )
+            for image, entry in zip(images, report["screenshots"]["items"], strict=True):
+                with Path(image["path"]).open("rb") as stream:
+                    contents = stream.read(REVIEW_BUNDLE_MAX_BYTES - size + 1)
+                size += len(contents)
+                if size > REVIEW_BUNDLE_MAX_BYTES:
+                    raise OverleafError("REVIEW_BUNDLE_LIMIT", "Select fewer pages or lower DPI")
+                if hashlib.sha256(contents).hexdigest() != image["sha256"]:
+                    raise OverleafError(
+                        "ARTIFACT_CHANGED", "Screenshot changed while saving the bundle"
+                    )
+                archive.writestr(zipfile.ZipInfo(entry["path"]), contents)
+        data = bundle.getvalue()
+        sha256 = hashlib.sha256(data).hexdigest()
+        path = self.store.directory(project_id, compile_id) / f"review-{sha256}.zip"
+        self.store.write(path, data)
+        return {
+            "compile_id": compile_id,
+            "path": str(path),
+            "sha256": sha256,
+            "bytes": len(data),
+            "pdf_status": artifact["status"],
+            "screenshots_status": report["screenshots"]["status"],
+            "pages": [image["page"] for image in images],
+        }
+
     def status(self, project_id, compile_id=None):
         record = self.store.get(project_id, compile_id)
         if record["state"] == "requested" and time.time_ns() > record.get(
             "request_deadline_ns", 2**63 - 1
         ):
             if record.get("response"):
+                issues = record.get("artifact_issues", []) + [
+                    {
+                        "code": "FINALIZATION_INTERRUPTED",
+                        "message": "Recorded server result; local evidence collection was interrupted",
+                    }
+                ]
                 self.store.patch(
-                    project_id, record["compile_id"], {"state": "completed"}, release=True
+                    project_id,
+                    record["compile_id"],
+                    {
+                        "state": "completed",
+                        "artifact_issues": issues,
+                        "source_binding": record.get("source_binding")
+                        or "compiled_revision_not_certified",
+                    },
+                    release=True,
                 )
                 record = self.reclassify(project_id, record["compile_id"])
             else:

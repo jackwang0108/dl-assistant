@@ -118,6 +118,97 @@ def test_logs_download_errors_remain_visible_not_success(service, cloud):
     assert record["artifact_issues"][0]["code"] == "ARTIFACT_UNAVAILABLE"
 
 
+@pytest.mark.parametrize("manifest", [None, [None], [{"path": "output.pdf"}]])
+def test_known_remote_result_survives_malformed_output_list(service, cloud, manifest):
+    def handler(request):
+        if request.url.path.endswith("/compile"):
+            return httpx.Response(200, json={"status": "failure", "outputFiles": manifest})
+        return cloud.handler(request)
+
+    service.client.http = httpx.Client(transport=httpx.MockTransport(handler))
+    result = service.compile("p1")
+    assert result["state"] == "completed" and result["raw_status"] == "failure"
+    assert result["classification"] == "failed" and result["output_list_status"] == "partial"
+    record = service.store.get("p1", result["compile_id"])
+    assert record["artifact_issues"][0]["code"] in ("OUTPUT_LIST_INVALID", "OUTPUT_ENTRY_INVALID")
+    assert service.compile("p1")["compile_id"] != result["compile_id"]
+
+
+def test_unknown_compile_response_still_requires_explicit_retry(service, cloud):
+    def handler(request):
+        if request.url.path.endswith("/compile"):
+            return httpx.Response(200, text="<html>Unrecognizable response</html>")
+        return cloud.handler(request)
+
+    service.client.http = httpx.Client(transport=httpx.MockTransport(handler))
+    failed = service.compile("p1")
+    assert failed["state"] == "outcome_unknown"
+    with pytest.raises(OverleafError) as blocked:
+        service.compile("p1")
+    assert blocked.value.code == "COMPILE_ALREADY_ACTIVE"
+
+
+def test_partial_output_list_keeps_unique_outputs_and_excludes_ambiguous_pdf(service, cloud):
+    def handler(request):
+        response = cloud.handler(request)
+        if request.url.path.endswith("/compile"):
+            payload = response.json()
+            pdf = next(item for item in payload["outputFiles"] if item["path"] == "output.pdf")
+            payload["outputFiles"] += [None, pdf]
+            return httpx.Response(200, json=payload)
+        return response
+
+    service.client.http = httpx.Client(transport=httpx.MockTransport(handler))
+    result = service.compile("p1")
+    assert result["state"] == "completed" and result["classification"] == "unknown"
+    ident = result["compile_id"]
+    assert service.read_log("p1", ident)["items"]
+    reports = service.report("p1", ident)["items"]
+    issues = next(item["items"] for item in reports if item["kind"] == "artifact_issues")
+    assert any(item["code"] == "OUTPUT_REFERENCE_AMBIGUOUS" for item in issues)
+    with pytest.raises(OverleafError) as unavailable:
+        service.download("p1", "output.pdf", ident)
+    assert unavailable.value.code == "OUTPUT_NOT_AVAILABLE"
+
+
+def test_review_bundle_is_local_and_bound_to_explicit_compile(service, cloud, tmp_path):
+    import hashlib
+    import json
+    import zipfile
+
+    repo = make_repo(tmp_path / "repo")
+    commit = service.bind("p1", str(repo))["head"]
+    older = service.compile("p1", expected_commit=commit)["compile_id"]
+    old_pdf = service.download("p1", "output.pdf", older)
+    newer = service.compile("p1")["compile_id"]
+    before = len(cloud.calls)
+    result = service.export_review_bundle("p1", older, pages="2", dpi=72)
+    assert result["pages"] == [2]
+    assert len(cloud.calls) == before and service.status("p1")["compile_id"] == newer
+    assert hashlib.sha256(Path(result["path"]).read_bytes()).hexdigest() == result["sha256"]
+    with zipfile.ZipFile(result["path"]) as archive:
+        assert archive.namelist() == ["review.json", "pages/page-2.png"]
+        report = json.loads(archive.read("review.json"))
+        assert report["pdf"]["sha256"] == old_pdf["sha256"]
+        assert report["source_evidence"]["expected_commit"] == commit
+        assert report["summary"]["source_binding"] == "compiled_revision_not_certified"
+        assert "raw" not in report and "repo_dir" not in report["source_evidence"]
+        img = report["screenshots"]["items"][0]
+        assert hashlib.sha256(archive.read(img["path"])).hexdigest() == img["sha256"]
+
+    path = Path(old_pdf["path"])
+    path.write_bytes(b"replacement")
+    metadata = service.status("p1", older)
+    assert metadata["pdf_status"] == "modified"
+    assert metadata["pdf_artifact"]["recorded_validation"] == "pdf_readable"
+    partial = service.export_review_bundle("p1", older, pages="2")
+    assert partial["screenshots_status"] == "verified_pdf_required"
+    with zipfile.ZipFile(partial["path"]) as archive:
+        assert archive.namelist() == ["review.json"]
+    path.unlink()
+    assert service.status("p1", older)["pdf_status"] == "missing"
+
+
 def test_expected_commit_rejects_dirty_worktree_without_sending_compile(service, cloud, tmp_path):
     repo = make_repo(tmp_path / "repo")
     binding = service.bind("p1", str(repo))

@@ -170,7 +170,9 @@ def overleaf_compiles(project_id: str, cursor: str | None = None, max_chars: int
     return page(
         service().store,
         ["compiles", project_id],
-        None if cursor else [service().summary(r) for r in service().store.compiles(project_id)],
+        None
+        if cursor
+        else [service().summary(r, verify_pdf=False) for r in service().store.compiles(project_id)],
         cursor,
         max_chars,
     )
@@ -185,6 +187,14 @@ def overleaf_compile_report(
 ) -> dict:
     """Read source observations, diagnostics and artifact hashes for one compile; signed URLs and secrets are not returned."""
     return service().report(project_id, compile_id, cursor, max_chars)
+
+
+@endpoint(read_only=False, external=False)
+def overleaf_export_review_bundle(
+    project_id: str, compile_id: str, pages: str | None = None, dpi: int = 150
+) -> dict:
+    """Save a local ZIP with fixed compile evidence and optional verified PDF page screenshots."""
+    return service().export_review_bundle(project_id, compile_id, pages, dpi)
 
 
 @endpoint(external=False)

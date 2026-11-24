@@ -5,6 +5,39 @@ description: Overleaf MCP v2 使用说明：绑定现有本地 Git 仓库，记�
 
 # Overleaf 编译与协作
 
+把 Overleaf 的编译结果、源码依据、诊断和协作反馈保存成可复查的材料。
+
+## SKILL 交接关系
+
+```mermaid
+flowchart LR
+    A["writing-paper 或 writing-paper-response"] -->|"项目、目标版本和核查范围"| B["overleaf-mcp"]
+    B -->|"编译记录、原页截图和带上下文的反馈"| A
+    B -->|"已核校验值的 PDF"| C["pdf-mcp"]
+```
+
+## 产出与保存
+
+记录项目及 `compile_id`、源码依据、诊断结论和实际核对的页。需要交接时，用 `overleaf_export_review_bundle` 保存审阅 ZIP，记录 ZIP 校验值，按需将它复制到调用方的交付目录。需要长期从 MCP 核查时保留对应编译记录；清理托管记录也会移除其托管审阅包。
+
+## 运行流程图
+
+```mermaid
+flowchart TD
+    A["确认项目、工作区和核查目标"] --> B{"要取得什么？"}
+    B -->|"编译结果"| C["按需同步源码并发起编译，保存 compile_id"]
+    C --> D["核服务器结果、日志和源码依据"]
+    D -->|"需要核 PDF"| E["下载并校验指定编译的 PDF，查看页面"]
+    D -->|"结果未知"| F["查看既有记录并核网页状态"]
+    E --> G["按需导出指定编译的审阅包"]
+    B -->|"协作反馈"| H["读取带历史上下文的评论"]
+```
+
+## 参考资料列表
+
+- [认证、代理与 Git](references/auth-and-git.md)
+- [工具、编译和审阅包操作](references/tools-and-workflow.md)
+
 ## 使用边界
 
 本工具管理项目元数据、编译请求、日志/PDF、评论和历史。正文在用户可见的本地仓库编辑，clone、fetch、整合、commit、push 由调用方按已有授权使用 Git CLI 完成；工具不会创建隐藏 clone 或替用户改正文。
@@ -26,6 +59,10 @@ description: Overleaf MCP v2 使用说明：绑定现有本地 Git 仓库，记�
 - **请求与服务器结果**：state、raw_status、error、remote_build_ids；outcome_unknown 表示请求可能已执行，不能自动重新提交。
 - **编译诊断**：classification、overleaf_compile_report 和 overleaf_read_log。服务器失败优先于日志里没有匹配到错误；缺少日志不算已确认干净。
 - **PDF 及源码依据**：overleaf_download_output 校验文件，overleaf_render 查看排版。PDF 可读不代表编译无错，更不代表研究内容正确或已确认对应指定源码版本。
+
+服务器已报告结果、产物清单异常时，状态仍保留该服务器结果，同时标出 `output_list_status="partial"` 和具体证据缺项。读日志按 `stream`、`log_line` 和 `log_end_line` 定位。只拿到源码行号时，需结合日志和工作区确认文件。
+
+`pdf_artifact` 分别记录下载时的验证和当前校验状态。要交接具体页时，先下载指定编译的 PDF，再导出带这些页面的审阅包。报告保留源码对应关系中仍未确认的部分。
 
 源码和历史观察无法确定对应关系时，保留 source_binding 的未确认状态；观察到远端变化时，不能把 PDF 认作本地提交的确定产物。Overleaf 的网页接口没有在本工具中提供可认证的指定提交编译能力。
 

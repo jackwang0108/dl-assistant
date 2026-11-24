@@ -212,10 +212,30 @@ class Store:
         return json.loads(row[0])
 
     def verify_output(self, record, name):
+        observed = self.artifact_status(record, name)
+        if observed["status"] == "verified":
+            return {**record["outputs"][name], "path": observed["path"]}
+        return None
+
+    def artifact_status(self, record, name):
         item = record.get("outputs", {}).get(name)
         if not item:
-            return None
+            return {"status": "not_downloaded"}
+        evidence = {
+            "recorded_validation": item.get("validation"),
+            "sha256": item["sha256"],
+            "bytes": item.get("bytes"),
+        }
         path = self.directory(record["project_id"], record["compile_id"], create=False) / name
-        if path.is_symlink() or not path.is_file() or checksum(path) != item["sha256"]:
-            return None
-        return {**item, "path": str(path)}
+        try:
+            if path.is_symlink():
+                return {**evidence, "status": "modified"}
+            if not path.is_file():
+                return {**evidence, "status": "missing"}
+            if checksum(path) != item["sha256"]:
+                return {**evidence, "status": "modified"}
+        except FileNotFoundError:
+            return {**evidence, "status": "missing"}
+        except OSError:
+            return {**evidence, "status": "unreadable"}
+        return {**evidence, "status": "verified", "path": str(path)}

@@ -27,7 +27,9 @@ def test_all_protocol_tools_annotations_and_full_workflow(service, cloud, monkey
         async with Client(server.mcp) as client:
             tools = await client.list_tools()
             names = {t.name for t in tools}
-            assert len(names) == 25 and "overleaf_compile" in names and "overleaf_read_log" in names
+            assert len(names) == 26 and "overleaf_compile" in names and "overleaf_read_log" in names
+            export = next(t for t in tools if t.name == "overleaf_export_review_bundle")
+            assert export.annotations.openWorldHint is False
             delete = next(t for t in tools if t.name == "overleaf_delete_project")
             assert (
                 delete.annotations.destructiveHint is True
@@ -84,6 +86,14 @@ def test_all_protocol_tools_annotations_and_full_workflow(service, cloud, monkey
                 client, "overleaf_render", project_id=project, pages="1", compile_id=ident
             )
             assert Path(rendered["items"][0]["path"]).is_file()
+            bundle = await call(
+                client,
+                "overleaf_export_review_bundle",
+                project_id=project,
+                compile_id=ident,
+                pages="1",
+            )
+            assert Path(bundle["path"]).is_file() and bundle["screenshots_status"] == "included"
             assert (
                 await call(
                     client,

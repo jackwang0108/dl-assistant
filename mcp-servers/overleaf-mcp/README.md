@@ -19,7 +19,7 @@ OVERLEAF_PROXY_URL=http://127.0.0.1:7890 uv run python -m overleaf_mcp
 
 Cookie/CSRF 只发送给指定实例，下载域名须显式允许；跨域重定向不继承凭证，也不使用 HTTP 客户端的 Cookie jar。默认允许已实测的 Overleaf 编译域，实例/CDN 授权错误、会话过期、限流和网络错误分别返回。不自动重试写请求。
 
-## 25 个工具
+## 工具列表
 
 | 工具 | 用途 |
 |---|---|
@@ -38,6 +38,7 @@ Cookie/CSRF 只发送给指定实例，下载域名须显式允许；跨域重�
 | overleaf_compile_status | 本地请求状态和无法确认的远端状态 |
 | overleaf_compiles | 稳定的编译请求顺序 |
 | overleaf_compile_report | 源码/服务器构建依据、诊断和产物信息 |
+| overleaf_export_review_bundle | 导出固定编译的审阅 JSON 和选定页截图 |
 | overleaf_read_log | 按流/行号读取已验证日志 |
 | overleaf_download_output | 按构建引用下载、原子保存、校验产物 |
 | overleaf_render | 1-based PDF 页面或区域渲染 |

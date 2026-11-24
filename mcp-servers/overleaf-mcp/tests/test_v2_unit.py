@@ -57,6 +57,24 @@ def test_diagnostic_locations_and_warnings_are_evidence_not_file_instructions():
     assert result[0]["source_file"] == "chapter.tex" and result[0]["source_line"] == 27
     assert result[1]["severity"] == "warning" and result[1]["source_line"] == 31
     assert result[2]["source_line"] == 10
+    assert result[2]["source_end_line"] == 12
+
+
+def test_classic_tex_trace_and_bibliography_errors():
+    issues = parse_log(
+        "! Undefined control sequence.\n<argument> \\missing\nl.12 \\bad\n! Fatal error"
+    )
+    assert issues[0]["log_line"] == 1 and issues[0]["log_end_line"] == 3
+    assert "l.12" in issues[0]["excerpt"]
+    assert issues[0]["source_line"] == 12 and issues[0]["source_file"] is None
+    assert issues[0]["source_location_status"] == "reported_line_only"
+    assert issues[1]["source_location_status"] == "unavailable"
+    status, bibliography = classify(
+        {"status": "success", "outputFiles": [{"path": "output.pdf"}]},
+        log="Output written.",
+        blg="2025/01/01 ERROR - Cannot find 'refs.bib'!",
+    )
+    assert status == "failed" and bibliography[0]["stream"] == "output.blg"
 
 
 def test_paging_limits_entire_json_and_reassembles_huge_records(service):
