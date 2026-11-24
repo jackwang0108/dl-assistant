@@ -77,9 +77,14 @@ flowchart TD
 | `补图表`      | ⑥ 意图登记 → make-visual 产出                           |
 | `补实验项`    | 记 new_needs → design-experiment 产 plan-vN → CPE → ingest-results |
 
-处理原则：re-frame 优先；每项对应一条触发意见（追溯用）；改完跑 ③ 自审（含跨节一致性）；重写章节或更新提纲影响其他章节时，对受影响节做一致性 sweep（status 置 needs-revision 进队列）。
+先核 [revision-brief.json](../templates/revision-brief-template.json) 的稿件版本、实际批准、行动 ID 和依赖。用 ID 关联写作待办。对 re-frame 先核提纲，涉及其他章节时按实际影响安排修改。每项按已确认范围和关闭判据自查，未达条件的保留待办。
 
-**关闭判据锁范围（review-response 来源的修订项）**：清单项带 `关闭判据` 时——① **编辑范围被判据锁死**：做满足判据的最小编辑，不顺势重写整节、不动无关段落（连带重写会引入新问题还破坏已确认内容）；② 改完**对着判据自查**「这条关闭了吗」，并在汇报里给出判据 → 证据（改在哪、改成了什么）的对应；③ **未关闭不勾 backlog**——判据没满足时要么继续改，要么回 response/用户重新裁决（判据本身定错了也是常事，别硬凑）。
+### 把实际改动交回回应端
+
+1. 按 [revision-result.json 模板](../templates/revision-result-template.json)在新的 `_draft/revisions/<response-id>/<return-id>/` 保存当次回传。绑定获批 brief 及其 SHA-256，沿用原行动 ID。可分批回传当前已经执行或受阻的行动。
+2. 回传实际改变、章节和原句或图表编号、核查做到了哪里，以及证据文件路径和校验值。有实际改后稿时固定其文件和摘要，已编译时记录该 PDF 的页码或行号。没有编译产物时仍可用章节和对象编号定位。纯补证可引用实际结果包和分析。
+3. 分别记 `completed`、`partial` 或 `blocked`。有未满足的判据时在 `remaining` 写清什么未核、为何受阻以及下一步需要什么。先规划了实验但尚未拿到数据时留在待办。
+4. 把回传路径交给 `writing-paper-response`。回应端按原行动和关闭判据审阅后定稿回复。
 
 ## 易错点
 

@@ -1,30 +1,36 @@
 {
-  "_notes": {
-    "是什么": "修改需求清单（revision-brief）的 schema——writing-paper 改稿的输入，由 writing-paper-response 产（或用户直接给）。一份清单 = 一批改稿待办项，逐项进 paper-state.json 的 backlog。职责切分 + 改动类型 → 目标路由 + 处理原则见 references/ops/op-3-write-section.md「修订项怎么路由」。",
-    "items[].改动类型": "re-frame（蓝图层改动）| section重写（整节重写）| 局部改（定点改）| 补图表（新图/表/示意图）| 补实验项（补实验，只给目的）",
-    "items[].具体要求": "改成什么，详细到 agent 能照着改（补实验项不填，改填补实验目的）",
-    "items[].关闭判据": "必填——「改成什么样这条就算关闭」的可验收条件（response 逐条讨论时与用户定稿）。writing-paper 改稿按判据锁编辑范围（最小编辑，不顺势重写），改完对判据自查，未关闭不勾 backlog",
-    "items[].触发意见": "哪条审稿意见 / 谁提的（可选，追溯用）",
-    "items[].补实验目的": "补实验项专用——回应什么质疑 / 确立什么主张，如「补 baseline Y 对比回应公平性质疑」"
+  "schema_version": 2,
+  "任务": "回应关于训练预算的意见",
+  "来源": "writing-paper-response",
+  "论文草稿路径": "<实际论文项目根>",
+  "response_ref": {
+    "path": "<获批回应记录的固定副本>",
+    "sha256": "<实际 SHA-256>"
   },
-  "任务": "<改稿任务名，如「回应 CVPR 审稿 R1/R2」>",
-  "来源": "writing-paper-response（基于审稿意见）/ 用户直接给",
-  "论文草稿路径": "<论文根（papers/<slug>/），_draft/content/ + blueprint.md + manifest 所在>",
+  "response_id": "review-round-1",
+  "stage": "handoff",
+  "paper": {
+    "path": "<本次改稿依据的实际稿件>",
+    "sha256": "<实际 SHA-256>"
+  },
   "items": [
     {
-      "section": "Method",
+      "id": "clarify-budget",
+      "unit_ids": ["budget-conditions"],
+      "section": "实验设置及表 2 脚注",
       "改动类型": "局部改",
-      "具体要求": "<改成什么，详细到 agent 能照着改>",
-      "关闭判据": "<改成什么样这条算关闭——可验收条件>",
+      "具体要求": "补充两组实际的训练更新步数和样本量。",
+      "关闭判据": "表 2 脚注与实验设置的预算口径一致，且可回查两组配置。",
       "涉及claim": ["C2"],
-      "触发意见": "R2 第 3 条"
-    },
-    {
-      "section": "Experiment",
-      "改动类型": "补实验项",
-      "补实验目的": "补 baseline Y 对比回应公平性质疑",
-      "关闭判据": "主表或补充实验含 baseline Y 对比并写进结果分析",
-      "触发意见": "R1 第 1 条"
+      "触发意见": ["R2-3"],
+      "approval": {
+        "status": "approved",
+        "basis": "<实际批准或已有授权依据>",
+        "source_refs": []
+      },
+      "status": "approved",
+      "depends_on": []
     }
-  ]
+  ],
+  "excluded_actions": []
 }

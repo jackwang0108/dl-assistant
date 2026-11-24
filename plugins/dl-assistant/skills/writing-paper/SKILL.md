@@ -18,7 +18,7 @@ flowchart LR
     WP -->|"获批的分批实验计划"| CPE["code-paper-experiment"]
     CPE -->|"按批返回实测结果、条件和偏差"| WP
     WRESP["writing-paper-response"] -->|"获批的修改清单及对应稿件版本"| WP
-    WP -->|"实际改稿、证据与核查结果"| WRESP
+    WP -->|"revision-result.json、改后稿件与证据"| WRESP
     WP -->|"编译核查后的稿件 PDF"| WREV["writing-paper-review"]
     WP -->|"稿件、目标会议要求及待处理项"| WPSUB["writing-paper-submission"]
 ```
@@ -49,6 +49,7 @@ flowchart LR
     │       ├── paper-results.json                    # 本次回包入口
     │       ├── plan-vN.json、run-spec.json            # 随包收到的计划与执行规格快照
     │       └── <随包证据>                            # 保留原相对路径及外部证据引用
+    ├── revisions/            # 分回应和回传批次保存 revision-result.json 与稿件、核查证据
     ├── references.json       # 引用登记，使用引用时核论文身份和出处
     ├── canonical-values.json # 导入结果或正文使用实测数字时登记数字来源
     ├── visuals/              # 图表计划、逐图说明和 manifest.json

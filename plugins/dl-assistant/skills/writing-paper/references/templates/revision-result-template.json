@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "response_id": "review-round-1",
+  "brief": {
+    "path": "<本批实际获批 revision-brief.json>",
+    "sha256": "<实际 SHA-256>"
+  },
+  "paper": {
+    "path": "<固定版本的实际改后 PDF 或稿件文件>",
+    "sha256": "<实际 SHA-256>"
+  },
+  "actions": [
+    {
+      "action_id": "clarify-budget",
+      "status": "completed",
+      "location": "第 7 页第 4.2 节及第 6 页表 2 注释",
+      "change": "补充两组实际更新步数和样本量，并在表注说明两组预算口径。",
+      "check_summary": "对照两组运行配置并检查改后 PDF 对应页。",
+      "artifacts": [
+        {
+          "path": "<经过核对的预算配置或验证记录>",
+          "sha256": "<实际 SHA-256>"
+        }
+      ],
+      "remaining": ""
+    }
+  ]
+}
