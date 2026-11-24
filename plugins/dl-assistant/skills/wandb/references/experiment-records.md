@@ -127,3 +127,10 @@ python3 "$wandb_skill_dir/scripts/check_tracking.py" --meta "$experiment_meta"
 
 - **Setup。** `setup.json.tracking_ref` 指向非敏感项目配置。按 `operations` 和 `checks` 保存 SDK 写入、独立查询、指标和 step、分布式记录、实际上传范围及故障策略的测试证据。注明小样例的实际覆盖和仍待验证的正式参数。
 - **Reproduction。** `reproduction.json` 用同一 `tracking_ref`。各 `runs` 绑定实际 `attempt_id`、`replicate_id` 和 W&B 记录。`identity.experiment_id` 对应复现的 `target_id`，`scope_id` 对应该份复现记录的身份。协议、代码和适用范围保留在复现记录。复现无研究论点时，`hypothesis_ids` 留空，`research_round` 可留空。对照实际发布权重和已验证入口时，从复现记录及实际读回核证据。
+
+## 论文实验回包的映射
+
+- 在 `paper-results.json` 的实验项 `execution.tracking` 放本文件定义的 `tracking` 对象。其 `scope_id` 为该回包的 `batch_id`，其他字段按实际项目填写。适用时填 `research_round` 和 `hypothesis_ids`。
+- 在 `execution.attempts[].meta_ref` 引用的 [尝试元记录](../../code-paper-experiment/references/templates/paper-attempt-template.json)里放对应的 `wandb` 对象。`identity.experiment_id` 等于 `exp_id`。重复、尝试及恢复来源按回包台账取值。`design_sha256` 是获批 `plan-vN.json` 的摘要，`run_spec_ref` 另定位实际使用的执行规格。
+- `code_dirty` 按实际工作区填写。使用 `configuration_ref` 以路径和摘要引用实际生效配置副本。脏工作区还填写 `code_diff_path` 和身份中的 diff 摘要。配置、diff 和查询快照的相对路径从该次回包根起算。声明 `synced` 时附实际所需查回快照。跨机时保留 `local_dir` 对应来源，必要时附 `recovery_ref` 说明访问条件。
+- 回包保存的代码、配置和 run 身份应能与实际尝试对应。使用 [论文回包检查器](../../code-paper-experiment/scripts/check-run-artifacts.sh) 核对。声明的身份、配置或查回证据有误时退出 1，接收端缺未同步运行的恢复目录时打印 `UNCHECKED` 并退出 3。

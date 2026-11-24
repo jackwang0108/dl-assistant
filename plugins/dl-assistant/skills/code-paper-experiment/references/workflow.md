@@ -46,4 +46,4 @@ bash "$skill_dir/scripts/check-run-artifacts.sh" --pkgdir "$handoff_dir"
 bash "$skill_dir/scripts/check-run-artifacts.sh" --pkgdir "$handoff_dir" --previous "$previous_dir"
 ```
 
-退出 0 表示声明的本地记录检查通过，退出 1 表示内容或引用不一致，退出 2 表示参数用法错误。外部证据和非内置分析方法要按实际来源另外核查。标明任务是否完成、证据支持范围、欠缺项和受影响的写作位置，再把回包路径交 writing-paper。关键科学判断变化时另附具体条件、反证或证据缺口交 iterate。
+退出 0 表示声明的本地记录检查通过，退出 1 表示内容或引用不一致，退出 2 表示参数用法错误。若退出 3，按 `UNCHECKED` 核跨机不可取得的 W&B 恢复目录，保留本地实验结果，并对各项证据说明可用范围。外部证据和非内置分析方法要按实际来源另外核查。标明任务是否完成、证据支持范围、欠缺项和受影响的写作位置，再把回包路径交 writing-paper。关键科学判断变化时另附具体条件、反证或证据缺口交 iterate。

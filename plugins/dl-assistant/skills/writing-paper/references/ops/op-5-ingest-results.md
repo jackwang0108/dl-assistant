@@ -41,7 +41,7 @@ bash "$cpe_skill_dir/scripts/check-run-artifacts.sh" --pkgdir "$handoff_dir"
 bash "$cpe_skill_dir/scripts/check-run-artifacts.sh" --pkgdir "$handoff_dir" --previous "$previous_dir"
 ```
 
-检查结果用于定位文件、身份、对账和有限复算。写入论文前仍要核实际条件、原始出处及结论边界。
+检查结果用于定位文件、身份、对账和有限复算。若返回 3，读 `UNCHECKED` 项，记录接收端暂不可查的 W&B 离线恢复材料。已独立核实且适用于稿件的本地证据仍可使用。写入论文前核实际条件、原始出处及结论边界。
 
 ## 示例 · 回填目标设备比较，保留第二台设备待办
 

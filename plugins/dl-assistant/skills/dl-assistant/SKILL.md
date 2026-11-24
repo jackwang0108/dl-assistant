@@ -9,7 +9,7 @@ description: 当调用 dl-assistant 科研助手中的任意一个 skill 时触�
 
 这是 dl-assistant 科研 skill 系统的**总览与全局地图**——一份参考文档，不做路由、不执行具体工作。它讲三件事：
 
-1. **全局 skill 流向图**：系统有哪些 skill、按什么顺序串、之间交接什么文件（见下节）。
+1. **全局 skill 流向图**：系统有哪些 skill、如何衔接、之间交接什么文件（见下节）。
 2. **三阶段划分**：前期输入 / 中期 coding / 后期产出。
 3. **跨机器模型**：产物落哪、怎么协作（见「全局目录布局与跨机器同步」）。
 
@@ -70,9 +70,9 @@ DL Assistant 把一个科研项目划分为三阶段，每阶段对应一组 ski
 
 上表的操作按各 MCP v2 说明执行。TeX 和 PDF 打开后以返回的 `document_id` 继续读，Overleaf 用同一轮的 `compile_id` 查日志和产物。
 
-## 全局 skill 流向图（skill 间顺序依赖）
+## 全局 skill 流向图
 
-下图展示科研流程中各技能的执行顺序。箭头标明需要交接的材料。各技能运行内部的流程图需要查看对应的技能，这里只显示技能之间的交接关系。
+箭头标明技能之间交接的材料。项目可以从已有成果或用户指定的任务进入。具体的运行步骤和检查项见各技能的流程图。
 
 ```mermaid
 flowchart LR
@@ -105,14 +105,15 @@ flowchart LR
     subgraph POSTE["后期 · 实验线（GPU 服务器）"]
         direction TB
         CPE[code-paper-experiment]
-        REL[code-paper-release]
     end
+    REL[code-paper-release]
 
     DOCS[("文献调研·baseline 选型")]
     PKG[("论文材料（paper-package.md）与代码仓库")]
-    EPLAN[("实验计划包")]
-    EDATA[("实验数据包")]
-    PDF[/论文 PDF/]
+    EPLAN[("获批计划<br/>plan-vN.md + plan-vN.json")]
+    EDATA[("分批结果<br/>paper-results.json 与可复查证据")]
+    PDF[/核查后的稿件或论文 PDF/]
+    GUIDE[/投稿指南及人工提交待办/]
     REPO[/release repo/]
 
     AD -.->|关注的论文| IF
@@ -135,39 +136,49 @@ flowchart LR
     IT -->|进入论文写作与补充实验阶段| PKG
 
     PKG --> WP
-    PKG --> CPE
 
-    WP -->|论文成品 PDF| WPR
-    WPR -->|审稿意见| WRESP
-    WRESP -->|修改决定| WP
-    WRESP -->|定稿| WPS
-    WPS --> PDF
+    WP -->|"固定版本的稿件与指定材料"| WPR
+    WPR -->|"problem-list.json 与稿件校验值"| WRESP
+    WRESP -->|"获批 revision-brief.json"| WP
+    WP -->|"revision-result.json、稿件与核查证据"| WRESP
+    WP -.->|"稿件版本、投稿要求与待办"| WPS
+    WPR -.->|"合规疑问及检查范围"| WPS
+    WRESP -.->|"回复定稿、稿件版本及未决项"| WPS
+    WPS -.->|"适用要求与材料问题"| WP
+    WPS -.->|"回复要求与待核项"| WRESP
+    WP --> PDF
+    WPS --> GUIDE
 
     WP --> EPLAN
     EPLAN --> CPE
     CPE --> EDATA
     EDATA --> WP
+    WP -.->|"核心主张未决或新证据动摇贡献"| IT
+    CPE -.->|"实测证据触及核心研究判断"| IT
+    WRESP -.->|"核心研究未决、依据与影响"| IT
 
-    CPE --> REL
-    REL --> REPO
+    WP -.->|"论文版本与数据口径"| REL
+    EDATA -.->|"相关结果、配置与资产出处"| REL
+    REL -.->|"稿件数字、链接或说明需更正"| WP
+    REL -->|"可审阅候选，按授权公开"| REPO
 ```
 
-- **方框** = skill；**圆柱体** = 跨阶段/子图交接的内容（DOCS / PKG / 实验计划包 / 实验数据包）；**平行四边形** = 最终外部成品（PDF 投稿 / REPO 发行，用户拿走）；**边标签** = 子图内部交接（论文成品 PDF，写作线内）。
-- **实线** = 主线必经；**虚线** = 可选前置输入。
+- 方框为技能，圆柱为跨阶段的交接材料，平行四边形为用户可取得的产物。箭头上的文字说明交接内容。
+- **实线**表示采用该流程时的主要交接。**虚线**表示按任务发生的补充输入、分支或返回。
 - **改交接必同步三张图**：增删/改任何一条交接，本图 + 两端 skill 各自的局部图一起改，别只改一处。
-- 中期由 `code-idea-execution` 执行实验，`code-idea-iterate` 分析证据后与用户决定是否继续迭代。进入论文阶段后，`code-idea-iterate` 生成 `paper-package.md`，记录科学问题、主要发现、支撑证据、替代解释、结论边界、相对已有工作的新增和剩余论证缺口。写作和论文实验均从 `code-idea-iterate` 接收该文件及对应的代码仓库。
+- 中期由 `code-idea-execution` 执行实验，`code-idea-iterate` 分析证据后与用户决定是否继续迭代。进入论文阶段后，`code-idea-iterate` 生成 `paper-package.md`，记录科学问题、主要发现、支撑证据、替代解释、结论边界、相对已有工作的新增和剩余论证缺口。写作端从中定位研究证据、待解决的问题和对应代码版本。
 - 中期主线依次包括环境准备、复现、代码清理、代码阅读和方案实现。**代码阅读（`code-reading`）是必经步骤**。实现研究方案之前，先带用户读懂基线代码（见「核心设计哲学」）。
 - `baseline-survey` 按用途选择代码仓库。**用于比较的基线代码**适用于改进直接前驱方法的研究。**用于分析实验的代码仓库**适用于组合已有研究发现或先做分析的研究，这类研究没有直接前驱仓库，第一版用分析实验检验假设。后一种情况下，`code-paper-reproduction` 以仓库自己报告的参考结果为复现目标，核查这套代码能否用于后续测量。
-- 复现后通常先做代码清理，再进入代码阅读。复现交接时，根据仓库规模、未使用代码和消融实验残留的多少、方案涉及的改动范围，以及预计的迭代次数，判断是否需要清理。仓库较小、代码整洁且只涉及局部改动时，**记录理由后可跳过清理，直接进入代码阅读**。判断标准见 `code-paper-reproduction` SKILL.md「下游交接」。
-- 后期 `writing-paper → review → response → writing-paper`（改论文）来回箭头。
-- 后期写作和论文实验分别在本地与 GPU 服务器上进行。实验计划包由写作交给论文实验，实验数据包由论文实验交回写作。
+- 复现后通常先做代码清理，再进入代码阅读。复现交接时，根据仓库规模、未使用代码和消融实验残留的多少、方案涉及的改动范围，以及预计的迭代次数，判断是否需要清理。仓库较小、代码整洁且只涉及局部改动时，**记录理由后可跳过清理，直接进入代码阅读**。交接内容见[论文复现流程](../code-paper-reproduction/references/workflow.md)。
+- 需要论文补充实验时，`writing-paper` 将获批的 `plan-vN.md`、`plan-vN.json` 和实际代码位置交 `code-paper-experiment`。执行端记录 `run-spec.json`，同一批可按不同修订交回 `paper-results.json`、引用快照和实际证据。写作端按批次和修订核结果。核心研究仍未决时回 iterate。
+- 预审把指定的 `problem-list.json` 和稿件校验值交回应端。回应端向写作端发获批 `revision-brief.json`，写作端用 `revision-result.json` 回传实际改动、稿件及证据。正式回复按实际核查结果定稿，投稿指南记录适用要求及用户需完成的平台操作。
 - **前期文献库不直接交给论文写作技能**。前期调研报告和精读笔记供用户了解领域、判断研究价值。论文写作时，围绕具体论点选取参考文献，包括研究方案所基于的核心论文，以及需要比较的相关工作。因此，图中前期调研与论文写作之间没有交接箭头。
 
 ## 全局目录布局与跨机器同步
 
 这套 skill 把机器分成**两类**（各自数量不限、不关心具体几台、什么拓扑）：
 
-- **本地机器**：干**文档类**的活——文献调研、读论文、想 idea、写论文、审稿回应，不需要 GPU。目录放 `docs/`（前期产出）+ `papers/`（后期产出：每篇论文一个 Overleaf git clone，见下）。
+- **本地机器**：干**文档类**的活——文献调研、读论文、想 idea、写论文、审稿回应，不需要 GPU。目录通常为 `docs/` 和 `papers/`。论文可用本地 LaTeX 或已绑定的 Overleaf 工程。
 - **GPU 机器**：**跑实验**——搭环境、复现、idea 实现 / 迭代、跑论文实验。在 baseline 仓库中保存 `docs/` 下的前期交接、工程准备报告和 `docs/research/` 下的中期研究轮次。发布候选在独立位置整理，验证机器按发布目标确定。
 
 > **运行位置假设**：这套 skill 假设 agent 在**项目根目录**下被启动——本地机器站在本地项目根（= 方向工作目录根）、GPU 机器站在 GPU 项目根（即下面树里的 `<项目>/`），所有 `docs/`、`papers/` 都相对这个根。**如果 agent 发现当前目录不像项目根（没有 `docs/` 之类），别猜，先问用户项目根在哪。**
@@ -182,15 +193,41 @@ flowchart LR
     ├── hf-radar/              # hf-trending-papers：雷达快照（按时间窗）
     ├── direction-tracking/    # direction-tracking：track-<slug>/ 累积库（常驻，增量更新）
     ├── paper-reading/         # paper-reading：精读笔记（一篇论文一个文件夹）
-    ├── literature-survey/     # literature-survey：调研报告（report + survey.json + reading-list + 谱系树）
+    ├── literature-survey/     # report.md、survey.json、reading-list.md、coverage-review.md 等
     ├── idea-find/             # idea-find：idea 文件夹（研究说明草稿 + 实验计划 + 初始论点记录）
     ├── baseline-survey/       # baseline-survey：选型报告（baseline-survey.json + report.md + facts/）
-    └── writing-paper-review/  # writing-paper-review 独立使用（审外部 PDF）：<slug>/round-N/ 审稿产物
+    ├── writing-paper-review/<slug>/round-N/  # 独立预审或复查，布局见下
+    └── submission-guide/<日期>-<标识>/  # 独立查规则或核材料，主入口 submission-guide.md
 
-<项目>/papers/    # 后期产出统一入口：每篇论文一个 Overleaf git clone（slug 默认 = Overleaf 项目名）；多篇并行 = 多个 clone，物理隔离
-└── <slug>/       # = 论文根（后期 skill 发现它：用户指定 > CWD 本身是 > papers/ 唯一候选 > 问用户）
-    ├── <主 tex>.tex / sections/ / tables/ / figures/ / refs.bib   # LaTeX 该有的（Overleaf 看到的；主 tex 只做 \input，名字随 authorkit）
-    └── _draft/     # writing-paper 工作区（.gitignore，不推 Overleaf）：状态骨干 paper-state.json、venue 契约、活蓝图 blueprint.md、内容源 content/、图表台账 visuals/、写作日志
+<项目>/papers/<slug>/  # 论文根，可使用本地 LaTeX 或已绑定的 Overleaf 工程
+├── <主文件>.tex、sections/、tables/、figures/、refs.bib
+├── _draft/
+│   ├── config.json、paper-state.json、venue-contract.md、venue-contract.json
+│   ├── blueprint.md、content/、references.json、canonical-values.json
+│   ├── visuals/、scripts/、build/、writing.log
+│   ├── experiments/
+│   │   ├── plan-vN.md、plan-vN.json                 # 写作端获批计划
+│   │   └── <batch-id>/handoffs/rev-<N>/
+│   │       ├── paper-results.json、plan-vN.json、run-spec.json
+│   │       └── <随包证据>
+│   └── revisions/<response-id>/<return-id>/
+│       └── revision-result.json                     # 实际改稿回传与证据引用
+├── review/round-N/
+│   ├── review-run.json、workflow-result.json、tasks/  # 当轮输入和原始任务
+│   ├── materials/、sources/                          # 按需保存本轮材料和检索来源
+│   └── handoffs/rev-<N>/
+│       ├── problem-list.json、problem-清单.md
+│       └── 审稿总报告.md、validation.json、records/
+├── response/<response-id>/
+│   ├── response-state.json                           # 当前记录
+│   ├── receipts/<return-id>/                         # 收到的改稿回传及证据
+│   └── handoffs/<stage>-<N>/
+│       ├── response-state.json、response-map.md      # 该阶段记录快照
+│       └── revision-brief.json、rebuttal-letter.md、validation.json
+└── submission/<阶段>-<轮次>/
+    ├── submission-guide.md                           # 官方要求、实际核查和人工提交待办
+    ├── checks/                                      # 可含 material-checks.json、build-record.json
+    └── renders/                                     # 按需保存页图
 ```
 
 > 注意：`papers/` 里是嵌套 git repo——方向目录本身也是 git repo 时，把 `papers/` 加进方向目录的 `.gitignore`，避免父 repo 把嵌套 clone 当 submodule 噪音。
@@ -204,11 +241,20 @@ GPU 机器：
 │   ├── code-paper-reproduction/   # reproduction 报告（reproduction.json + report.md）
 │   ├── code-idea-prepare/         # cleanup 报告（cleanup.json + cleanup-report.md + coverage/）
 │   ├── code-reading/             # 诊断脚本 + 阅读笔记
-│   └── research/                 # 中期研究记录
+│   ├── paper-experiments/<batch-id>/  # 论文实验批次
+│   │   ├── plan-vN.md、plan-vN.json、run-spec.json
+│   │   ├── experiments/<exp-id>/
+│   │   │   ├── report.md、configs/、scripts/
+│   │   │   └── runs/<attempt-id>/                   # command.sh、meta.json、metrics.json、日志与产物
+│   │   └── handoffs/rev-<N>/
+│   │       ├── paper-results.json、plan-vN.json、run-spec.json
+│   │       └── <随包证据>
+│   └── research/                     # 中期研究记录
 │       ├── PROJECT_CONTEXT.md    # 项目背景及资料指针
 │       ├── research-rounds.json  # 按顺序登记已建立的轮次
 │       ├── v<N>-<slug>/          # research-spec.md、research-plan.md、claims.json
-│       │   ├── experiments/     # 实验台账、单实验报告和运行
+│       │   ├── claim-code-map.md
+│       │   ├── experiments/     # index.json、单实验报告和运行
 │       │   ├── executions/      # 各执行批次的独立核查
 │       │   ├── decisions/       # 基于本轮证据作出的决定
 │       │   ├── execution-conclusion.md
@@ -216,7 +262,8 @@ GPU 机器：
 │       └── paper-package.md     # 用户决定进入写作时生成
 └── [baseline 自己的源码 …]
 
-<独立位置>/       # code-paper-release 发布候选；内部发布报告另存
+<发布候选目录>/           # 可发布的代码、README、许可证和适用的复现材料
+<内部记录目录>/<release-id>/  # RELEASE_REPORT.md、checks/ 和按需保存的基准
 ```
 
 ```mermaid
@@ -224,26 +271,28 @@ flowchart LR
     subgraph LOCAL["本地机器（文档操作为主，不需 GPU）"]
         direction TB
         LDOCS["docs/ — 前期产出（调研、选型、idea）"]
-        LPAPER["papers/＜slug＞/ — writing-paper 产出（Overleaf git clone）"]
+        LPAPER["papers/＜slug＞/ — 稿件、写作、审稿、回应和投稿记录"]
     end
     subgraph GPU["GPU 机器（跑实验）"]
         direction TB
         GREPO["baseline repo — 源码随 baseline（idea 实现 / 实验在这跑）"]
         GDOCS["docs/ — 前期交接和工程准备报告"]
         GRESEARCH["docs/research/ — 研究轮次、实验和决定"]
+        GEXP["docs/paper-experiments/ — 获批计划、运行和回包"]
     end
     RELDIR["发布候选（独立位置，按发布目标选择验证机器）"]
 
     LOCAL -->|"前期 docs（中期读）"| GPU
-    GPU -->|"中期报告 / 实验数据 / 结论（写作线读）"| LOCAL
-    LOCAL -->|"补实验 spec（实验线跑）"| GPU
+    GRESEARCH -->|"paper-package.md 及引用的研究证据"| LPAPER
+    LPAPER -->|"获批计划及代码位置"| GEXP
+    GEXP -->|"按批次和修订回传 paper-results.json 与证据"| LPAPER
     LPAPER -->|"论文版本"| RELDIR
     GREPO -->|"研究代码、配置和资产"| RELDIR
 ```
 
 在 baseline 仓库的 `docs/research/` 中，execution 和 iterate 共用轮次目录。一轮可有多批执行和多个决定。首轮由 execution 登记，后续由 iterate 在确认建轮时追加。研究代码默认沿 `main` 推进，实际起点和收尾代码按[研究轮次登记与 Git 交接](references/research-rounds.md)记录。
 
-**跨机器文件交接**：两类机器之间要来回交接文件（前期 docs → GPU、中期报告 / 实验数据 / 结论 → 本地、补实验 spec → GPU）。原则是——**skill 只声明「需要哪个文件」，不规定怎么传**：到了需要跨机器文件的节点，skill 直接找用户要（"给我 setup report"、"把补实验 spec 弄到 GPU 机器上"），用户爱用 scp、FileZilla、手动拷都行，skill 只认文件到位。所以图里的箭头只标「什么文件、谁要用」，不标传输工具。
+**跨机器文件交接**。前期资料可按完整目录复制到研究仓库，例如把 `docs/idea-find/` 带到实际运行仓库的 `docs/`。写作端接收 `paper-package.md` 及其引用的证据，实验端接收获批计划和实际代码位置；回包按整个修订目录转交，保留相对路径及外部证据的位置和可访问方式。用实际文件、版本和摘要对账。传输工具按项目约定选择。
 
 > **没有状态文件这回事。** 判断"进行到哪一步"靠的是**按需扫描真实的产物文件**（轮次索引、实验记录、各种报告、论文 manifest）——产物即真相（见「核心设计哲学」），不维护任何 `PROJECT_STATE` 之类的中枢。跨机器也无需带状态文件：每个 skill 都读自己的产物自恢复上下文，靠本节定义的协作机制把产物送到该在的机器上。
 

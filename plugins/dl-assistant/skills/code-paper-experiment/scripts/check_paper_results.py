@@ -3,6 +3,7 @@
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import math
 import re
@@ -13,6 +14,7 @@ from statistics import mean
 STATUSES = {"not_started", "in_progress", "completed", "partial", "failed", "blocked", "cancelled"}
 VALIDITIES = {"unassessed", "valid", "limited", "invalid"}
 SLUG = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")
+TRACKING_PATH = Path(__file__).resolve().parents[2] / "wandb/scripts/check_tracking.py"
 
 
 def require(condition, message):
@@ -85,10 +87,13 @@ def dependencies(rows, field):
         require(isinstance(items, list) and len(set(items)) == len(items), f"{eid}: invalid {field}")
         require(set(items) <= rows.keys(), f"{eid}: unknown dependency")
         remaining[eid] = set(items)
+    order = []
     while remaining:
         ready = {eid for eid, items in remaining.items() if not items}
         require(ready, f"cyclic {field}")
+        order.extend(eid for eid in remaining if eid in ready)
         remaining = {eid: items - ready for eid, items in remaining.items() if eid not in ready}
+    return order
 
 
 def check_plan(plan):
@@ -182,7 +187,36 @@ def check_statistic(stat, attempts, root, measurements):
             f"{name}: value does not match declared raw readouts")
 
 
-def check_results(root, result, plan, spec, plan_rows, approved):
+def check_tracking(root, result, eid, execution, attempts, unchecked, known_runs):
+    tracking = execution.get("tracking")
+    if tracking is None:
+        require(all(attempt.get("wandb") is None for attempt in attempts),
+                f"{eid}: W&B attempt has no experiment tracking configuration")
+        return
+    require(isinstance(tracking, dict) and tracking.get("scope_id") == result["batch_id"],
+            f"{eid}: W&B scope must identify the paper batch")
+    require(TRACKING_PATH.is_file(), f"{eid}: missing shared W&B tracking checker")
+    loader = importlib.util.spec_from_file_location("dl_wandb_tracking", TRACKING_PATH)
+    checker = importlib.util.module_from_spec(loader)
+    loader.loader.exec_module(checker)
+    experiment_meta = {
+        "experiment_id": eid,
+        "design_record": {"path": result["plan"]["path"]},
+        "tracking": tracking,
+        "attempts": attempts,
+    }
+    limitations = []
+    errors = checker.check(experiment_meta, root, portable=True, unchecked=limitations)
+    require(not errors, f"{eid}: " + "; ".join(errors))
+    unchecked.extend(f"{eid}: {message}" for message in limitations)
+    for attempt in attempts:
+        run = (checker.origin(tracking["base_url"]), tracking["entity"], tracking["project"],
+               attempt["wandb"]["run_id"])
+        require(run not in known_runs, f"{eid}: W&B run reused across experiments")
+        known_runs.add(run)
+
+
+def check_results(root, result, plan, spec, plan_rows, approved, unchecked):
     require(result["batch_id"] == plan["batch_id"], "results and plan batch IDs differ")
     require(positive(result["revision"]), "invalid result revision")
     previous = result["previous_sha256"]
@@ -190,6 +224,7 @@ def check_results(root, result, plan, spec, plan_rows, approved):
             or (result["revision"] > 1 and sha256(previous)), "invalid previous result digest")
     require(isinstance(result["changes"], list), "changes must be a list")
     rows = indexed(result["experiments"], "exp_id")
+    known_runs = set()
     require(rows.keys() == plan_rows.keys(), "results must cover all plan experiments")
     for eid, row in rows.items():
         experiment = plan_rows[eid]
@@ -211,6 +246,7 @@ def check_results(root, result, plan, spec, plan_rows, approved):
         replicates = indexed(experiment["replicates"]["items"], "id")
         measurements = indexed(experiment["measurements"], "id")
         parents = {}
+        actual_attempts = {}
         for aid, attempt in attempts.items():
             require(attempt["status"] in STATUSES and attempt["data_validity"] in VALIDITIES,
                     f"{eid}/{aid}: invalid attempt status or data validity")
@@ -242,7 +278,11 @@ def check_results(root, result, plan, spec, plan_rows, approved):
                 require(prior in attempts and attempts[prior]["replicate_id"] == replicate,
                         f"{eid}/{aid}: retry or recovery must retain replicate")
             parents[aid] = {"previous": refs}
-        dependencies(parents, "previous")
+            # Track lineage from the validated handoff, not a second declaration in meta.json.
+            actual_attempts[aid] = {**actual, "resume_from": attempt.get("resume_from")}
+        order = dependencies(parents, "previous")
+        check_tracking(root, result, eid, execution, [actual_attempts[aid] for aid in order],
+                       unchecked, known_runs)
         for stat in indexed(row["statistics"], "id").values():
             require(row["measurement"]["validity"] in {"valid", "limited"}, f"{eid}: aggregate lacks valid measurements")
             check_statistic(stat, attempts, root, measurements)
@@ -250,7 +290,7 @@ def check_results(root, result, plan, spec, plan_rows, approved):
             check_artifact(root, artifact)
 
 
-def check_package(root):
+def check_package(root, unchecked=None):
     result_path = root / "paper-results.json"
     result = load(result_path)
     plan_path = snapshot(root, result["plan"])
@@ -258,7 +298,7 @@ def check_package(root):
     spec = load(snapshot(root, result["run_spec"]))
     rows, approved = check_plan(plan)
     check_spec(plan_path, plan, spec, rows, approved)
-    check_results(root, result, plan, spec, rows, approved)
+    check_results(root, result, plan, spec, rows, approved, [] if unchecked is None else unchecked)
     return result_path, result, spec
 
 
@@ -276,6 +316,10 @@ def check_revision(current, previous):
     for old_row in before["experiments"]:
         eid = old_row["exp_id"]
         new_row = new_rows[eid]
+        old_tracking = old_row["execution"].get("tracking")
+        if old_tracking is not None:
+            require(new_row["execution"].get("tracking") == old_tracking,
+                    f"{eid}: prior W&B experiment scope changed")
         attempts = indexed(new_row["execution"]["attempts"], "attempt_id")
         for old_attempt in old_row["execution"]["attempts"]:
             aid = old_attempt["attempt_id"]
@@ -287,6 +331,10 @@ def check_revision(current, previous):
                 require(old_meta[key] == new_meta[key], f"{eid}/{aid}: actual execution identity changed")
             require(old_meta["run_spec_ref"]["sha256"] == new_meta["run_spec_ref"]["sha256"],
                     f"{eid}/{aid}: actual run-spec changed")
+            if old_meta.get("wandb") is not None:
+                new_wandb = new_meta.get("wandb") or {}
+                require(all(old_meta["wandb"][key] == new_wandb.get(key) for key in ("identity", "run_id")),
+                        f"{eid}/{aid}: prior W&B run identity changed")
         new_stats = indexed(new_row["statistics"], "id")
         for old_stat in old_row["statistics"]:
             sid = old_stat["id"]
@@ -307,17 +355,22 @@ def main():
     args = parser.parse_args()
     if args.plan and (not args.spec or args.previous) or args.pkgdir and args.spec:
         parser.error("use --plan with --spec, or --pkgdir with optional --previous")
+    unchecked = []
     try:
         if args.plan:
             plan = load(args.plan)
             rows, approved = check_plan(plan)
             check_spec(args.plan, plan, load(args.spec), rows, approved)
         else:
-            current = check_package(args.pkgdir)
+            current = check_package(args.pkgdir, unchecked)
             if args.previous:
                 check_revision(current, args.previous)
     except (OSError, ValueError, KeyError, TypeError, AttributeError) as exc:
         parser.exit(1, f"[FAIL] {exc}\n")
+    if unchecked:
+        for limitation in unchecked:
+            print(f"[UNCHECKED] {limitation}")
+        return 3
     print("[PASS] Declared records checked. Review scientific interpretation and external evidence separately.")
     return 0
 

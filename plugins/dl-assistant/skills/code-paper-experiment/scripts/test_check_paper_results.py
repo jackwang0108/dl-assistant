@@ -105,6 +105,63 @@ class PackageTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "repeated independent replicate"):
             checker.check_package(self.package(1))
 
+    def tracked_package(self, *, sync_status="synced", wrong_run=False):
+        row = self.result["experiments"][0]
+        row["execution"].update(status="partial", reason="only one pair executed")
+        self.attempt(row, 1, {"baseline": 12.5, "combined": 10.7})
+        scope = {
+            "provider": "wandb", "base_url": "http://wandb.internal:8080",
+            "entity": "research", "project": "latency",
+            "scope_id": self.result["batch_id"], "research_round": None, "hypothesis_ids": [],
+        }
+        row["execution"]["tracking"] = scope
+        directory = self.package(1)
+        path = row["execution"]["attempts"][0]["meta_ref"]
+        actual = checker.load(directory / path, versioned=False)
+        config_ref = write(directory, "evidence/effective-config.json", {"device": "test"})
+        identity = {
+            "experiment_id": row["exp_id"], "attempt_id": actual["attempt_id"],
+            "replicate_id": actual["replicate_id"], "resume_from_attempt": None,
+            "git_commit": actual["git_commit"], "design_sha256": self.result["plan"]["sha256"],
+            "config_sha256": config_ref["sha256"], "code_diff_sha256": None,
+            "data_refs": [], "model_refs": [], "protocol_ref": "approved evaluation",
+        }
+        wandb = {"run_id": "paper-attempt-1", "identity": identity, "sync_status": sync_status}
+        if sync_status == "synced":
+            readback = {
+                "schema_version": 1, "base_url": scope["base_url"], "entity": scope["entity"],
+                "project": scope["project"], "run_id": "different-run" if wrong_run else wandb["run_id"],
+                "queried_at": "2026-11-25T00:00:00Z", "query": {"keys": ["latency"]},
+                "coverage": {"steps": [1]}, "summary": {"latency": 10.7},
+                "config": {"dl_assistant": {**identity, **{
+                    field: scope[field] for field in ("scope_id", "research_round", "hypothesis_ids")
+                }}},
+            }
+            wandb["snapshot_ref"] = write(directory, "evidence/readback.json", readback)
+        else:
+            wandb.update(local_dir="/remote/wandb/offline-run", reason="pending on source machine")
+        actual.update(configuration_ref=config_ref, code_dirty=False, wandb=wandb)
+        write(directory, path, actual)
+        return directory
+
+    def test_wandb_readback_is_checked_through_paper_package(self):
+        directory = self.tracked_package()
+        unchecked = []
+        checker.check_package(directory, unchecked)
+        self.assertEqual(unchecked, [])
+
+    def test_wandb_mismatched_readback_is_rejected(self):
+        directory = self.tracked_package(wrong_run=True)
+        with self.assertRaisesRegex(ValueError, "readback identity mismatch: run_id"):
+            checker.check_package(directory)
+
+    def test_missing_offline_directory_is_reported_as_unchecked(self):
+        directory = self.tracked_package(sync_status="offline")
+        script = REFERENCES.parents[1] / "scripts/check-run-artifacts.sh"
+        result = subprocess.run(["bash", script, "--pkgdir", directory], capture_output=True, text=True)
+        self.assertEqual(result.returncode, 3, result.stderr)
+        self.assertIn("[UNCHECKED]", result.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()

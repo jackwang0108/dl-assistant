@@ -19,6 +19,7 @@
         "status": "not_started",
         "reason": "尚未执行",
         "attempts": [],
+        "tracking": null,
         "resource_usage": []
       },
       "measurement": {
@@ -40,6 +41,7 @@
         "status": "blocked",
         "reason": "示例：第二台设备原版入口受阻",
         "attempts": [],
+        "tracking": null,
         "resource_usage": []
       },
       "measurement": {

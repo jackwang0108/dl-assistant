@@ -15,12 +15,15 @@ description: 按研究问题和实际证据撰写或修改论文，组织图表�
 flowchart LR
     IT["code-idea-iterate"] -->|"paper-package.md、研究证据与代码位置"| WP["writing-paper"]
     WP -->|"核心主张未决、受影响范围及待补证据"| IT
-    WP -->|"获批的分批实验计划"| CPE["code-paper-experiment"]
-    CPE -->|"按批返回实测结果、条件和偏差"| WP
-    WRESP["writing-paper-response"] -->|"获批的修改清单及对应稿件版本"| WP
+    WP -->|"获批 plan-vN.md 与 plan-vN.json"| CPE["code-paper-experiment"]
+    CPE -->|"分批回传 paper-results.json 与证据"| WP
+    WRESP["writing-paper-response"] -->|"获批 revision-brief.json 及对应稿件版本"| WP
     WP -->|"revision-result.json、改后稿件与证据"| WRESP
     WP -->|"编译核查后的稿件 PDF"| WREV["writing-paper-review"]
     WP -->|"稿件、目标会议要求及待处理项"| WPSUB["writing-paper-submission"]
+    WPSUB -.->|"适用要求与材料问题"| WP
+    WP -.->|"论文版本、图表和数据口径"| REL["code-paper-release"]
+    REL -.->|"稿件数字、链接或说明需更正"| WP
 ```
 
 新稿优先读用户给的材料或 `docs/research/paper-package.md`，沿其中的引用核对应研究轮次、命题、代码和实验。已有现稿时核用户指定的编辑范围和版本。跨机器交接按 [dl-assistant 共用规则](../dl-assistant/SKILL.md#所有技能共用的规则)记录材料位置和版本。
