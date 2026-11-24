@@ -1,45 +1,27 @@
-# C 类：获取会议论文集
+# 会议论文集来源与身份核对
 
-本技能支持以下 11 个会议：CVPR / ICCV / ECCV / NeurIPS(NIPS) / ICML / ICLR / AAAI / ACL / EMNLP / ACMMM / IJCAI。
+用户给定会议、年份、论文集 URL 或清单后，核对主会、研讨会、论文类型及是否只含部分列表。下面是常用来源候选，不限制只能跟踪这些会议；首次使用某年列表时核实实际 URL 与页面结构，不凭记忆拼接后称已验证。
 
-按网站访问条件分为开放来源和受限来源。
+| 来源候选 | 常见会议 |
+| --- | --- |
+| CVF Open Access | CVPR、ICCV |
+| ECVA | ECCV |
+| NeurIPS Proceedings | NeurIPS |
+| PMLR | ICML 等 |
+| ACL Anthology | ACL、EMNLP 等 |
+| AAAI 官方论文集 | AAAI |
+| IJCAI 官方论文集 | IJCAI |
+| OpenReview | ICLR 等，按实际公开 venue 和决定范围核实 |
+| ACM Digital Library | ACM Multimedia 等 |
 
-## 网站与会议
+来源列表不保证当前可访问或每年沿用同一平台。先尝试公开列表与公开接口；访问限制、认证和网络失败分别记录，不将历史单次失败写成永久登录要求。不要求用户在对话中提供账号密码或 cookie，确需身份时由用户通过适当工具完成认证。
 
-| 网站 | 会议 | 开放度 |
-| --- | --- | --- |
-| CVF(`openaccess.thecvf.com`) | CVPR / ICCV | 开放 |
-| `ecva.net` | ECCV | 开放 |
-| `papers.nips.cc` | NeurIPS | 开放 |
-| PMLR(`proceedings.mlr.press`) | ICML | 开放 |
-| ACL Anthology(`aclanthology.org`) | ACL / EMNLP | 开放 |
-| `ojs.aaai.org` | AAAI | 开放 |
-| `ijcai.org/proceedings` | IJCAI | 开放 |
-| **OpenReview(`openreview.net`)** | **ICLR** | 受限：网站受 Cloudflare 保护，官方 API 需要登录 |
-| **ACM DL(`dl.acm.org`)** | **ACMMM** | 受限：需要付费访问或登录 |
+获取不到时可请用户提供公开列表、标题清单或 BibTeX，继续处理其他来源。arXiv 关键词查询只是补充，不能承诺覆盖大部分会议论文。原始列表、分页与未取得部分保存在运行目录；付费正文不可得也不妨碍保存可核实书目信息。
 
-## 开放类（CVF / ecva / nips / PMLR / ACL Anthology / AAAI / IJCAI）
+## 同一论文的跨来源身份
 
-- 获取会议论文列表，保存各篇标题和链接。
-- 网站 URL 和页面结构可能随年份变化。首次查询某个会议和年份时，先核实 URL 和页面结构，再获取列表。
-- 多数会议论文有 arXiv 版本。将标题转为小写、去除标点和副标题变体后比较。标题一致且至少一名作者的姓氏相同，才视为同一篇，并按 arXiv ID 写入 seen 供去重。只满足一项或两项都不满足时，标为 `unmatched`，留待人工核对。
+优先使用 DOI、arXiv ID、官方页面互链或明确版本关系。不能用“删掉副标题后相同 + 任一作者姓相同”自动合并。
 
-## 受限类（OpenReview=ICLR / ACM DL=ACMMM）
+只有标题和作者信息时，对完整标题、完整作者组合及版本信息进行核查，标明关联证据；仍不确定就保留独立临时身份和待核对关系，不强行合并。标题哈希只是暂存键，不是同一论文的证明。
 
-- **OpenReview**：网站受 Cloudflare 保护。据用户实测，官方 API 需要登录。
-  - 用户提供 OpenReview 账号凭证（cookie 或 token）时，使用官方 API。
-  - 无法使用官方 API 时，按下节处理。
-- **ACM DL**：需要付费访问，无法访问时按下节处理。
-
-### 无法获取会议列表时
-
-请用户提供会议论文清单，可用 URL、标题列表或 BibTeX。
-多数 ICLR 和 ACMMM 论文有 arXiv 版本，A 类关键词查询可覆盖其中大部分。C 类查询作为补充。
-
-## 跨源去重
-
-各来源优先使用 arXiv ID 在 seen 中去重。同一篇论文即使既由 A 类查到预印本，又由 C 类查到会议版本，也只记录一次。没有 arXiv 版本时使用标题哈希或 DOI。
-
----
-
-> OpenReview 的网站访问限制和官方 API 登录要求来自用户实测。第一次查询某网站、会议和年份时，核实具体 URL。
+无 arXiv 版本的论文用 DOI 或官方稳定 URL 交接。后续发现可靠映射时，在处理记录中建立别名和合并指向，合并全部来源与历史判断；累计库保留一个当前条目，不把身份迁移算成新论文。

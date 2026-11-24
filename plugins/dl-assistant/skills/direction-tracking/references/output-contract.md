@@ -1,87 +1,158 @@
-# 文件格式与保存顺序
+# 记录格式与恢复
 
-每个方向使用一个 `track-<方向slug>/` 目录，每次运行都更新该目录。
+一个方向使用一个长期目录，每次运行使用独立子目录。以下为版本 2 格式，既记录获取历史，也区分处理是否完成。
 
-## 目录树
-
-固定保存目录为 `<项目>/docs/direction-tracking/`。
-
+```text
+track-<slug>/
+├── config.yaml
+├── seen.jsonl              追加式逐篇处理记录，不只是已获取 ID 集合
+├── library.md              根据最新收录记录维护的累计阅读清单
+├── meta.json               按配置与来源分开的获取进度
+└── runs/<唯一运行标识>/
+    ├── config.yaml         本次完整配置快照
+    ├── raw/                各来源原始返回及 source-coverage.json
+    ├── pdfs/               按需保存已核版本的 PDF
+    ├── round1/             独立分片相关性记录
+    ├── round2/             独立逐篇正文检查记录
+    └── digest.md           本次报告与覆盖情况
 ```
-docs/direction-tracking/track-<方向slug>/
-├── config.yaml       方向配置，用户可直接编辑
-├── seen.jsonl        记录所有获取过的论文及其来源，包括未通过筛选的，供下次去重
-├── library.md        累计论文库，只收录通过两轮筛选的论文，采用简报条目格式
-├── runs/<日期>-<HHmm>.md   每次运行的简报，文件名附时间，同日多次运行互不覆盖
-└── meta.json         上次更新时间 last_run 和进度索引
-```
 
-## config.yaml（用户可手改）
+运行标识使用 UTC 时间精确到秒并在冲突时加编号；不得覆盖既有运行。主 agent 是累计文件的唯一写入者，子 agent 只写被分配的独立文件。同一方向不同时运行两个写入任务，发现未结束运行先核查是否恢复它。
+
+## config.yaml
 
 ```yaml
-direction: "一句话说清这方向在研究什么"
-keywords:                # 供 A 类关键词查询使用
-  - referring expression segmentation
-synonyms:                # 可选的同义词组，覆盖不同术语，每组内用 OR
-  - [referring image segmentation, RES]
-seeds:                   # 供 B 类使用，初始为 2-5 篇种子论文的 arXiv ID。可提名新种子，经用户确认后加入
-  - 2304.07899
-  - 2305.01511
-created: 2026-07-13
+schema_version: 2
+config_version: 1
+direction: "研究问题的一句话说明"
+include: ["明确包含的研究问题"]
+exclude: ["明确排除的研究问题"]
+borderline: ["需要人工判断的边界案例"]
+keywords: ["referring expression segmentation"]
+synonyms: [["referring image segmentation", "RES"]]
+seeds: ["2304.07899", "2305.01511"]
+bootstrap_from: "2026-01-01"
+created: "2026-07-13"
 ```
 
-`<方向slug>` 根据 `direction` 生成，用户可修改。用户也可增删关键词和种子论文。
+日期和论文 ID 用引号，避免 YAML 转成数字。方向范围、关键词或参考论文改变时递增 `config_version`，保存旧配置快照及变更说明。用户手改未递增版本时，执行前对照最近快照识别差异并确认变更，不静默沿用旧进度。
 
-## seen.jsonl（去重记录，含来源）
+## seen.jsonl：处理记录
 
-每行是一条 JSON 记录。所有获取过的论文都要记录，包括未通过筛选的。
+每行一个 JSON 事件，主 agent 串行追加；同论文可有多条，按追加顺序取当前配置下最后的有效记录。保留旧决定及来源，不删除失败历史。例如：
 
 ```json
-{"id":"2406.12345","source":"A:referring expression segmentation","date":"2026-07-13"}
-{"id":"2407.00123","source":"B:2304.07899","date":"2026-07-13"}
-{"id":"2405.00077","source":"C:CVPR2026","date":"2026-07-13"}
+{"schema_version":2,"id":"arxiv:2607.00001","aliases":[],"version_id":"2607.00001v1","config_version":1,"run_id":"20260713T143000Z","recorded_at":"2026-07-13T14:30:00Z","sources":["A:referring expression segmentation"],"status":"pending_screen","reason":"已保存原始结果，尚未筛选","evidence_status":"unreviewed","record_path":"runs/20260713T143000Z/raw/A.json","recommended_version":null}
 ```
 
-- `source`:`A:<关键词>` / `B:<种子ID>` / `C:<会议年份>`。
-- 根据 `library.md` 判断是否通过筛选。已收录表示通过，未收录表示未通过，无需单独保存 accepted 或 rejected。
-- **去重依据**。`id` 优先使用 arXiv ID。没有 arXiv 版本的会议论文可用标题哈希或 DOI，标题哈希格式为 `id: "titlehash:..."`。
+必要字段为稳定身份、已知别名、实际版本（未知为 null）、配置版本、运行标识、记录时间、全部已知来源、处理状态、理由、证据状态、记录路径与最近已推荐版本。更新事件保留之前累积的身份与来源信息。需要待办动作时增记 `next_action`。
 
-## library.md（累计论文库）
+处理状态：
 
-收录所有通过两轮筛选的论文，按运行时间倒序追加。每篇采用下方的简报条目格式。`idea-find` 可从中查找适合作为选题起点的论文。
+| status | 含义与恢复动作 |
+| --- | --- |
+| `pending_screen` | 已获取但未筛选，恢复后继续 |
+| `pending_review` | 相关性或正文资料不足、预算不足或工具失败；写明下一步，不视为排除 |
+| `included` | 已确认与方向相关，进入累计库；证据状态可仍待核实 |
+| `excluded` | 有明确不相关理由；仅对记录的配置版本有效 |
+| `merged` | 身份已合并，记录 `canonical_id`，读取时转向该身份，不重复计数 |
 
-## runs/`<日期>-<HHmm>`.md（本次简报）
+`evidence_status` 使用 `unreviewed`、`abstract_only`、`insufficient`、`supported`、`contradicted` 表示实际证据核查结果，并用文字注明范围，不等于独立复现或创新性结论。相关但证据不足的论文可收录并标注，不自动删除。
 
-简报只收录本次首次加入 library 的论文，采用下方的条目格式。文件名包含时间，同一天多次运行时分别保存。
+## 身份与版本
 
-开头说明篇数、子主题和整体情况，随后逐篇列出论文。末尾添加 **「推荐继续阅读或用于选题的论文」**，列出 3–5 篇的 arXiv ID 及具体推荐理由，供 `paper-reading` 或 `idea-find` 使用。
+稳定身份优先 arXiv ID（去版本号，含 `arxiv:` 前缀），其次 DOI 或官方论文 URL。无稳定标识时标题哈希仅作临时身份，保留完整标题和作者；相同标题不能自动合并。获得确定关联后增加别名与合并记录，保留旧 ID 的指向，不丢历史来源。
 
-## 论文库和简报共用的条目格式
+发现相同 ID：
 
-```markdown
-### <标题>
-- arXiv: <id> — https://arxiv.org/abs/<id>
-- 来源: <A 关键词 / B 种子ID / C 会议年份>
-- 为啥相关: <一句话,R1 给的>
-- 量化: <baseline 年份·数量 / SOTA / 规模 / 可复现,R2 给的;C 类仅依据摘要和元数据>
-- 值得深读   # 可选标记，用于推荐给 paper-reading 精读
-```
+- 相同版本、相同配置且已完成时复用结果，补来源，不重复推荐。
+- 待处理或失败记录继续处理，不能因 ID 已存在跳过。
+- 新版本保存新原始材料并标为待核查；比较已推荐版本，重大方法、结果、资源或结论变化才作为“重要更新”推荐。仅排版变化无需再次推荐；无法比较时说明未知。
+- 版本未知时不得当作已确认相同版本；保留最后观测时间与核查任务。
 
-## meta.json（进度索引，供下次继续运行）
+## meta.json 与来源进度
+
+记录 `schema_version`、方向标识、配置版本及来源索引。A 按配置版本记录连续完整获取到的 UTC 日期、未完成日期段及本次截止时间；B 按种子记录查询时间、分页是否完成及原始结果位置；C 按会议年份与列表范围记录已获取部分和剩余列表。计数可从逐篇记录重建，不作为唯一依据。
+
+“获取完整”指此次请求未截断、所有页已成功保存且候选已登记；不保证外部索引收录无遗漏。候选登记完成后可以推进该来源获取进度，但未筛完的任务仍保留待处理。失败或不完整来源不能推进其完成进度，成功的其他来源独立更新。不能用一个 `last_run` 替代这些信息。
+
+示例中 arXiv 已完整到 12 日，一个种子的本次查询仍待补页。下面路径以方向目录为基准。
 
 ```json
 {
-  "slug": "referring-segmentation",
-  "created": "2026-07-13",
-  "last_run": "2026-07-13T14:30:00Z",
-  "total_seen": 0,
-  "total_library": 0
+  "schema_version": 2,
+  "slug": "vision-example",
+  "config_version": 1,
+  "source_progress": {
+    "1": {
+      "A": {"complete_through_utc": "2026-07-12", "pending_ranges": [], "run_id": "20260713T143000Z"},
+      "B": {
+        "arxiv:2304.07899": {
+          "last_complete_at_utc": null,
+          "status": "partial",
+          "next_action": "核原快照能否续取；否则重新读已取范围并按论文 ID 合并。",
+          "run_id": "20260713T143000Z"
+        }
+      },
+      "C": {}
+    }
+  }
 }
 ```
 
-## 每次运行的保存顺序
+本次 `raw/source-coverage.json` 逐请求写来源键、请求范围、实际覆盖、返回数量、状态、原始路径及剩余工作。对 A 类记录日期口径与已完成日期段，对 B 类记录种子、快照覆盖与失败来源，对 C 类记录会议、年份、轨道和实际列表。先形成这份记录，再把相应完成范围写进 `meta.json`。
 
-1. 按本次任务获取 A、B 或 C 类论文，合并并去重。**将新 ID 立即追加到 `seen.jsonl`**，这样即使后续未通过筛选，下次也能识别为已获取。
-2. 依次进行 R1 和 R2，将通过的论文写入 `library.md` 和 `runs/<日期>.md`。
-3. 最后更新 `meta.json` 中的 `last_run=now` 和篇数。
+```json
+{
+  "run_id": "20260713T143000Z",
+  "config_version": 1,
+  "cutoff_at_utc": "2026-07-13T14:30:00Z",
+  "sources": [
+    {
+      "source_key": "A",
+      "requested_scope": "2026-07-10 至 2026-07-12，UTC submittedDate",
+      "obtained_scope": "请求日期段，未达到上限",
+      "returned_count": 18,
+      "status": "complete",
+      "raw_refs": ["runs/20260713T143000Z/raw/A.json"],
+      "remaining": null
+    },
+    {
+      "source_key": "B:arxiv:2304.07899",
+      "requested_scope": "该种子的引用者",
+      "obtained_scope": "已保存首个结果快照",
+      "returned_count": 12,
+      "status": "partial",
+      "raw_refs": ["runs/20260713T143000Z/raw/B-001.json"],
+      "remaining": "继续核可用分页及失败来源"
+    }
+  ]
+}
+```
 
-R1 或 R2 未通过的论文已在第一步进入 seen，不加入 library。
+合法空结果的 `returned_count` 为 0。未运行或无法解析时用 null。来源状态用 `complete`、`partial`、`failed` 或 `not_run`。部分返回为零时仍保留实际状态和原因。
+
+## library 与报告
+
+累计库按稳定身份维护一条当前收录条目，更新版本保留历史报告链接，不重复追加为新论文。条目包括：稳定标识/URL、标题、来源、首次发现时间与发表时间、实际版本、为何相关、阅读范围、证据评价与限制、详细记录路径、推荐理由及具体阅读问题。未推荐到重点名单不影响收录。
+
+本次 `digest.md` 包含：
+
+1. 配置与各来源覆盖情况、数量、截断/失败及待完成范围。
+2. 首次发现论文（注明发表时间，避免称为刚发表）。
+3. 旧论文重要更新（对照哪个旧版本、变了什么、为何需要再读）。
+4. 待筛选/待核查及边界案例，原因与后续动作。
+5. 重点阅读建议：具体理由、一个可核查的阅读问题和下游选项。
+
+简报开始时可用以下表格。已获取、已筛和库新增使用各自的实际分母。跨来源出现在多个行的同一论文只在总计中计一次。
+
+| 来源 | 请求与实际范围 | 获取及筛选状态 | 下次接续 |
+| --- | --- | --- | --- |
+| arXiv | 7 月 10–12 日 UTC 提交日期 | 取得 18 篇且均已登记，其中 6 篇待筛 | 续筛 6 篇，从独立日期进度算下一窗口 |
+| 种子引用者 | 首个结果快照 | 取得 12 篇，后续页待核 | 优先从已有快照续取，或重取并合并 |
+
+## 写入顺序与旧格式
+
+先保存运行配置和原始结果，再登记待处理记录；筛选完成后保存逐篇报告，再追加状态事件，更新累计库和运行报告；最后核对候选覆盖与来源完整性后写进度。累计文件使用同目录临时文件写完校验后替换，避免中断留下半个 JSON 或 Markdown。恢复时核对原始结果、处理记录与报告；缺记录补登记、缺报告回到待核查，不用累计库的缺席推导排除。
+
+旧 `seen.jsonl` 中只有 ID 的记录表示曾经获取，不能推断处理完成。迁移前备份旧文件：累计库已有条目导入为收录、阅读范围未知；其余导入为待核查。旧 `last_run` 仅作历史时间参考，不当成各源完整进度，向用户确认回补范围后建立新版记录。

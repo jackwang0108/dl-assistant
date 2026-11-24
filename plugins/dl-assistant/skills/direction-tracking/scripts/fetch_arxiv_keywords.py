@@ -20,17 +20,17 @@ Key properties:
   * A single OR-query across all keyword phrases
     (`all:"kw1" OR all:"kw2"`) so a paper matching several phrases comes back once.
   * Filters by arXiv *submittedDate* window [from, to] (UTC). For incremental
-    tracking the caller passes last_run (minus a small overlap) as --from.
+    tracking the caller uses the source-specific completed range plus overlap as --from.
   * Paginates by submittedDate until exhausted (or --max cap).
-  * Carries comment / journal_ref quality signals (same as fetch_arxiv_daily).
+  * Carries author-provided comment / journal_ref metadata.
 
 Run (zero setup, deps auto-installed by uv):
     uv run fetch_arxiv_keywords.py --keywords "referring expression segmentation" RES --from 2026-06-01 --to 2026-07-13
     uv run fetch_arxiv_keywords.py --keywords "open vocabulary detection" --from 2026-07-01
 
 Date semantics: filters by arXiv *submittedDate* (UTC). arXiv indexing can lag,
-so a paper submitted today may appear a day or two later -- callers should
-overlap the --from window slightly and dedup against the seen-set.
+so a paper submitted today may appear a day or two later -- callers may overlap the --from window to reduce omissions. This cannot
+guarantee complete coverage; fetching and processing progress are separate.
 """
 
 from __future__ import annotations
@@ -61,12 +61,16 @@ def resolve_date(date_arg: str) -> str:
         return datetime.now(timezone.utc).strftime("%Y-%m-%d")
     if date_arg == "yesterday":
         return (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
+    if not re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}", date_arg):
+        raise ValueError("Expected YYYY-MM-DD")
     datetime.strptime(date_arg, "%Y-%m-%d")  # raises ValueError if malformed
     return date_arg
 
 
 def build_query(keywords: list[str], date_from: str, date_to: str) -> str:
     """Build an arXiv query: (all:"kw1" OR all:"kw2") AND submittedDate:[from TO to]."""
+    if date_from > date_to:
+        raise ValueError("Start date must not be after end date.")
     # Keywords come from user-editable config.yaml -- strip embedded double
     # quotes so a stray `"` can't break out of the phrase and corrupt the query.
     cleaned = [k.replace('"', "").strip() for k in keywords]
@@ -84,8 +88,8 @@ def build_query(keywords: list[str], date_from: str, date_to: str) -> str:
 
 def paper_to_dict(result: arxiv.Result) -> dict:
     """Normalise an arxiv.Result into a plain dict (same shape as fetch_arxiv_daily)."""
-    arxiv_id = result.entry_id.split("/")[-1]  # e.g. 2606.28322v1
-    base_id = arxiv_id.split("v")[0]  # strip version for stable key
+    arxiv_id = result.entry_id.split("/abs/", 1)[-1]
+    base_id = re.sub(r"v[0-9]+$", "", arxiv_id)
     comment = (result.comment or "").strip().replace("\n", " ") or None
     return {
         "id": base_id,
@@ -106,19 +110,19 @@ def paper_to_dict(result: arxiv.Result) -> dict:
 
 
 def dedup(papers: list[dict]) -> list[dict]:
-    """Drop duplicate papers by stable base id, preserving first occurrence."""
-    seen: set[str] = set()
-    out: list[dict] = []
-    for p in papers:
-        if p["id"] in seen:
-            continue
-        seen.add(p["id"])
-        out.append(p)
-    return out
+    """Group by stable identity and keep the newest observed numbered version."""
+    selected: dict[str, tuple[int, dict]] = {}
+    for paper in papers:
+        match = re.search(r"v([0-9]+)$", paper["version_id"])
+        version = int(match.group(1)) if match else 0
+        identity = paper["id"]
+        if identity not in selected or version > selected[identity][0]:
+            selected[identity] = (version, paper)
+    return [paper for _, paper in selected.values()]
 
 
-def fetch(keywords: list[str], date_from: str, date_to: str, max_results: int) -> list[dict]:
-    """Query arXiv and return a de-duplicated list of paper dicts."""
+def fetch(keywords: list[str], date_from: str, date_to: str, max_results: int) -> tuple[list[dict], int]:
+    """Return the unique papers and the entry count observed before de-duplication."""
     query = build_query(keywords, date_from, date_to)
     client = arxiv.Client(page_size=100, delay_seconds=3.0, num_retries=3)
     search = arxiv.Search(
@@ -128,7 +132,7 @@ def fetch(keywords: list[str], date_from: str, date_to: str, max_results: int) -
         sort_order=arxiv.SortOrder.Descending,
     )
     papers = [paper_to_dict(r) for r in client.results(search)]
-    return dedup(papers)
+    return dedup(papers), len(papers)
 
 
 def main() -> None:
@@ -161,10 +165,14 @@ def main() -> None:
         help="Safety cap on total papers fetched (default 200).",
     )
     args = parser.parse_args()
+    if args.max_results <= 0:
+        parser.error("--max must be positive")
 
     try:
         date_from = resolve_date(args.date_from)
         date_to = resolve_date(args.date_to)
+        if date_from > date_to:
+            raise ValueError("Start date must not be after end date")
     except ValueError:
         print(
             json.dumps(
@@ -179,17 +187,22 @@ def main() -> None:
         sys.exit(1)
 
     try:
-        papers = fetch(args.keywords, date_from, date_to, args.max_results)
+        papers, raw_count = fetch(args.keywords, date_from, date_to, args.max_results)
     except Exception as exc:  # network / API failure — report, don't crash silently
         print(json.dumps({"error": f"arXiv fetch failed: {type(exc).__name__}: {exc}"}))
         sys.exit(1)
 
     result = {
+        "date_basis": "submittedDate",
+        "timezone": "UTC",
+        "fetched_at": datetime.now(timezone.utc).isoformat(),
         "keywords": args.keywords,
         "date_from": date_from,
         "date_to": date_to,
         "total_count": len(papers),
-        "truncated": len(papers) >= args.max_results,
+        "raw_count": raw_count,
+        "max_results": args.max_results,
+        "truncated": raw_count >= args.max_results,
         "papers": papers,
     }
     print(json.dumps(result, ensure_ascii=False, indent=2))
