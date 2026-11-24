@@ -2,16 +2,16 @@
 
 本文件说明怎样独立核查实验执行、数据和测量质量，以及证据对具体命题的支持范围，并把有出处的判断交回主会话复核。
 
-在[运行手册 Step 5](workflow.md#step-5-核查执行测量和证据)使用。核查者先阅读批准设计、实际实现和原始证据，形成自己的判断后再与主会话对照。输出保存为本轮的 `acceptance-review.md`。
+在[运行手册 Step 5](workflow.md#step-5-核查执行测量和证据)使用。核查者先阅读批准设计、实际实现和原始证据，形成自己的判断后再与主会话对照。输出保存为当批轮次目录下的 `executions/<批次-slug>/execution-result-review.md`。
 
 ## 1. 准备核查范围和材料
 
-主会话说明待核的任务、命题、时间和产物范围，以及返回路径。需要委派时按已获授权安排，提供事实、文件位置和已知缺项。主会话的结论草稿与原始材料分开，供核查者形成独立判断后对照。
+未参与该批设计与执行的审阅子 agent 写核查。主会话说明批次、待核任务、命题、时间和产物范围，以及返回路径。需要委派时按已获授权安排，提供事实、文件位置和已知缺项。主会话的结论草稿与原始材料分开，供核查者形成独立判断后对照。
 
 | 读取顺序 | 给核查者的材料 |
 | --- | --- |
-| 研究问题与批准范围 | `01-idea-spec.md`、`02-research-plan.md`、批准记录和修订、`claims.json` 中实际要核的子论点 |
-| 拟执行的设计与实际实现 | `design.json` 或获批副本、`03-claim-code-map.md`、实际代码 commit 与 diff、生效配置，以及数据、测量和统计代码 |
+| 研究问题与批准范围 | `research-spec.md`、`research-plan.md`、批准记录和修订、`claims.json` 中实际要核的子论点 |
+| 拟执行的设计与实际实现 | `design.json` 或获批副本、`claim-code-map.md`、实际代码 commit 与 diff、生效配置，以及数据、测量和统计代码 |
 | 全部相关运行和偏差 | `experiments/index.json`、各实验 `meta.json`、命令、日志、退出状态、失败和恢复记录、实际配置、数据及模型引用。注明部分运行或缺失材料 |
 | 支撑判断的原始证据 | 逐样本或逐次读数、聚合数据和计算脚本。若 W&B 查回结果用于判断，给实际快照和所核步数范围 |
 
@@ -38,16 +38,16 @@
 | `insufficient_evidence` | 已经核查，所获证据不足以支持或削弱命题。写清缺关键对照、测量受限、无法区分解释或执行失败导致缺数据等具体原因 |
 | `contradicted` | 有效且可比的观察与该命题在所测条件下的预测相反。记录对照、观察及适用条件，交 iterate 进一步分析 |
 
-在 `acceptance-review.md` 给每个子论点的建议及核查出处。建议包含 `evidence_assessment`、`evidence_strength`、`evidence`、`evidence_quality` 和 `inference_limits`。每条证据包含实际实验和 run、路径、对照与条件、读数及单位或定性依据，按其对命题的作用填 `supports`、`contradicts`、`mixed` 或 `limits`。数据有效性写入 `evidence_quality.data_validity`，并在 `issues` 具体说明缺项及偏差。
+在 `execution-result-review.md` 给每个子论点的建议及核查出处。建议包含 `evidence_assessment`、`evidence_strength`、`evidence`、`evidence_quality` 和 `inference_limits`。每条证据包含实际实验和 run、路径、对照与条件、读数及单位或定性依据，按其对命题的作用填 `supports`、`contradicts`、`mixed` 或 `limits`。数据有效性写入 `evidence_quality.data_validity`，并在 `issues` 具体说明缺项及偏差。
 
 主会话保留原核查报告，回查各建议引用的实际运行、数据、设计和适用范围，再串行写回相关子论点。采纳独立判断时，来源写 `acceptance-v<N>` 并引用核查位置。遇到分歧时，记录未采纳建议、相应证据和理由。若本轮未开展或尚未完成独立核查，交接时标明实际范围，主会话的判断按其实际来源记录。命题内容、ID、研究状态、总论点和贡献由 iterate 与用户处理。
 
-## 可复制的 acceptance-review.md
+## 可复制的 execution-result-review.md
 
 ```markdown
 # {研究版本} · 独立证据核查
 
-- 核查范围 | {实际任务与命题，已查和未查的范围}
+- 核查范围 | {批次 slug、实际任务、实验和 run、已查与未查的命题及范围}
 - 来源 | {批准设计和修订、代码 commit/diff、实际配置、台账、运行和原始数据位置}
 
 ## 1. 实际执行和数据质量
@@ -67,27 +67,27 @@
 {共性数据或设计问题、最强替代解释、未核实材料、什么补证能改变判断。}
 ```
 
-## 完整填写示例 · edge-vision 的 T1 核查
+## 完整填写示例 · edge-vision 的 configuration-comparison 核查
 
-沿用[执行手册的虚构案例](workflow.md#示例--edge-vision-的计时与轨迹)。本例假设 T1 已获批准并执行了配置比较，机制隔离条件未能落实。所列路径用于示范填写。
+沿用[执行手册的虚构案例](workflow.md#示例--edge-vision-的计时与轨迹)。本例假设 configuration-comparison 已获批准并执行了配置比较，机制隔离条件未能落实。文件放在 `executions/configuration-comparison/execution-result-review.md`。示例中的证据路径相对研究轮次根目录。
 
 ```markdown
 # v1-edge-vision · 独立证据核查
 
-- 核查范围 | T1 中的四组配置计时，以及这些读数能否用于判断 C1。C2 的独立核查未开展。
-- 来源 | 02-research-plan.md 的 T1、exp-002-configuration-comparison 的已批准设计副本、03-claim-code-map.md、实际算子分派 diff、四组有效配置、台账和原始计时及轨迹记录。
+- 核查范围 | configuration-comparison 中的四组配置计时，以及这些读数能否用于判断 C1。C2 的独立核查未开展。
+- 来源 | research-plan.md 的 configuration-comparison、exp-configuration-comparison 的已批准设计副本、claim-code-map.md、实际算子分派 diff、四组有效配置、台账和原始计时及轨迹记录。
 
 ## 1. 实际执行和数据质量
 
 | 任务与实验 | 原计划及实际执行 | 数据、测量及对照 | 偏差、缺项、证据路径 |
 | --- | --- | --- | --- |
-| T1 · exp-002-configuration-comparison | 原版、仅裁剪、仅融合、组合四组均完成。所查计时和轨迹使用同一设备、输入、批大小及预热条件 | 正式延迟关闭轨迹采集，采用同一同步边界。基线 12.6 ms，组合 10.8 ms。按原方案汇总的差值为 −1.8 ms（组合减基线） | 计时可以支持该条件下的配置比较。轨迹显示实际算子与写回量同时改变，未取得固定算子的隔离对照。读数与条件见 experiments/exp-002-configuration-comparison/analysis/latency-comparison.json |
+| configuration-comparison · exp-configuration-comparison | 原版、仅裁剪、仅融合、组合四组均完成。所查计时和轨迹使用同一设备、输入、批大小及预热条件 | 正式延迟关闭轨迹采集，采用同一同步边界。基线 12.6 ms，组合 10.8 ms。按原方案汇总的差值为 −1.8 ms（组合减基线） | 计时可以支持该条件下的配置比较。轨迹显示实际算子与写回量同时改变，未取得固定算子的隔离对照。读数与条件见 experiments/exp-configuration-comparison/analysis/latency-comparison.json |
 
 ## 2. 子论点证据建议
 
 | 命题及预测条件 | 证据和作用 | 建议、依据与限制 |
 | --- | --- | --- |
-| C1 · 在实际算子固定的条件下，减少写回量预期降低延迟 | baseline-01 与 combined-01 的延迟差 −1.8 ms。所用数据及算子见 experiments/exp-002-configuration-comparison/analysis/latency-comparison.json。对 C1 的证据作用为 limits | evidence_assessment 为 insufficient_evidence，evidence_strength 为 none。所查延迟的 data_validity 为 valid。issues 记实际算子和写回量同时变化。inference_limits 说明可描述组合配置收益，仍需用同一算子实现、不同写回量的对照区分解释 |
+| C1 · 在实际算子固定的条件下，减少写回量预期降低延迟 | baseline-01 与 combined-01 的延迟差 −1.8 ms。所用数据及算子见 experiments/exp-configuration-comparison/analysis/latency-comparison.json。对 C1 的证据作用为 limits | evidence_assessment 为 insufficient_evidence，evidence_strength 为 none。所查延迟的 data_validity 为 valid。issues 记实际算子和写回量同时变化。inference_limits 说明可描述组合配置收益，仍需用同一算子实现、不同写回量的对照区分解释 |
 
 ## 3. 跨实验发现与待核项
 

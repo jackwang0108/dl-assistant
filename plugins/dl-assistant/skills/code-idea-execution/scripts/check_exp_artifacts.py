@@ -184,8 +184,8 @@ class Checks:
                     self.file(directory, artifact.get("path"), artifact.get("format"), eid + " artifact")
         if status == "completed" and required == 0:
             self.add(eid, "FAIL", "completed至少需声明一项实际产物")
-        if check_artifacts and status in {"completed", "failed", "blocked", "cancelled"}:
-            self.file(directory, "报告.md", "text", eid + " 报告")
+        if check_artifacts and status in {"in_progress", "completed", "failed", "blocked", "cancelled"}:
+            self.file(directory, "report.md", "text", eid + " 报告")
 
     def attempts(self, data, directory, eid, check_artifacts):
         attempts = data.get("attempts")

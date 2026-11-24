@@ -44,7 +44,7 @@
 ```markdown
 # 访存和算子实现能否分开 · 取证设计独立核查
 
-- 核查对象 | Q2、H2、H3。evidence-design/design.md 的核查前稿，重点看 T1 的四组配置。
+- 核查对象 | Q2、H2、H3。evidence-design/design.md 的核查前稿，重点看 configuration-comparison 的四组配置。
 - 已查资料 | 设计中「取证项与共享条件」及「判断依据与结果解释」，literature/literature.json 的 E1，C v1 §4.3 表 3。
 - 核查范围 | 四组能否比较配置效果，能否分别归因到写回量或算子实现。未实际验证目标设备、轨迹接口或正式实验耗时。
 
@@ -53,7 +53,7 @@
 | 编号与发现 | 类型 | 事实、推理和出处 | 影响的判断与可继续的事项 | 建议动作 |
 | --- | --- | --- | --- | --- |
 | R1 四组配置没有安排独立操纵写回量和算子实现 | 已确认的缺陷 | 核查前设计只切换裁剪和融合。C v1 表 3 的组合对照也同时切换两项改动。若两个中间因素随配置一起变化，四组的延迟读数无法分别归因 | 对照条件一致时可评估配置收益。H2 与 H3 的机制判断需要隔离条件 | 保留四组配置比较，再分别检查能否固定实现后改变写回量，或在写回量相近时改变实现。具体可行性和成本待核 |
-| R2 轨迹采集能力及其对计时的影响尚未知 | 待验证的风险 | 工程入口和采集选项还没核实，当前没有本项目的重复基准或轨迹 | 仍可设计基准核查。能否据轨迹开展机制分析待定 | 将轨迹可用性前移到 T0。核对启用采集是否改变计时，记录可测指标、波动和耗时，再定 T1 范围 |
+| R2 轨迹采集能力及其对计时的影响尚未知 | 待验证的风险 | 工程入口和采集选项还没核实，当前没有本项目的重复基准或轨迹 | 仍可设计基准核查。能否据轨迹开展机制分析待定 | 将轨迹可用性前移到 baseline-timing。核对启用采集是否改变计时，记录可测指标、波动和耗时，再定 configuration-comparison 范围 |
 
 ## 剩余不确定性
 
@@ -61,7 +61,7 @@
 
 ## 回传摘要
 
-R1 表明当前四组可用于配置比较，单凭这些对照难以分别归因。R2 建议先在已批准的 T0 确认计时和轨迹。详见 evidence-design/reviews/assumptions.md 的 R1、R2。
+R1 表明当前四组可用于配置比较，单凭这些对照难以分别归因。R2 建议先在已批准的 baseline-timing 确认计时和轨迹。详见 evidence-design/reviews/assumptions.md 的 R1、R2。
 ```
 
-主会话在 `evidence-design/design.md` 记录处理，例如「采纳 `evidence-design/reviews/assumptions.md` 的 R1、R2。T0 先核轨迹及计时，T1 补上隔离对照的适用条件。已复核设计明确了能回答的问题，工程可行性待 T0 验证」。当前只批准 T0 时，按 `spec.json` 中的范围执行基准核查。用户审阅 T0 的结果后再确认 T1 的设计和投入。
+主会话在 `evidence-design/design.md` 记录处理，例如「采纳 `evidence-design/reviews/assumptions.md` 的 R1、R2。baseline-timing 先核轨迹及计时，configuration-comparison 补上隔离对照的适用条件。已复核设计明确了能回答的问题，工程可行性待 baseline-timing 验证」。当前只批准 baseline-timing 时，按 `spec.json` 中的范围执行基准核查。用户审阅 baseline-timing 的结果后再确认 configuration-comparison 的设计和投入。

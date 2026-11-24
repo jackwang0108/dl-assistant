@@ -127,6 +127,8 @@ bash "$run_long" "$session" "$run_dir" "$run_command"
 
 按[报告与机读模板](cleanup-report-template.md)定稿 `cleanup-report.md` 与 `cleanup.json`。逐项核对改前、改后版本和实际 diff、保留和移除的用途、对应的运行证据、可复跑入口、未验证或撤销的改动，以及合并状态。在机读交接中记录实际运行入口和执行路径记录的位置及版本。早期待办或失败批次以实际状态记录。
 
+首次准备研究仓库时，在项目根的 `docs/research/` 初始化缺少的 `PROJECT_CONTEXT.md` 和 `research-rounds.json`。项目背景写已核的长期研究问题、采用的基线身份以及 setup、reproduction、cleanup 和调研资料的位置。暂未知的内容留待核实。轮次索引从 `{"rounds": []}` 起步，已有索引和背景保留。此处只初始化，首轮获批开立后再由 execution 登记。
+
 交接前逐项回查：
 
 | 要交代什么 | 从哪里核 |

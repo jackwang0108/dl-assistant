@@ -1,11 +1,11 @@
-# 研究决定记录模板
+# 下一步决定模板
 
-本文件提供可复制的 `research-assessment.md` 和一份填写示例。把记录存到 `ideas/decisions/<decision-id>/research-assessment.md`，按[运行手册 Step 3](workflow.md#step-3-形成并比较下一步建议)起草，按 [Step 4](workflow.md#step-4-与用户确定下一步)补上实际决定。
+本文件提供可复制的 `next-step-decision.md` 和一份填写示例。把记录存到 `docs/research/v<N>-<slug>/decisions/<决定-slug>/next-step-decision.md`，按[运行手册 Step 3](workflow.md#step-3-形成并比较下一步建议)起草，按 [Step 4](workflow.md#step-4-与用户确定下一步)补上实际决定。
 
 ## 可复制模板
 
 ```markdown
-# {决定 ID} · 研究判断与下一步
+# {说明本次决定的标题}
 
 - **讨论范围**　{研究轮次、问题、相关命题及本次讨论范围}
 - **证据位置**　{结论中的观察 ID、实际实验及 run、独立核查或文献位置}
@@ -22,10 +22,11 @@
 - **备选**　{做什么、何时适用、为什么暂不优先}
 - **改变建议的条件**　{看到哪些结果会调整行动}
 
-## 用户决定与停止点
+## 用户决定、停止点与交付
 
 - **实际决定**　{用户选择和获批范围。尚无决定时写待确认}
 - **待决事项**　{哪些工作、资源或预算还待确认}
+- **正式交付**　{同轮或新轮、获批的 plan 路径和修订、任务 slug。仅复查已有材料时，写实际诊断位置。}
 - **下一项证据**　{要带回什么材料、它能回答什么}
 - **停止或恢复条件**　{本次做到哪里汇报、什么条件到位后才能继续}
 ```
@@ -35,10 +36,10 @@
 示例沿用[上轮结论中的虚构项目](../../code-idea-execution/references/conclusion-template.md)。下方路径以示例项目为准。
 
 ```markdown
-# D4 · 研究判断与下一步
+# 先复查已有轨迹与实际算子
 
-- **讨论范围**　v1-edge-vision 的 Q2。根据 T1 结果决定如何继续区分写回量（C1）和实际算子（C2）的作用。
-- **证据位置**　conclusion.json 中的 OBS-02。实验 exp-002-configuration-comparison 的 baseline-01、combined-01 及 analysis/latency-comparison.json。独立核查见 acceptance-review.md 的 C1，现有轨迹和源码复核见同目录 autopsy.md 的 CHECK-02、CHECK-03。
+- **讨论范围**　v1-edge-vision 的 Q2。根据 configuration-comparison 结果决定如何继续区分写回量（C1）和实际算子（C2）的作用。
+- **证据位置**　conclusion.json 中的 OBS-02。实验 exp-configuration-comparison 的 baseline-01、combined-01 及 analysis/latency-comparison.json。独立核查见 executions/configuration-comparison/execution-result-review.md 的 C1，现有轨迹和源码复核见同目录 autopsy.md 的 CHECK-02、CHECK-03。
 
 ## 认识变化
 
@@ -52,10 +53,11 @@
 - **备选**　现有记录不足时，另行申请最小分派核查，在目标设备和输入下记录实际算子。先确认是否可固定，再确定正式隔离对照和预算。
 - **改变建议的条件**　如果已有证据能确认固定方式保留目标条件，就起草写回量对照供审阅。如果固定方式会改变目标场景，就比较其他测量方式，或讨论将问题收窄到已测的配置收益。
 
-## 用户决定与停止点
+## 用户决定、停止点与交付
 
 - **实际决定**　用户同意先复查已有代码、配置和轨迹，完成后先汇报。
 - **待决事项**　新测量、正式隔离对照及预算待审。
+- **正式交付**　本次只复查已有材料，按需在同一决定目录保存 autopsy.md。
 - **下一项证据**　固定分派的实际入口、可能发生回退的位置，以及现有记录能否确认其适用条件。
 - **停止或恢复条件**　核完现有材料即汇报。若仍缺目标输入下的真实算子读数，说明缺口，待用户确认最小核查范围后再交 execution。
 ```

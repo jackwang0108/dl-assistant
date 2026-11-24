@@ -27,25 +27,26 @@ flowchart LR
 
 ## 产出与保存
 
-按项目现有的版本目录保存，默认 `ideas/v<N>-<slug>/`。续做先核批准版本、当前代码与已有运行。原批准设计、实际尝试和变更记录分别保存。
+在 `docs/research/v<N>-<slug>/` 保存本轮产物，与 iterate 共用目录。一个研究轮次可接收多批获批任务。用目的命名任务、实验和批次，例如 `verify-fixed-dispatch`、`exp-verify-fixed-dispatch`。在 plan 和台账里写简短标题，已有记录使用原标识。
 
 | 产物 | 何时创建与记录内容 |
 | --- | --- |
-| `00-from-previous-version.md` | 后续版本按 iterate 实际交接使用，说明本轮为何从上轮变化而来 |
-| `01-idea-spec.md`、`02-research-plan.md` | 接收本轮研究说明和取证方案时保存版本快照，保留来源和批准记录 |
-| [论点与代码映射](references/claim-code-map-template.md) `03-claim-code-map.md` | 实现和审阅时更新。关联命题、取证任务、实际代码、数据及测量位置、已试检查和开放前提 |
+| `docs/research/research-rounds.json` | 首轮获批开立时登记，整轮交接时补实际收尾 commit 或轮次 tag |
+| `docs/research/PROJECT_CONTEXT.md` | 首轮缺少 prepare 的初始化时，按已核事实补建 |
+| `research-spec.md`、`research-plan.md` | 接收本轮研究说明和取证方案时保存版本快照，保留来源和批准记录 |
+| [论点与代码映射](references/claim-code-map-template.md) `claim-code-map.md` | 实现和审阅时更新。关联命题、取证任务、实际代码、数据及测量位置、已试检查和开放前提 |
 | [论点记录](../dl-assistant/references/claims-template.json) `claims.json` | 接收上游快照。证据核查后更新被检验子论点的证据判断和边界 |
-| `acceptance-review.md` | 开展独立核查时保存核查者的发现、所读证据、限制和建议 |
-| [结论与机读交接](references/conclusion-template.md) `04-conclusion.md`、`conclusion.json` | 本轮结束、受阻或达到停止条件时整理。分开写执行、测量质量、证据判断和未决事项 |
+| `executions/<批次-slug>/execution-result-review.md` | 开展独立核查时，由审阅子 agent 写该批覆盖的实验、run、证据和判断边界 |
+| [结论与机读交接](references/conclusion-template.md) `conclusion.md`、`conclusion.json` | 本轮结束、受阻或达到停止条件时整理。分开写执行、测量质量、证据判断和未决事项 |
 | `experiments/index.json` | 登记首项实验时建立，持续记录实验及全部尝试的状态和引用 |
-| `experiments/exp-<编号>-<名称>/` | 每项取证任务实际登记时建立，保存设计、执行及结果 |
+| `experiments/exp-<实验-slug>/` | 每项实验实际登记时建立，保存设计、执行及结果。一批可包含多个实验 |
 | `scratch/` | 按需存临时调试材料。支撑结论的材料引用到相应实验记录 |
 
 ```text
-experiments/exp-<编号>-<名称>/
+experiments/exp-<实验-slug>/
 ├── design.json        # 开跑前保存获批设计与版本，或保存指向固定副本的引用
 ├── meta.json          # 登记实验身份、命题与对照，随执行补状态、偏差和产物
-├── 报告.md            # 有实际观察或受阻结论时，写目的、结果及解释范围
+├── report.md           # 开跑前写目的和获批设计，运行后补实际条件、读数和判断
 ├── configs/           # 按需保存实际配置、覆盖项和所用清单
 ├── scripts/           # 按需保存可复跑命令和实际入口
 ├── runs/<run-id>/     # 每次实际运行、重复或恢复尝试独立记录
@@ -113,9 +114,10 @@ flowchart TD
 | [论点与代码映射模板](references/claim-code-map-template.md) | 填写映射，记录检查和用户审阅时 |
 | [组件与差距排查](../code-paper-reproduction/references/trust-traps.md)、[训练诊断](references/training-dynamics-debug.md) | 需要局部核交接行为或排查训练异常时 |
 | [实验元记录](references/experiment-meta-template.json)、[实验台账](references/experiment-index-template.json)、[单实验报告](references/exp-report-template.md) | 登记和回填实际运行时 |
+| [实验设计记录](references/experiment-design-template.json)、[单次运行记录](references/run-meta-template.json) | 锁定获批设计和每次尝试实际使用的代码、配置与产物时 |
 | [长任务托管](../dl-assistant/references/long-run-ops.md)、[W&B 共同记录](../wandb/references/experiment-records.md) | 启动、恢复和追溯运行时。实验使用 W&B 时核其运行身份及同步证据 |
 | [独立证据核查](references/acceptance-contract.md)、[共享论点记录](../dl-assistant/references/claims-template.json) | 整理执行、测量和子论点证据判断时 |
-| [结论与机读模板](references/conclusion-template.md)、[版本记录](../dl-assistant/references/version-tree.md) | 核对证据、版本和后续交接时 |
+| [结论与机读模板](references/conclusion-template.md) | 汇总各批观察、核查实际证据并交回 iterate 时 |
 
 ## 执行原则与确认点
 

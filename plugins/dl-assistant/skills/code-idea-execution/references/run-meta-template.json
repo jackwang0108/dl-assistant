@@ -1,0 +1,33 @@
+{
+  "attempt_id": null,
+  "execution_batch_id": null,
+  "replicate_id": null,
+  "seed": null,
+  "design_version": null,
+  "status": "not_started",
+  "working_directory": null,
+  "command": null,
+  "script": null,
+  "git_commit": null,
+  "code_dirty": null,
+  "code_diff_path": null,
+  "configuration_ref": null,
+  "environment": null,
+  "device": null,
+  "model_refs": [],
+  "data_refs": [],
+  "start_time": null,
+  "end_time": null,
+  "session": null,
+  "exit_code": null,
+  "exit_code_path": null,
+  "log_path": null,
+  "result_paths": [],
+  "retry_of": null,
+  "resume_from": null,
+  "_notes": {
+    "用途": "保存为 runs/<run-id>/meta.json。启动前记身份和实际执行条件，结束后补状态、退出依据和结果位置。",
+    "重复": "重试与恢复沿用对应的 replicate_id，分别引用原尝试或 checkpoint。独立重复用实际的重复标识。",
+    "路径": "用实验目录作为这些字段的相对路径起点。外部材料注明实际位置。代码有未提交修改时保留实际 diff。"
+  }
+}

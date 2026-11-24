@@ -1,6 +1,6 @@
 # 证据复核与原因调查模板
 
-本文件提供可复制的 `autopsy.md` 和完整示例。按[证据复核与原因调查指引](autopsy-guide.md)查已有材料、比较解释，再在 `research-assessment.md` 引用查到的结果。需要展开调查时，将本记录保存在实际研究决定目录，默认 `ideas/decisions/<decision-id>/autopsy.md`。
+本文件提供可复制的 `autopsy.md` 和完整示例。按[证据复核与原因调查指引](autopsy-guide.md)查已有材料、比较解释，再在 `next-step-decision.md` 引用查到的结果。需要展开调查时，将本记录保存在实际研究决定目录，默认 `docs/research/v<N>-<slug>/decisions/<决定-slug>/autopsy.md`。
 
 ## 可复制模板
 
@@ -28,7 +28,7 @@
 - 已经查清 | {当前可以回答什么，适用于哪些条件}
 - 仍未知 | {尚存解释或缺少的证据，会影响哪项结论}
 - 后续检查与恢复条件 | {已有材料继续核查，或待获批的新测量、对照及其预期信息}
-- 交接位置 | {research-assessment.md 中引用的判断和证据}
+- 交接位置 | {next-step-decision.md 中引用的判断和证据}
 ```
 
 ## 完整填写示例 · edge-vision 的配置收益
@@ -39,8 +39,8 @@
 # D-edge-v1 · 证据复核与原因调查
 
 - 本次要判断什么 | Q2／C1，现有结果能否分清写回量下降与实际算子切换对延迟的影响。
-- 观察与来源 | v1-edge-vision 的 OBS-02，exp-002-configuration-comparison。baseline-01 为 12.6 ms，combined-01 为 10.8 ms，差值为 −1.8 ms。读数及轨迹引用见该实验的 analysis/latency-comparison.json。
-- 已核的条件 | T1 的获批设计和对应运行记录。正式计时均关闭轨迹采集。两组保持设备、输入、批大小、预热及同步计时边界。
+- 观察与来源 | v1-edge-vision 的 OBS-02，exp-configuration-comparison。baseline-01 为 12.6 ms，combined-01 为 10.8 ms，差值为 −1.8 ms。读数及轨迹引用见该实验的 analysis/latency-comparison.json。
+- 已核的条件 | configuration-comparison 的获批设计和对应运行记录。正式计时均关闭轨迹采集。两组保持设备、输入、批大小、预热及同步计时边界。
 
 ## 1. 仍可能成立的解释
 
@@ -62,5 +62,5 @@
 - 已经查清 | 组合在所测设备和输入上快 1.8 ms。这个结果可用于描述配置间的差异。
 - 仍未知 | 实际算子和写回量的各自作用。C1 暂为 insufficient_evidence。
 - 后续检查与恢复条件 | 已有记录复核到 CHECK-03。若下一轮获准核实际分派，先确认目标输入能否在固定入口下使用同一算子。核实后再讨论追加写回量对照。
-- 交接位置 | research-assessment.md 引用 CHECK-01 至 CHECK-03，记录是否批准继续测量及其停止点。
+- 交接位置 | next-step-decision.md 引用 CHECK-01 至 CHECK-03，记录是否批准继续测量及其停止点。
 ```

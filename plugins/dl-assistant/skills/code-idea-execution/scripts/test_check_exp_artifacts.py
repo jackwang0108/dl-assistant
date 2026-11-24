@@ -24,7 +24,7 @@ class ArtifactCheckTests(unittest.TestCase):
             'status': 'completed', 'data_validity': 'valid',
             'inference_status': 'contradicted', 'purpose': 'Check predicted error reduction',
             'design_record': {'path': 'design.json'},
-            'plan_task_id': 'T1',
+            'plan_task_id': 'configuration-comparison',
             'git_commit': '0123456789', 'code_dirty': False,
             'attempts': [{'attempt_id': 'a1', 'replicate_id': 'main', 'status': 'completed', 'command': 'python eval.py', 'exit_code': 0}],
             'required_artifacts': [{'path': 'results.json', 'format': 'json', 'required_for': ['completed']}],
@@ -34,7 +34,7 @@ class ArtifactCheckTests(unittest.TestCase):
             'interpretation_plan': 'Compare paired errors; report uncertainty and alternative explanations',
         })
         self.write('results.json', {'difference': 0.02, 'unit': 'error fraction'})
-        (self.exp / '报告.md').write_text('Observed error increased; evidence contradicts the prediction.\n')
+        (self.exp / 'report.md').write_text('Observed error increased; evidence contradicts the prediction.\n')
         self.save()
 
     def write(self, path, data):
@@ -156,7 +156,7 @@ class ArtifactCheckTests(unittest.TestCase):
             self.exp = self.root / row['experiment_id']
             self.exp.mkdir()
             if row['status'] == 'completed':
-                meta = template['_notes']['edge_vision_T0_完整示例']['meta']
+                meta = template['_notes']['edge_vision_baseline_timing_完整示例']['meta']
             else:
                 attempt = dict(template['_notes']['重试记录片段']['attempts'][0], command='python parse.py')
                 meta = dict(template, **{k: row[k] for k in (
@@ -187,7 +187,7 @@ class ArtifactCheckTests(unittest.TestCase):
                 self.write(attempt['meta_path'], {'attempt_id': attempt['attempt_id']})
                 if attempt.get('exit_code_path'):
                     (self.exp / attempt['exit_code_path']).write_text(f"{attempt['exit_code']}\n")
-            (self.exp / '报告.md').write_text(meta['status_reason'], encoding='utf-8')
+            (self.exp / 'report.md').write_text(meta['status_reason'], encoding='utf-8')
             self.write('meta.json', meta)
         result = self.run_check('--all', self.root)
         self.assertIn('计划尚未建实验目录', result.stdout)
@@ -294,6 +294,11 @@ class ArtifactCheckTests(unittest.TestCase):
         self.meta['attempts'][0].update(status='in_progress', exit_code=None)
         self.save()
         self.run_check('--all', self.root)
+        report = self.exp / 'report.md'
+        report.rename(self.exp / '报告.md')
+        result = self.run_check('--all', self.root, expected=1)
+        self.assertIn('report.md', result.stdout)
+        (self.exp / '报告.md').rename(report)
         self.meta['attempts'][0]['exit_code'] = 0
         self.save()
         self.run_check('--all', self.root, expected=1)

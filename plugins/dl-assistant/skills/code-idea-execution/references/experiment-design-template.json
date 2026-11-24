@@ -1,0 +1,29 @@
+{
+  "experiment_id": null,
+  "plan_task_id": null,
+  "design_version": null,
+  "recorded_at": null,
+  "plan_ref": null,
+  "approval_ref": null,
+  "design_mode": null,
+  "purpose": null,
+  "predictions_or_checks": [],
+  "comparisons": [],
+  "measurement": {
+    "readings": [],
+    "replicate_unit": null,
+    "replicate_count": null,
+    "aggregation": null
+  },
+  "analysis_plan": null,
+  "result_interpretation": [],
+  "resource_limit": null,
+  "allowed_adjustments": [],
+  "stop_conditions": [],
+  "_notes": {
+    "用途": "开跑前按已批准的 plan 填写并冻结，实验 meta.json 的 design_record 指向此文件。也可直接绑定固定的批准设计副本。",
+    "comparisons": "每项写比较组、改变与保持条件、怎样验证实际生效。准备任务可写检查步骤及验收前提。",
+    "measurement": "读数写指标、单位和来源，说明重复、汇总及缺失处理。只核可测性时写实际检查与验收口径。",
+    "result_interpretation": "写不同可能观察分别能说明什么，以及判据依据。取证后新增分析另记，不覆盖本记录。"
+  }
+}

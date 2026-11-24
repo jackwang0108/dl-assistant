@@ -10,17 +10,17 @@
 git rev-parse --show-toplevel
 git status --short --branch
 git log -1 --oneline
-rg --files ideas -g conclusion.json -g 04-conclusion.md -g claims.json -g index.json
+rg --files docs/research -g conclusion.json -g conclusion.md -g claims.json -g index.json
 ```
 
 文件列表用于定位。用用户指定的研究轮次、实际记录里的版本与代码、设计及运行来源确定本次正在讨论哪一轮。
 
 | 从哪里读 | 核什么 |
 | --- | --- |
-| 本轮 `conclusion.json`、`04-conclusion.md` | 读本轮状态、实际观察、`measurement_quality`、`evidence_updates`、独立核查范围和 `handoff.remaining_tasks` |
-| `01-idea-spec.md`、`02-research-plan.md`、`claims.json` | 还原本轮科学问题、假设与可区分预测，核批准设计、当前命题与留下的证据 |
+| 本轮 `conclusion.json`、`conclusion.md` | 读本轮状态、实际观察、`measurement_quality`、`evidence_updates`、独立核查范围和 `handoff.remaining_tasks` |
+| `research-spec.md`、`research-plan.md`、`claims.json` | 还原本轮科学问题、假设与可区分预测，核批准设计、当前命题与留下的证据 |
 | `experiments/index.json`、对应 `meta.json`、运行和原始产物 | 由观察定位实际 run、基准、分组、统计和偏差。核失败、受阻和未跑事项会影响哪项判断 |
-| 上轮和历史记录 | 读实质相关的 `00-from-previous-version.md`、旧的诊断、研究决定和反向证据，核哪些条件变了 |
+| 上轮和历史记录 | 从 `docs/research/research-rounds.json` 查上一研究轮次、实际代码起点和决定引用，再读相关的诊断及反向证据 |
 | 论文或后期补实验返回的材料 | 核论文版本、受影响的实际主张或段落、新证据及相关实现。区分原判断与当前待重评内容 |
 
 | 当前现场 | 怎么继续 |
@@ -49,9 +49,9 @@ rg --files ideas -g conclusion.json -g 04-conclusion.md -g claims.json -g index.
 
 | 要核的内容 | edge-vision 的一条证据链 |
 | --- | --- |
-| 原先预测 | C1 预期在实际算子实现固定时，改变写回量会改变延迟。核研究说明、T1 设计和命题的实际条件 |
-| 实测与条件 | 从 `conclusion.json` 的 OBS-02 找到 `exp-002-configuration-comparison` 的 `baseline-01` 与 `combined-01`，回查各自命令、生效配置和轨迹。正式计时均关闭轨迹，同设备、输入、预热与同步边界。配对读数为 12.6 和 10.8 ms，见该实验的 `analysis/latency-comparison.json` |
-| 判断变化 | 组合低 1.8 ms，支持所测配置的结果。C1 仍为 `insufficient_evidence`，引用 `acceptance-review.md` 的 C1 核查 |
+| 原先预测 | C1 预期在实际算子实现固定时，改变写回量会改变延迟。核研究说明、configuration-comparison 设计和命题的实际条件 |
+| 实测与条件 | 从 `conclusion.json` 的 OBS-02 找到 `exp-configuration-comparison` 的 `baseline-01` 与 `combined-01`，回查各自命令、生效配置和轨迹。正式计时均关闭轨迹，同设备、输入、预热与同步边界。配对读数为 12.6 和 10.8 ms，见该实验的 `analysis/latency-comparison.json` |
+| 判断变化 | 组合低 1.8 ms，支持所测配置的结果。C1 仍为 `insufficient_evidence`，引用 `executions/configuration-comparison/execution-result-review.md` 的 C1 核查 |
 | 最强替代解释 | 两组实际算子发生切换。运行时实现的变化也可能造成同方向的延迟差 |
 | 仍缺什么 | 核现有几个组里有没有实际算子相同、写回量不同的配对。若没有，再判断目标条件下能否构造该对照 |
 
@@ -86,15 +86,17 @@ rg --files ideas -g conclusion.json -g 04-conclusion.md -g claims.json -g index.
 
 Agent 主动提出推荐，写清它能减少的未知、最强反对理由、成本更低的可行备选，以及什么证据会改变建议。用现有运行或实际资源估投入，未知时说明先查什么才能估。只有一个合理行动时可以直接推荐，并交代其他行动为什么暂缓。用同一套证据、可行性和成本标准评估用户提出的想法。
 
-按[研究决定记录模板](research-assessment-template.md)起草 `ideas/decisions/<decision-id>/research-assessment.md`。对应原先预测、实际观察和判断变化，附上能定位到实验、运行或原文的出处。记录最强替代解释、关键未知、推荐与备选、改变建议的条件和停止点。用户决定先写「待确认」。
+用能说明目的且本轮唯一的 slug 命名决定目录。按[下一步决定模板](next-step-decision-template.md)起草 `docs/research/v<N>-<slug>/decisions/<决定-slug>/next-step-decision.md`。对应原先预测、实际观察和判断变化，附上能定位到实验、运行或原文的出处。记录最强替代解释、关键未知、推荐与备选、改变建议的条件和停止点。用户决定先写「待确认」。
 
 ### 示例 · edge-vision
 
-基线 12.6 ms，组合 10.8 ms。写回量与实际算子同时变化，已有四组记录也找不到同算子、不同写回量的配对，C1 仍缺机制证据。先查 `runtime/dispatch.py:select_kernel` 的固定入口、回退路径和现有运行记录。若还需在目标输入下确认分派，先申请最小核查，核完即停。确认能固定实际算子并保留目标条件后，再设计写回量对照。正式计时关闭已知会影响读数的轨迹采集，并用独立轨迹核对实际算子和写回差异。如果固定算子改变了要研究的场景，就重审测量方式或收窄问题。[填写示例](research-assessment-template.md#填写示例--edge-vision)
+基线 12.6 ms，组合 10.8 ms。写回量与实际算子同时变化，已有四组记录也找不到同算子、不同写回量的配对，C1 仍缺机制证据。先查 `runtime/dispatch.py:select_kernel` 的固定入口、回退路径和现有运行记录。若还需在目标输入下确认分派，先申请最小核查，核完即停。确认能固定实际算子并保留目标条件后，再设计写回量对照。正式计时关闭已知会影响读数的轨迹采集，并用独立轨迹核对实际算子和写回差异。如果固定算子改变了要研究的场景，就重审测量方式或收窄问题。
+
+首次复查写入 v1 的 `decisions/check-existing-traces/`。如果用户批准在 v1 补采原比较中缺失的轨迹，在 v1 追加 plan 修订，交 execution 将结果写进 v1 的新执行批次。若用户之后决定为固定分派开 v2，把决定写进 v1 的 `decisions/approve-fixed-dispatch-check/`，将正式方案保存到 `docs/research/v2-edge-vision/` 并登记轮次。v2 的 plan 引用该决定。[填写示例](next-step-decision-template.md#填写示例--edge-vision)
 
 ## Step 4 与用户确定下一步
 
-先说明「现有证据支持什么、我建议下一步做什么、为什么值得、哪种结果会让我改建议」。讨论结束后，更新同一份 `research-assessment.md`。记下用户实际选了什么、批准了哪些工作、哪些还待决定。再写要带回什么证据、做到哪里汇报，以及需要什么条件才能继续。仍未选定时保留「待确认」，并写清卡在哪个问题。
+先说明「现有证据支持什么、我建议下一步做什么、为什么值得、哪种结果会让我改建议」。讨论结束后，更新同一份 `next-step-decision.md`。记下用户实际选了什么、批准了哪些工作、哪些还待决定。再写要带回什么证据、做到哪里汇报，以及需要什么条件才能继续。仍未选定时保留「待确认」，并写清卡在哪个问题。
 
 | 用户考虑的去向 | 应先回答的问题 |
 | --- | --- |
@@ -114,12 +116,14 @@ Agent 主动提出推荐，写清它能减少的未知、最强反对理由、�
 
 在 edge-vision 中，「组合在这一设备和输入上更快」已有配置比较证据。「加速来自减少写回」仍缺固定算子的隔离对照。配置收益本身是否构成值得写的发现，还要对照最接近工作是否已报告同类结果、当前多回答了哪个问题。若核心主张取决于未取得的结果，讨论补证或缩小主张。截稿和资源用于安排工作量。用户决定准备写作后进入 Step 6。
 
-## Step 5 准备并交接下一轮取证版本
+## Step 5 准备并交接取证任务
+
+先区分三种去向。用已有记录复算或核配置时，由 iterate 完成，在本轮决定目录保存结果。需要重新运行或取得新读数时，由 iterate 写取证设计，execution 执行。如果仍在回答本轮的问题，例如补采缺失组或继续查同一个疑点，把获批任务加入本轮 plan 的新修订并交 execution 执行新批次。用户确认建立新研究轮次时，再创建新轮目录和分支。
 
 1. **先写草案供审阅。** 用 [研究说明模板](../../dl-assistant/references/spec-template.md)写研究什么、为什么值得、成功后能主张什么。用[取证方案模板](../../dl-assistant/references/plan-template.md)及[编写原则](../../dl-assistant/references/plan-writing-principles.md)写这轮要弄清什么、怎样取证和不同结果怎么解释。对照、读数、条件、投入和停止点写到能审阅。内容尚待确认时可放入决定目录的 `drafts/`。
 2. **一起交用户看决定。** 说明相对上轮的改变、依据和关键对照。一次审阅可确认两份文件，记录实际批准版本与范围。仅批准准备时，在研究说明里写清能确认的准备条件及科学判断还缺什么，在取证方案里写任务、验收、资源和停止点，标明待确认的正式工作及其启动条件。
 3. **核对命题快照。** 按[共享论点模板](../../dl-assistant/references/claims-template.json)保留历史证据、适用范围和改判依据。命题语义不变沿用 ID，发生实质变化时新分配 ID 并写来源。核 spec 的研究重点、plan 的实际获批任务及快照中的相关命题是否对齐。只核准备条件时，写明它限制哪些后续推断。
-4. **核实际代码起点并建立获批版本。** 确认工作区、计划版本和拟沿用的实现 commit。研究上的上一轮与代码上的实际起点可以不同。新版本获确认后建对应目录和分支。示例的版本与 commit 换成方案记录的值：
+4. **选择同轮补证或新轮交接。** 同轮沿用研究轮次及分支，保留原批准 plan 和实际运行记录，保存获批修订与对应决定。用户确认开新轮时，核工作区和实际起点，再建对应目录和分支。研究上的上一轮与代码起点可能不同。选较早提交时，核当前索引与决定文件能否从新分支取得，保留相关文档提交或明确记录可读的版本和路径。示例的版本与 commit 换成方案记录的值。
 
 ```bash
 verified_start=8d34a2f
@@ -137,12 +141,12 @@ git branch --show-current
 git log -1 --oneline
 ```
 
-5. **保存版本交接。** 续做时核实际版本后沿用本轮分支。建立新版本时按[交接模板](from-previous-version-template.md)及[机读摘要模板](from-previous-version-template.json)保存两份 `00-from-previous-version` 文件。引用决定记录、上轮证据、实际起点、新分支、plan 修订和批准任务，再更新 `ideas/idea_tree.json`。交 execution 时附研究说明、取证方案、命题快照和实际批准范围，指出第一项可执行任务与停止点。提交及远端操作按项目约定和已有授权。
+5. **保存本次交付。** 新轮将获批的 `research-spec.md`、`research-plan.md` 和 `claims.json` 直接放进相应轮次目录，在 `docs/research/research-rounds.json` 追加条目。按[首轮索引示例](../../code-idea-execution/references/workflow.md#step-1-恢复现场核对输入与批准范围)记录轮次 ID、用途、目录、上一研究轮次、实际起点 commit、分支和批准决定路径。决定留在提供证据的轮次，链接本次获批方案和任务。无论同轮还是新轮，plan 都引用实际决定与批准修订，交给 execution 时指出第一项可执行任务和停止点。提交及远端操作按项目约定和已有授权。
 
 ## Step 6 保存写作、暂停、停止或新起点的决定
 
-- **准备写作。** 用户确认后写 `ideas/paper-package.md`。从科学问题和主要发现组织材料，每项主张注明证据、关键比较、适用边界、替代解释、相对最接近工作的新增和剩余缺口。引用实际代码、配置及运行。需要补证的内容写到可明确区分核心研究缺口和可在现有论证内规划的补充实验。把材料及可取得的代码和证据位置交 writing-paper。
+- **准备写作。** 用户确认后写 `docs/research/paper-package.md`，在本次决定记录中链接交付路径。从科学问题和主要发现组织材料，每项主张注明证据、关键比较、适用边界、替代解释、相对最接近工作的新增和剩余缺口。引用实际代码、配置及运行。需要补证的内容写到可明确区分核心研究缺口和可在现有论证内规划的补充实验。把材料及可取得的代码和证据位置交 writing-paper。
 - **暂停或停止。** 保存实际决定、已完成记录、仍运行或受阻的任务、已有证据、未知和可恢复条件；按实际进度更新研究记录。
 - **从新起点研究。** 保留本轮学到的事实、原问题为什么调整及可继续用的材料，再交 idea-find 明确新问题。
 
-不论去向，都在 `research-assessment.md` 引用实际证据和用户决定。交写作时逐条核主张、条件和原始证据能相互定位，注明仍未补齐的核心缺口。暂停时写可恢复的具体条件，例如取得完整轨迹、确认可用设备或用户重新批准某项投入。遇到新的论文结果或后期反馈触及核心主张时，用实际版本和新证据重新讨论受影响的范围。
+不论去向，都在 `next-step-decision.md` 引用实际证据和用户决定。交写作时逐条核主张、条件和原始证据能相互定位，注明仍未补齐的核心缺口。暂停时写可恢复的具体条件，例如取得完整轨迹、确认可用设备或用户重新批准某项投入。遇到新的论文结果或后期反馈触及核心主张时，用实际版本和新证据重新讨论受影响的范围。

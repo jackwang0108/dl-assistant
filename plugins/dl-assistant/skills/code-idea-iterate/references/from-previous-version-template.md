@@ -1,4 +1,6 @@
-# 下一轮版本交接
+# 下一轮版本交接（旧产出参考）
+
+当前迭代产出按[运行手册 Step 5](workflow.md#step-5-准备并交接取证任务)保存。既有项目记录可按下方旧格式查阅。
 
 本文件说明为什么从上一轮进入当前版本、哪些判断因证据而改变，以及本轮获准做什么。
 
@@ -31,7 +33,7 @@
 
 ## 完整填写示例 · edge-vision
 
-以下延续[先复查已有记录的决定](research-assessment-template.md#填写示例--edge-vision)。假设复查后用户在 D5 确认建立 v2，只批准核最小分派条件。示例路径均相对项目根。
+以下延续[先复查已有记录的决定](next-step-decision-template.md#填写示例--edge-vision)。假设复查后用户在 D5 确认建立 v2，只批准核最小分派条件。示例路径均相对项目根。
 
 ```markdown
 # v2-edge-vision ← v1-edge-vision

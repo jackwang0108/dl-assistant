@@ -4,7 +4,7 @@
 
 ## Step 1 恢复现场，核对输入与批准范围
 
-按[会话恢复说明](../../dl-assistant/references/session-recovery.md)核仓库、分支、版本目录、实验台账和实际运行中的任务。首轮用[研究交接记录](../../idea-find/references/research-handoff.md)找到研究说明、本轮取证方案、初始论点和用户确认。后续轮读 `00-from-previous-version.md`、上一轮结论和已确认的新方案。
+按[会话恢复说明](../../dl-assistant/references/session-recovery.md)核仓库、分支、版本目录、实验台账和实际运行中的任务。首轮用[研究交接记录](../../idea-find/references/research-handoff.md)找到研究说明、本轮取证方案、初始论点和用户确认。后续轮从 `docs/research/research-rounds.json` 找当前轮以及来源决定，读取实际 `research-plan.md` 修订和上一轮结论。同轮补证时，打开本轮决定记录、已批准的 plan 修订和对应任务。
 
 ```bash
 git rev-parse --show-toplevel
@@ -34,13 +34,31 @@ git diff --cached --stat
 
 **只批准准备任务时**，只完成对应核查，例如原模型重复计时、测量能否采到轨迹、目标机资源。写下运行入口、计时范围、实际给出的读数和成本、可能扰动测量的因素以及正式实验待确认事项。到已批准的停止点汇报，后续收到正式方案再从本步续做。
 
-开工汇报示例。「当前要弄清的是目标设备能否稳定计时，以及轨迹采集是否改变计时。D3 只批准一台设备的 T0，完成基准重复和有无轨迹的对照后，我会带回读数、可测性和正式比较建议。四组正式实验 T1 仍待确认。」
+开工汇报示例。「当前要弄清的是目标设备能否稳定计时，以及轨迹采集是否改变计时。approve-baseline-timing 只批准一台设备的 baseline-timing，完成基准重复和有无轨迹的对照后，我会带回读数、可测性和正式比较建议。四组正式实验 configuration-comparison 仍待确认。」
 
-首轮将已确认内容保存为 `01-idea-spec.md` 和 `02-research-plan.md` 的版本快照，写明来源及批准记录。根据[共享论点模板](../../dl-assistant/references/claims-template.json)保存 `claims.json` 的版本信息和初始论点 ID。后续由 iterate 交接的版本沿用其快照。设计变化按批准记录保留新版本，原方案可回查。
+首轮将已确认内容保存为 `research-spec.md` 和 `research-plan.md` 的版本快照，写明来源及批准记录。根据[共享论点模板](../../dl-assistant/references/claims-template.json)保存 `claims.json` 的版本信息和初始论点 ID。后续沿用 iterate 放在正式轮次目录的快照。设计变化按批准记录保留修订，原方案可回查。
+
+首轮在 `docs/research/` 缺少初始化文件时，按已核事实补项目背景和空索引 `{"rounds": []}`。首轮获批开立后，在 `rounds` 追加本轮 ID、用途、目录、上一研究轮次（首轮为空）、实际代码起点、分支和批准决定路径。已存在的轮次直接核对并沿用。每轮按已核起点建本地分支，例如 `idea/v1-edge-vision`。一轮内的后续批次沿用该分支，一批也可以有多次提交。
+
+索引条目示例。路径相对项目根，`approval_ref` 可包含具体决定的标识。整轮收尾时再填写实际的交接 commit 和 tag。
+
+```json
+{
+  "id": "v1-edge-vision",
+  "purpose": "核计时和轨迹条件，再比较裁剪与融合的配置收益",
+  "directory": "docs/research/v1-edge-vision",
+  "previous_round": null,
+  "start_commit": "c91b7e4",
+  "branch": "idea/v1-edge-vision",
+  "approval_ref": "docs/idea-find/<日期>-edge-vision/spec.json#approve-baseline-timing",
+  "handoff_commit": null,
+  "handoff_tag": null
+}
+```
 
 ## Step 2 核对方案能否落地
 
-1. 按[论点、代码与测量映射指引](claim-code-map-guide.md)从批准的取证项追到实际入口、代码、资产和原始读数，再按[映射模板](claim-code-map-template.md)写 `03-claim-code-map.md`。沿正式命令读生效配置、数据流、模型选择、训练或测量调用、指标计算与统计汇总。纯分析或理论任务明确所用数据、工具或推导入口及关键假设。
+1. 按[论点、代码与测量映射指引](claim-code-map-guide.md)从批准的取证项追到实际入口、代码、资产和原始读数，再按[映射模板](claim-code-map-template.md)写 `claim-code-map.md`。沿正式命令读生效配置、数据流、模型选择、训练或测量调用、指标计算与统计汇总。纯分析或理论任务明确所用数据、工具或推导入口及关键假设。
 2. 对每项比较写清共同条件、实际变动、测量单位、重复对象和能区分的解释。例如两项机制同时变化时，组合收益可以描述整套配置，机制判断需要隔离对照。核必要数据组成、训练阶段、输入、模型与测量条件。基准的证据范围需与当前设计对应。
 3. 缺环境、资产或可用入口时回 setup；缺相应的基准测量时补具体基准检查或回 reproduction。研究问题、关键对照、测量和分析方式需要实质改变时先回 Step 1 确认。有明确的局部探索授权时，给出其观察范围、成本和停止条件。
 4. 安排最小检查与完整运行的顺序。小规模、短训或组件检查分别写能观察到的行为。若正式判断依赖较大规模，把升档条件放进方案。已有跨规模结果先核是否同一改动与同一基线的配对证据。
@@ -53,7 +71,7 @@ git diff --cached --stat
 | 改训练方法后重新训练 | 按批准设计选起始权重或初始化方式，核训练数据、更新阶段、调度及最终评测和权重选择规则。明确现有证据是完整训练、短训还是 reduced | 只有发布权重评测时，列出缺的训练证据。可先补已获准的训练基准或缩小当前可比较范围 |
 | 对现有结果做测量或分析 | 从同一测量协议下的原始数据或基线 run 取对照。查计时边界、样本纳入、单位、统计及代码版本 | 缺原始量、计时口径或同条件对照时，指出仍可描述的现象以及需补的测量 |
 
-把下面这类对应关系写入 `03-claim-code-map.md`，将示例路径换成实际入口、配置和函数位置。按需要从真实命令逐层核参数是否传到测量末端。
+把下面这类对应关系写入 `claim-code-map.md`，将示例路径换成实际入口、配置和函数位置。按需要从真实命令逐层核参数是否传到测量末端。
 
 | 命题 | 对照要区分什么 | 要保持的条件 | 实际实现与测量位置 | 会得到的证据及解释范围 |
 | --- | --- | --- | --- | --- |
@@ -86,7 +104,7 @@ git log -1 --oneline
 
 实现按最小可验证路径推进。在现有正式入口上选能触发改动的输入，记录实际维度、数据覆盖、对照分支、更新或已知结果。运行技术排查时用[组件检查](../../code-paper-reproduction/references/trust-traps.md)或[训练诊断](training-dynamics-debug.md)。局部试跑如果改变配置，要记实际条件及覆盖范围。若查到设计与实现无法对应，写清缺的证据和可行备选，按影响回 Step 2 或 Step 1。
 
-**开跑前向用户审阅实际代码与比较。** 用 `git diff`、起点到当前版本的提交差异及实际文件位置，把以下内容写入 `03-claim-code-map.md`，带用户一起查看映射、实际 diff 和局部检查：
+**开跑前向用户审阅实际代码与比较。** 用 `git diff`、起点到当前版本的提交差异及实际文件位置，把以下内容写入 `claim-code-map.md`，带用户一起查看映射、实际 diff 和局部检查：
 
 | 要说明什么 | 说明到什么程度 |
 | --- | --- |
@@ -101,14 +119,16 @@ git log -1 --oneline
 
 ## Step 4 登记并按阶段执行
 
-1. **启动前保存设计和身份。** 将获批任务、命题、取证类型、对照、预期、实际配置、重复对象、预算和停止条件写入 `design.json` 或绑定获批副本。探索可记录待观察问题，确认性对照沿用事先确认的比较方法。对每次实际 run 记录代码 commit 与 diff、解释器、工作目录、数据权重、实际命令、重复及重试身份。检查实现与设计、可比性、来源和批准范围。
-2. **登记实验和尝试。** 用[实验台账](experiment-index-template.json)和[实验元记录](experiment-meta-template.json)组织实际状态和引用。实验使用 W&B 时，按[共同记录约定](../../wandb/references/experiment-records.md)在启动前记录实际实例、项目和 run 身份，绑定代码、设计、配置及尝试。核本地结果及远端读回的同步范围，保留同步失败时的本地证据。
+每次接收一组获批任务并交回结果算一批。用本轮唯一、能说明目的的 slug 标识批次，例如 `configuration-comparison`。在 `experiments/index.json` 登记本批任务和实验，实际尝试记录批次归属。后续核查写入 `executions/<批次-slug>/`。同一批的重试或恢复继续用原批次，已交回后另获批补测时登记新批次。
+
+1. **启动前保存设计和身份。** 将获批任务、命题、取证类型、对照、预期、实际配置、重复对象、预算和停止条件按[实验设计模板](experiment-design-template.json)写入 `design.json` 或绑定获批副本。探索可记录待观察问题，确认性对照沿用事先确认的比较方法。对每次实际 run 记录代码 commit 与 diff、解释器、工作目录、数据权重、实际命令、重复及重试身份。检查实现与设计、可比性、来源和批准范围。每项实验开跑前按[单实验报告模板](exp-report-template.md)建立 `report.md`，写好目的、判据和获批设计引用，运行后再回填实际执行、观察和证据解释。
+2. **登记实验和尝试。** 用[实验台账](experiment-index-template.json)、[实验元记录](experiment-meta-template.json)和[单次运行记录](run-meta-template.json)组织实际状态和引用。实验使用 W&B 时，按[共同记录约定](../../wandb/references/experiment-records.md)在启动前记录实际实例、项目和 run 身份，绑定代码、设计、配置及尝试。核本地结果及远端读回的同步范围，保留同步失败时的本地证据。
 3. **启动并随执行保存证据。** 预计超过 5 分钟、耗时不确定或重跑代价高的任务，在实际运行机器用 tmux 或调度器。先保存运行脚本与当前尝试记录。下面用已登记的脚本启动虚构项目的一次尝试。
 
 ```bash
 repo=/srv/research/edge-vision
 run_long=/srv/skills/dl-assistant/scripts/run-long.sh
-exp_dir="$repo/ideas/v1-edge-vision/experiments/exp-001-baseline-timing"
+exp_dir="$repo/docs/research/v1-edge-vision/experiments/exp-baseline-timing"
 run_dir="$exp_dir/runs/attempt-01"
 session=idea-edge-timing-01
 cd "$repo" || exit 1
@@ -129,7 +149,7 @@ bash "$run_long" "$session" "$run_dir" "$run_command"
 
 4. **在阶段节点判断下一步。** 回填实际观察、异常与偏差、数据范围、已用资源及下一项成本。用[单实验报告](exp-report-template.md)保存用户能读懂的结果。按已确认的方案和预算继续。科学解释依赖改变条件、增加关键对照或追加投入时，说明实际证据及建议，再回 Step 1。任务阻塞、停止条件达到或无合理的追加检查时，带已有证据进入 Step 5。
 
-阶段汇报按「实际发现 → 影响哪项比较 → 下一项检查及预计成本 → 建议」写。示例：「T0 已完成。虚构记录中，原模型关闭轨迹时三次计时为 12.5、12.6、12.7 ms，开启时为 15.3、15.4、15.6 ms。两组条件按 T0 方案核对，采集对计时有可见影响。建议 T1 将正式计时和机制轨迹分开采，并保留实际算子身份。T0 已用 18 分钟，T1 成本按四组各自的预计耗时另估，目前停在已批准的 T0 边界。」
+阶段汇报按「实际发现 → 影响哪项比较 → 下一项检查及预计成本 → 建议」写。示例：「baseline-timing 已完成。虚构记录中，原模型关闭轨迹时三次计时为 12.5、12.6、12.7 ms，开启时为 15.3、15.4、15.6 ms。两组条件按 baseline-timing 方案核对，采集对计时有可见影响。建议 configuration-comparison 将正式计时和机制轨迹分开采，并保留实际算子身份。baseline-timing 已用 18 分钟，configuration-comparison 成本按四组各自的预计耗时另估，目前停在已批准的 baseline-timing 边界。」
 
 ## Step 5 核查执行、测量和证据
 
@@ -156,13 +176,13 @@ bash "$execution_skill_dir/scripts/check-exp-artifacts.sh" --all "$experiments_d
 
 脚本按当前状态检查台账、设计、各次尝试及声明的产物。退出码 `0` 表示结构检查无错误，`1` 表示记录或产物检查失败，`2` 表示参数或 Python 依赖有问题。逐项看输出，失败或待批准的任务即使结构检查通过，仍按其实际执行状态记录。W&B 的本地检查只核记录，按实际查回核同步范围。预登记时间、测量有效性和证据判断按本步逐项查证。
 
-按[独立核查契约](acceptance-contract.md)准备实际设计、diff、原数据、运行和偏差记录。需委派独立核查时，说明范围与输入，按已获授权安排。核查者给出有限范围的意见及依据，保存到 `acceptance-review.md`，由主会话核对后串行更新。尚未完成独立核查时，在结论里写清实际核查范围和待核项。
+按[独立核查契约](acceptance-contract.md)准备实际设计、diff、原数据、运行和偏差记录。需委派独立核查时，说明范围与输入，按已获授权安排。核查者给出有限范围的意见及依据，由未参与该批设计和执行的审阅子 agent 保存到 `executions/<批次-slug>/execution-result-review.md`。主会话核对后串行更新命题，保留分歧与依据。优先独立核查会改变核心命题、决定较大投入或支撑论文主张的实验。尚未完成时，在结论里写清实际自查范围和待核项。
 
 ## Step 6 记录判断与边界并交接
 
 1. 按[共享论点记录](../../dl-assistant/references/claims-template.json)更新实际检验的子论点。写 `evidence_assessment`、来源、证据指针、对照质量、支持范围和仍未知的解释。保留原命题和历史证据。研究状态、总论点与科学贡献由 iterate 和用户结合本轮结果判断。
-2. 按[结论模板](conclusion-template.md)写 `04-conclusion.md` 和 `conclusion.json`。从用户最需要知道的观察写起，给出实际比较值与条件，分别写执行、测量和证据判断。注明本轮版本、实际基准、全部相关尝试、偏差与缺项，并标明哪些运行可以复查或续做。
-3. 交接前回查实际代码与配置、原始结果、命题引用、批准范围及未解决问题。向用户说明观察如何影响本轮假设、最强替代解释是什么、建议下一步补什么。把本轮结论和记录交 iterate。版本标识根据实际 commit、diff 和项目约定填写，提交或同步按实际授权。
+2. 每批交回时，按[结论模板](conclusion-template.md)更新本轮 `conclusion.md` 和 `conclusion.json`。保留早前批次的观察出处和核查，标明本次更新所覆盖的批次，引用各项 `report.md` 和已完成的批次核查。从用户最需要知道的观察写起，给出实际比较值与条件，分别写执行、测量和证据判断。注明本轮版本、实际基准、全部相关尝试、偏差与缺项，并标明哪些运行可以复查或续做。
+3. 交接前回查实际代码与配置、原始结果、命题引用、批准范围及未解决问题。向用户说明观察如何影响本轮假设、最强替代解释是什么、建议下一步补什么。把本轮结论和记录交 iterate。每次运行引用实际 commit，有未提交改动时保留对应 diff。整轮收尾且有代码要交接时，核收尾 commit 后在已有授权内打 annotated tag，例如 `git tag -a research-round/v1-edge-vision <收尾-commit> -m "Hand off v1-edge-vision"`，在轮次索引记录实际 commit 和标签。纯分析且无新代码交接时，索引记录实际使用的 commit 即可。只交回一批结果时继续沿用本轮分支。提交或同步按实际授权。
 
 交接前逐条核对：
 
@@ -175,6 +195,6 @@ bash "$execution_skill_dir/scripts/check-exp-artifacts.sh" --all "$experiments_d
 
 ## 示例 · edge-vision 的计时与轨迹
 
-沿用[研究交接里的 edge-vision](../../idea-find/references/research-handoff.md)。首轮批准的只是 T0。先在指定设备核原模型、批大小、预热和同步计时的边界，分别观察开启与关闭轨迹采集时的耗时。在同一测量单位下保存逐次读数、实际参数和轨迹可得性，汇报采集是否扰动计时、T1 预计投入及还缺的对照。此时 C1、C2 仍待实际研究证据。
+沿用[研究交接里的 edge-vision](../../idea-find/references/research-handoff.md)。首轮批准的只是 baseline-timing。先在指定设备核原模型、批大小、预热和同步计时的边界，分别观察开启与关闭轨迹采集时的耗时。在同一测量单位下保存逐次读数、实际参数和轨迹可得性，汇报采集是否扰动计时、configuration-comparison 预计投入及还缺的对照。此时 C1、C2 仍待实际研究证据。
 
-若之后批准 T1，按实际代码讲清基线、仅裁剪、仅融合和组合如何由配置进入，展示改动 diff 与试跑证据。假设四组都按相同计时协议完成，组合测得 10.8 ms，基线为 12.6 ms。把实际收益写成「该设备及输入条件下，组合配置比基线低 1.8 ms」，同时记录两组的算子和写回量。若受条件限制，原计划的隔离比较未取得，组合观察仍可用于描述配置收益。交接写清 C1 需要固定实际算子实现、改变写回量的对照，C2 需要满足方案同等写回条件、实际算子不同的对照。保留缺项、已有读数和实际尝试，由 iterate 判断下一轮先补哪一项。
+若之后批准 configuration-comparison，按实际代码讲清基线、仅裁剪、仅融合和组合如何由配置进入，展示改动 diff 与试跑证据。假设四组都按相同计时协议完成，组合测得 10.8 ms，基线为 12.6 ms。把实际收益写成「该设备及输入条件下，组合配置比基线低 1.8 ms」，同时记录两组的算子和写回量。若受条件限制，原计划的隔离比较未取得，组合观察仍可用于描述配置收益。交接写清 C1 需要固定实际算子实现、改变写回量的对照，C2 需要满足方案同等写回条件、实际算子不同的对照。保留缺项、已有读数和实际尝试，由 iterate 判断下一轮先补哪一项。

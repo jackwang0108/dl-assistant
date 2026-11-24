@@ -33,17 +33,17 @@
     "批准的设计": "design_record 指向运行前已保存的 design.json 或固定的批准设计副本，并注明版本、记录时间、对应批准和计划位置。对照、观察量、分析方法、重复、预算、允许调整及停止条件见该设计。实质变更保留原设计，增加版本或另建实验，并记录实际获批范围。每次尝试绑定当时使用的设计。",
     "实际代码和配置": "git_commit、code_dirty、code_diff_path、configuration_ref 可作同项实验各次尝试共享的实际出处。引用过的共享值在后续启动时保持原样，变更写在新尝试。code_dirty 为 true 时保存执行所用 diff。实际生效配置的引用包含 path，W&B 启用时按共同约定记录 sha256。模型、数据、运行环境和实际条件在对应尝试或运行记录里注明。",
     "重复与尝试": "attempt_id 在本实验内唯一，对应 runs/<run-id>/ 的独立记录。replicate_id 按实验设计标记独立重复；同一次重复重试或恢复时沿用其 replicate_id，分别以 retry_of 或 resume_from 引用前序尝试。恢复时记 checkpoint 身份以及实际恢复的状态。一次启动内部的逐次计时等原始读数按方案记入结果。无独立重复设计时按实际注明。",
-    "运行记录": "每次启动前登记尝试，保存实际命令或脚本、代码及配置出处、设备、工作目录、模型和数据身份、时间、日志与结果。attempts 可通过 meta_path 引用 runs/<run-id>/meta.json 的详细记录。代码运行的退出状态按实际填入；人工核查用 manual_record_ref 指向实际记录，退出码可为 null。",
+    "运行记录": "每次启动前登记尝试，记录对应 execution_batch_id，保存实际命令或脚本、代码及配置出处、设备、工作目录、模型和数据身份、时间、日志与结果。attempts 可通过 meta_path 引用 runs/<run-id>/meta.json 的详细记录。代码运行的退出状态按实际填入；人工核查用 manual_record_ref 指向实际记录，退出码可为 null。",
     "状态与解释": "实验 status 与台账一致，使用 not_started、in_progress、completed、failed、blocked 或 cancelled。status_reason 说明主要原因或实际完成范围。尝试 status 记录实际进程或操作状态。data_validity 用 unassessed、valid、limited 或 invalid，说明结果能用到何处。inference_status 可用 pending、supported、contradicted、insufficient_evidence 或 not_applicable，表示本项任务在该设计下能得出的实验解释；逐命题证据判断留在 claims.json。inference_limits 记仍无法区分的解释、待补条件或适用范围。",
     "偏差": "deviations 记录设计与实际执行的差异、所涉尝试、原因、允许调整的依据或批准，以及对结果解释的影响。保留原始尝试。批大小、精度、计时口径或关键对照受到影响时，按获批方案判断能否继续、是否需复跑或重新确认。",
     "产物与读数": "本地设计、配置、运行及产物路径相对实验目录。项目内其他位置或外部记录注明路径的实际起点。required_artifacts 每项登记 path、format 和 required_for，对应该状态真正需要的产物。失败时可声明日志及已有的部分结果。results 写实际读数、单位、实际条件、比较对象和证据路径。未取到的结果保持 null 或按具体缺项说明。",
     "W&B 关联": "使用 W&B 的实验保存 tracking 和各次尝试的 wandb 记录，沿用 wandb/references/experiment-records.md 的身份、配置摘要与同步约定。同步结果与运行退出状态分别记录。",
-    "edge_vision_T0_完整示例": {
-      "说明": "以下为虚构的 T0 元记录，与 experiment-index-template.json 的已完成条目对应。复制使用时以实际命令、配置和文件位置替换。",
+    "edge_vision_baseline_timing_完整示例": {
+      "说明": "以下为虚构的 baseline-timing 元记录，与 experiment-index-template.json 的已完成条目对应。复制使用时以实际命令、配置和文件位置替换。",
       "meta": {
         "schema_version": 2,
-        "experiment_id": "exp-001-baseline-timing",
-        "plan_task_id": "T0",
+        "experiment_id": "exp-baseline-timing",
+        "plan_task_id": "baseline-timing",
         "type": "diagnostic",
         "design_mode": "exploration",
         "purpose": "核原模型的计时可测性和轨迹采集对计时的影响",
@@ -51,21 +51,21 @@
         "hypothesis_ids": [],
         "claim_cids": [],
         "status": "completed",
-        "status_reason": "完成 D3 批准的一台目标设备上的准备检查，并到达 T0 的停止点。",
+        "status_reason": "完成 approve-baseline-timing 批准的一台目标设备上的准备检查，并到达 baseline-timing 的停止点。",
         "registered_at": "2026-11-24T10:00:00+08:00",
         "updated_at": "2026-11-24T10:20:00+08:00",
         "design_record": {
           "path": "design.json",
           "version": "v1",
           "recorded_at": "2026-11-24T10:00:00+08:00",
-          "plan_ref": "ideas/v1-edge-vision/02-research-plan.md#t0",
-          "approval_ref": "研究交接记录中 spec.json 的 D3",
+          "plan_ref": "docs/research/v1-edge-vision/research-plan.md#baseline-timing",
+          "approval_ref": "研究交接记录中 spec.json 的 approve-baseline-timing",
           "scope": "在一台目标设备上核原模型计时以及轨迹采集影响，完成准备检查后停止。"
         },
         "git_commit": "c91b7e4",
         "code_dirty": false,
         "code_diff_path": null,
-        "configuration_ref": {"path": "configs/t0-baseline-timing.yaml"},
+        "configuration_ref": {"path": "configs/baseline-timing.yaml"},
         "tracking": null,
         "required_artifacts": [
           {"path": "design.json", "format": "json", "required_for": ["completed"]},
@@ -77,6 +77,7 @@
         "attempts": [
           {
             "attempt_id": "attempt-01",
+            "execution_batch_id": "baseline-timing",
             "replicate_id": "timing-01",
             "seed": null,
             "status": "completed",
@@ -84,11 +85,11 @@
             "meta_path": "runs/attempt-01/meta.json",
             "working_directory": "/srv/research/edge-vision",
             "script": "scripts/run.sh",
-            "command": "bash ideas/v1-edge-vision/experiments/exp-001-baseline-timing/scripts/run.sh ideas/v1-edge-vision/experiments/exp-001-baseline-timing/runs/attempt-01",
+            "command": "bash docs/research/v1-edge-vision/experiments/exp-baseline-timing/scripts/run.sh docs/research/v1-edge-vision/experiments/exp-baseline-timing/runs/attempt-01",
             "environment": "/srv/envs/edge-vision/bin/python",
-            "device": "edge-dev-01 上 D3 指定的目标设备",
+            "device": "edge-dev-01 上 approve-baseline-timing 指定的目标设备",
             "model_refs": [{"id": "Vision-S r1", "variant": "EMA", "path": "/srv/assets/edge-vision/vision-s-r1.pth"}],
-            "data_refs": [{"id": "T0 的固定输入", "path": "configs/t0-input-ids.txt"}],
+            "data_refs": [{"id": "baseline-timing 的固定输入", "path": "configs/baseline-input-ids.txt"}],
             "start_time": "2026-11-24T10:02:00+08:00",
             "end_time": "2026-11-24T10:20:00+08:00",
             "session": "idea-edge-timing-01",
@@ -106,20 +107,20 @@
           "readings": [
             {"label": "关闭轨迹采集", "metric": "端到端延迟", "values": [12.5, 12.6, 12.7], "unit": "ms"},
             {"label": "开启轨迹采集", "metric": "端到端延迟", "values": [15.3, 15.4, 15.6], "unit": "ms"},
-            {"label": "T0 实际耗时", "metric": "总运行耗时", "values": [18], "unit": "min"}
+            {"label": "baseline-timing 实际耗时", "metric": "总运行耗时", "values": [18], "unit": "min"}
           ],
           "evidence_paths": ["runs/attempt-01/metrics.json", "runs/attempt-01/outputs/trace.json"],
-          "finding": "两组条件按 T0 方案核实。已取得执行轨迹，开启采集时本次计时增加。"
+          "finding": "两组条件按 baseline-timing 方案核实。已取得执行轨迹，开启采集时本次计时增加。"
         },
         "data_validity": "valid",
         "inference_status": "not_applicable",
-        "inference_limits": ["本次用于核可测性。正式配置收益和机制对照待 T1。"],
-        "next_action": "建议正式计时与轨迹分开采，交用户确认 T1 的对照、口径和预算。"
+        "inference_limits": ["本次用于核可测性。正式配置收益和机制对照待 configuration-comparison。"],
+        "next_action": "建议正式计时与轨迹分开采，交用户确认 configuration-comparison 的对照、口径和预算。"
       }
     },
     "重试记录片段": {
-      "说明": "接续台账中 exp-003-trace-reader-smoke 的另一个虚构时点。获准修正备选解析器后，同一离线检查从头启动。两次使用相同轨迹，沿用同一个 replicate_id。这里展示尝试字段节选，各自的运行元记录保存实际命令、版本和条件。",
-      "experiment_id": "exp-003-trace-reader-smoke",
+      "说明": "接续台账中 exp-trace-reader-smoke 的另一个虚构时点。获准修正备选解析器后，同一离线检查从头启动。两次使用相同轨迹，沿用同一个 replicate_id。这里展示尝试字段节选，各自的运行元记录保存实际命令、版本和条件。",
+      "experiment_id": "exp-trace-reader-smoke",
       "attempts": [
         {
           "attempt_id": "attempt-01",

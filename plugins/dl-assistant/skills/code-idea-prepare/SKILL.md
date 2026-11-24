@@ -33,6 +33,7 @@ flowchart LR
 | [清理报告与机读记录](references/cleanup-report-template.md) `cleanup-report.md`、`cleanup.json` | 开工时记现场，调查后补基准与建议，逐批回填，交付时核对两份记录。保存实际变更、改前和改后版本、证据、未覆盖项和后续入口。无需改动时也可交调查结论 |
 | `coverage/` | 调查时按需保存执行路径和原始覆盖证据。记录具体执行条件和观测范围 |
 | `runs/<run-slug>/` | 本轮新增的改前检查、逐批检查和最终复核各用独立目录。可复用的复现 run 在报告中引用 |
+| `docs/research/PROJECT_CONTEXT.md`、`docs/research/research-rounds.json` | 首次准备研究仓库并交接时初始化缺少的文件，已有记录沿用。轮次由获批后的 execution 或 iterate 登记 |
 
 ```text
 coverage/

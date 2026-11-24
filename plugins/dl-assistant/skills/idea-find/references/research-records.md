@@ -132,7 +132,7 @@
       "pending": ["基准核查和正式实验投入"]
     },
     {
-      "id": "D3",
+      "id": "approve-baseline-timing",
       "date": "2025-07-01",
       "type": "evidence_scope",
       "subject": "Q2 的测量可行性",
@@ -164,7 +164,7 @@
     "action": "核对设备和运行时条件后，按获准范围重复测量基准延迟并检查是否可取得稳定执行轨迹。",
     "path": "specs/edge-vision-idea-plan-draft.md",
     "location": "基准核查与停止条件",
-    "authorized_by": "D3",
+    "authorized_by": "approve-baseline-timing",
     "done_when": "记下可测指标、波动、耗时及正式四组对照的成本依据，再与用户确认是否继续。"
   }
 }
