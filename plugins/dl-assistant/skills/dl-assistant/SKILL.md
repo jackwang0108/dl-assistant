@@ -168,7 +168,7 @@ flowchart LR
 这套 skill 把机器分成**两类**（各自数量不限、不关心具体几台、什么拓扑）：
 
 - **本地机器**：干**文档类**的活——文献调研、读论文、想 idea、写论文、审稿回应，不需要 GPU。目录放 `docs/`（前期产出）+ `papers/`（后期产出：每篇论文一个 Overleaf git clone，见下）。
-- **GPU 机器**：**跑实验**——搭环境、复现、idea 实现 / 迭代、跑论文实验、抽 release。在 baseline 仓库中保存 `docs/` 下的前期交接、工程准备报告和 `docs/research/` 下的中期研究轮次。代码发布使用独立仓库。
+- **GPU 机器**：**跑实验**——搭环境、复现、idea 实现 / 迭代、跑论文实验。在 baseline 仓库中保存 `docs/` 下的前期交接、工程准备报告和 `docs/research/` 下的中期研究轮次。发布候选在独立位置整理，验证机器按发布目标确定。
 
 > **运行位置假设**：这套 skill 假设 agent 在**项目根目录**下被启动——本地机器站在本地项目根（= 方向工作目录根）、GPU 机器站在 GPU 项目根（即下面树里的 `<项目>/`），所有 `docs/`、`papers/` 都相对这个根。**如果 agent 发现当前目录不像项目根（没有 `docs/` 之类），别猜，先问用户项目根在哪。**
 
@@ -216,7 +216,7 @@ GPU 机器：
 │       └── paper-package.md     # 用户决定进入写作时生成
 └── [baseline 自己的源码 …]
 
-<独立位置>/       # code-paper-release 产出：独立新仓库（history 归零）
+<独立位置>/       # code-paper-release 发布候选；内部发布报告另存
 ```
 
 ```mermaid
@@ -231,12 +231,14 @@ flowchart LR
         GREPO["baseline repo — 源码随 baseline（idea 实现 / 实验在这跑）"]
         GDOCS["docs/ — 前期交接和工程准备报告"]
         GRESEARCH["docs/research/ — 研究轮次、实验和决定"]
-        GREL["release 新仓库（独立）"]
     end
+    RELDIR["发布候选（独立位置，按发布目标选择验证机器）"]
 
     LOCAL -->|"前期 docs（中期读）"| GPU
     GPU -->|"中期报告 / 实验数据 / 结论（写作线读）"| LOCAL
     LOCAL -->|"补实验 spec（实验线跑）"| GPU
+    LPAPER -->|"论文版本"| RELDIR
+    GREPO -->|"研究代码、配置和资产"| RELDIR
 ```
 
 在 baseline 仓库的 `docs/research/` 中，execution 和 iterate 共用轮次目录。一轮可有多批执行和多个决定。首轮由 execution 登记，后续由 iterate 在确认建轮时追加。研究代码默认沿 `main` 推进，实际起点和收尾代码按[研究轮次登记与 Git 交接](references/research-rounds.md)记录。

@@ -1,31 +1,79 @@
 {
   "_notes": [
-    "release repo 的性能基准记录，落 docs/perf-baseline.json。",
-    "scripts/perf-regression.sh 读本文件逐项比对：复现值落 tolerance 内 = pass。",
-    "基准是 CPE 的 full-scale 真数（从数据包 paper-results.json 汇总），不是 reduced 占位、不是凭记忆誊写。",
-    "metrics[] 每一项对应论文主表一个指标。reproduce 块是最终方法的复现命令，从 execution-conclusion.md 或 execution-conclusion.json 引用的实际 run 记录核对。",
-    "checkpoint 权重：作者发布的写下载链接；同时记 CPE 侧 GPU 路径指针（paper-results.json）备查。"
+    "结构示例，不是JSON Schema或检查器。按实际数值检查填写metrics；无数值回归时不强建本文件。",
+    "空数组是待填写的实际对象集合；null为未知。论文值、上游来源值和此次实测值分开记录。",
+    "每项检查独立绑定代码、环境、配置、数据协议、权重与输出。单权重评测不得直接作为多次训练均值的复现。",
+    "如果基准来自 paper-results.json，用 reference.cpe 记录批次、修订和原始结果身份。公开副本只保留可公开的来源及可访问的证据。"
   ],
-  "status": "fullscale_final",
-  "baseline_source": "code_paper_experiment",
-  "metrics": [
-    {
-      "metric": "<指标名：数据集 + split + 评测协议>",
-      "value": 0.0,
-      "std": 0.0,
-      "n_seeds": 0,
-      "tolerance": 0.0
-    }
-  ],
-  "reproduce": {
-    "command": "<完整复现命令，含全部参数；conda activate <env> 起>",
-    "commit": "<release repo 首个 commit hash>",
-    "checkpoint": "<发布权重下载链接 或 挂载路径占位>",
-    "data_split": "<数据集 + split>"
-  },
-  "provenance": {
-    "cpe_pkg": "<CPE 数据包路径/版本，如 handoffs/rev-1>",
-    "gpu_hours": "<训练参考资源，从 paper-results.json 台账来>",
-    "notes": "<汇总口径说明：哪些 exp_id 进了主表基准>"
+  "schema_version": 2,
+  "release_id": null,
+  "status": "unassessed",
+  "metrics": [],
+  "metric_record_shape": {
+    "check_id": null,
+    "purpose": null,
+    "capability": null,
+    "paper_location": null,
+    "metric": null,
+    "unit": null,
+    "direction": null,
+    "paper_reported": {
+      "value": null,
+      "statistic": null,
+      "n_replicates": null,
+      "source_ref": null
+    },
+    "reference": {
+      "value": null,
+      "statistic": null,
+      "replicate_ids": [],
+      "checkpoint_selection": null,
+      "source_ref": null,
+      "json_pointer": null,
+      "cpe": {
+        "batch_id": null,
+        "revision": null,
+        "exp_id": null,
+        "statistic_or_reading_id": null,
+        "attempt_ids": [],
+        "evidence_refs": []
+      }
+    },
+    "comparison": {
+      "matched_conditions": [],
+      "known_differences": [],
+      "rule": null,
+      "absolute_tolerance": null,
+      "relative_tolerance": null,
+      "basis_refs": []
+    },
+    "inputs": {
+      "code_commit": null,
+      "files": [],
+      "environment_refs": [],
+      "config_refs": [],
+      "data_protocol_refs": [],
+      "checkpoint_refs": []
+    },
+    "input_ref_shape": {
+      "path_or_uri": null,
+      "version": null,
+      "sha256": null
+    },
+    "execution": {
+      "working_directory": null,
+      "command": null,
+      "hardware": null,
+      "output_refs": []
+    },
+    "observed": {
+      "value": null,
+      "statistic": null,
+      "replicate_ids": []
+    },
+    "status": "not_run",
+    "limitations": [],
+    "invalidated_by": [],
+    "recheck_refs": []
   }
 }
