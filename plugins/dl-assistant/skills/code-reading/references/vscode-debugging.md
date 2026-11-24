@@ -1,7 +1,6 @@
-# VSCode 交互调试（code-reading · A 模式 默认建议的交互方式）
+# VS Code 交互调试
 
-> A 模式（有 setup report、环境配好）默认建议结合 VSCode 调试。停在断点后，可直接在 debug console 查看当前配置、模型和 batch 的实际值。
-> 这是 A 的 **默认建议的交互方式，不强制**；不在 VSCode 里调（或不想调）时改用独立诊断脚本（见 `diagnostics.md`）。
+选定需要实际观察的源码路径，且用户希望交互调试时，按[阅读流程](workflow.md)先核真实环境和入口，再使用本文件配置调试。也可选择[独立诊断脚本](diagnostics.md)。
 
 ## 调试时用户和 agent 各自做什么
 
@@ -15,7 +14,7 @@ agent 无法读取你的 VSCode debug console 输出。
 
 ## 1. launch.json：两个用途
 
-A 模式选定路径后由 agent 编写 launch.json。按需要使用以下两类配置。
+按需要选以下配置。已有 `launch.json` 时先核当前配置，再添加需要的入口。
 
 - **(a) 沿仓库入口单步执行**。观察这次运行实际加载的配置、数据和模型。
 - **(b) 单独运行目标模块**。用最小输入调用目标函数或类，再逐步解释运行过程。
@@ -50,14 +49,14 @@ A 模式选定路径后由 agent 编写 launch.json。按需要使用以下两�
 按以下优先顺序准备脚本。
 
 - **首选，导入并调用原实现。** 独立脚本通过 `import` 加载仓库或依赖里的目标类或方法，构造最小输入并调用。让 `program` 指向该脚本，在原实现中设置断点后单步执行。
-- **无法独立调用时复制相关逻辑。** 原实现依赖共享状态、无法单独运行，或缺少仓库专属环境（B 模式）时，把相关逻辑复制到独立脚本。明确注明脚本只验证复制的逻辑。有真实入口的运行结果时，按 (a) 的结果复核脚本是否一致。
+- **无法独立调用时复制相关逻辑。** 原实现依赖共享状态、无法单独运行，或缺少仓库专属环境时，把相关逻辑复制到独立脚本。明确注明脚本只验证复制的逻辑。有真实入口的运行结果时，按 (a) 的结果复核脚本是否一致。
 
 ```json
 {
   "name": "<项目简称>: dissect <target 类/方法>",
   "type": "debugpy",
   "request": "launch",
-  "program": "${workspaceFolder}/docs/code-reading/diagnostics/<harness>.py",
+  "program": "${workspaceFolder}/docs/code-reading/<日期>-<主题>/diagnostics/<harness>.py",
   "console": "integratedTerminal",
   "cwd": "${workspaceFolder}",
   "python": "<setup_report 中的 conda env python 路径>",
@@ -70,9 +69,9 @@ A 模式选定路径后由 agent 编写 launch.json。按需要使用以下两�
 
 > 脚本写法见 `diagnostics.md`。能导入原实现时用类一，无法导入时用类二的通用环境独立验证。本节说明如何配置 launch.json、单步运行并解释结果。
 
-## 2. 断点计划（和 Stage 2 分段对齐）
+## 2. 断点计划（和源码讲解分段对齐）
 
-选定路径后，agent 沿这条路径标几个**适合设置断点的位置**，和 Stage 2 要逐段走的段对齐：
+选定路径后，agent 沿这条路径标几个**适合设置断点的位置**，和要逐段讲解的位置对齐：
 
 ```text
 这条训练路径，建议先在这 6 处下断点，我们一段段来：
