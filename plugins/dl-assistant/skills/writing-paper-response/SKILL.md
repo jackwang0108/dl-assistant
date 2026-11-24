@@ -30,7 +30,7 @@ description: 论文意见回应（后期）：处理审稿人/导师/合作者/�
 ```mermaid
 flowchart LR
     PDF[/论文 PDF/] --> WPR["writing-paper-review<br/>模拟审稿"]
-    WPR --> COMM[("审稿意见<br/>round-N/problem-list.json")]
+    WPR --> COMM[("审稿意见<br/>指定的 problem-list.json 和稿件校验值")]
     COMM --> WRESP["writing-paper-response<br/>逐条讨论 + 产清单"]
     ADV["导师/合作者/用户自己的意见"] --> WRESP
     WRESP --> RBRIEF[("revision-brief.json<br/>+ rebuttal-letter.md")]
@@ -57,7 +57,7 @@ flowchart LR
 ## 输入材料
 
 - **意见来源 + 原文**：
-  - **审稿**（真实 / `writing-paper-review` 模拟）：reviewer comments；模拟审稿场景读**最新一轮** `<论文根>/review/round-N/problem-list.json`（多轮取最大 N；供程序读取的文件，problem-清单.md 是供用户阅读的生成版本，读取时以 JSON 为准）+ 同轮 `meta-review.md`（「已排除指控」是 AC 判定不成立的质疑及核查理由，供起草回复时参考）。
+  - **审稿意见**：真实评审读原始意见与送审稿。内部预审读交接中指定的 `problem-list.json` 和本轮稿件，按文件内 `paper.sha256` 与交接给出的校验值核对。综合意见可查相邻的 `审稿总报告.md`。
   - **非审稿**（组会 / 导师 / 合作者 / 自己回看）：**启动时直接问用户收集意见**——用户本人想到的、导师组会上提的、合作者说的都算；用户逐条口述或贴文本，多条先合并去重。
 - **论文成稿**（PDF 或 `_draft/content/*.md`）：reviewer 攻击的对象本身——page-line 定位、引用澄清的原料，与 blueprint 冲突时以它为准。
 - **论文大纲**（`blueprint.md`）用于核对总论点、各项贡献和各节写作意图，判断修改是否影响论文贡献。
@@ -88,7 +88,7 @@ flowchart LR
 
 ```mermaid
 flowchart TD
-    S1["Step 1 准备<br/>确认来源（审稿/非审稿）· 拿意见原文（审稿=最新 round-N problem-list.json<br/>非审稿=问用户收集+去重）· 读 blueprint + 成稿 + 已有实验证据<br/>审稿场景查 rebuttal 规则 + 时限"]
+    S1["Step 1 准备<br/>固定意见来源和所审稿件<br/>预审核清单路径和稿件校验值，真实审稿查回复规则和时限<br/>读提纲、现稿和已有实验证据"]
     S1 --> S2
     S2["Step 2 逐条讨论（每条一个确认点）<br/>agent 给 判断（六类 + 三层分流）+ 修改方案 → 保存为 comment-N.md → 用户审<br/>已确认的修改记录：与已定方案冲突立即确认取舍"]
     S2 --> G1{"用户认可?"}
@@ -103,7 +103,7 @@ flowchart TD
 ### Step 1 准备
 
 - **确认意见来源 + 拿意见原文**：
-  - 审稿场景：读最新一轮 `problem-list.json`（多轮取最大 N）+ 同轮 `meta-review.md`（查阅已排除质疑及核查理由）；查 venue 当年 rebuttal 规则（字数 / 格式 / **时限**，照 `references/rebuttal-writing.md` 的核查要求）。
+  - 内部预审：按 [交接读取指引](references/fix-strategy.md#如何使用-problem-listjson-的字段) 核清单路径、稿件校验值及实际完成范围。若仅知道项目根，列出可能的轮次、模式和稿件版本供确认。真实审稿：核原始意见和送审稿，查目标当年 rebuttal 的字数、格式及截止时间。
   - 非审稿场景：直接问用户收集意见（用户本人 / 导师 / 合作者），逐条口述或贴文本，合并去重。
 - **论文根定位**（四级发现规则）+ 读 `_draft/blueprint.md` + 成稿。
 - **核对可用的实验证据**：读论文根的实验结果区（CPE 数据包 / ingest-results 产物），列出「已有什么证据」——逐条讨论时用于查证正文和已有数据。
@@ -115,11 +115,11 @@ flowchart TD
 **初始判断**：
 - **六种意见类型**：misunderstanding（误解）/ missing evidence（缺证据）/ writing clarity（表达不清）/ novelty concern（创新质疑）/ experiment concern（实验质疑）/ impossible request（不可能要求）
 - **三种修改范围**：**substance**（存在实质问题，需补实验或大幅修改）/ **misread-risk**（表述容易引起误解，可作简短澄清）/ **polish**（润色）。
-- **输入是 problem-list.json 时按字段给出初步处理建议**：`severity=致命` → 通常归入 substance（须直接处理问题并据证回应）；`改进` → 多为 polish / misread-risk 可权衡；**`type=合规` 的条目不走六类讨论**——照 authorkit / venue 硬性要求改，没有策略空间，直接进清单（局部改），跟用户确认一轮即可；**`type=指控成立` 按致命处理**（指重大缺陷审稿人提出且经 AC 核实成立的质疑）。标签用于给出初步判断，用户可以调整。
+- **输入是 problem-list.json 时按证据给出初步处理建议**：合读 `finding_status`、`evidence`、`impact` 与 `severity`，再判断修改范围。待核或有分歧的问题先指明核查动作；合规意见核适用的官方要求；核心研究未决交 iterate 判断。
 
 **修改方案**（纳入修改需求清单）：**策略照 `references/fix-strategy.md`**——回应方式的优先顺序（先查正文和已有数据，再考虑补实验）+ 六类 × 修改策略 + page-line 定位（每条必做：意见所指位置和拟修改位置）。
 - **稿件修改**：注明章节及原句或图表编号、改动类型（re-frame / section 重写 / 局部改 / 补图表 / 补实验项）、具体要求。补实验项只给核心目的（**设计交 writing-paper**）。
-- **关闭判据（必填）**：「改成什么样这条意见就算关闭」的可验收条件——随修改方案一起给用户确认。来源三种：review 来的意见**继承** problem-list 的 `close_criterion` 初版（讨论中可修订）；外部意见（导师/合作者/真实审稿人）没有判据，由 agent **随方案起草**——起草动作逼模糊意见具体化（「这段不清楚」必须落成「第 X 段歧义点 Y 消除」），拿不准的与用户明确讨论并确认；taste 级意见允许写成**用户确认型**（「改后该段交用户过目认可」），不强制每条都机械可验。
+- **关闭判据（确认修改方案时填写）**：结合清单的实际依据、影响和未决项随方案起草，与用户确认。例如先核两组训练预算，再约定稿件需准确说明实际预算以及结论适用条件。仅影响文风时，可写为改后交用户确认。
 - **回复文本**：审稿场景 → rebuttal；非审稿 → 平和说明。按回复语气选项（见 `references/rebuttal-writing.md`）。
 - **要不要补实验**：是 → 补的核心目的；否。
 
@@ -155,7 +155,7 @@ flowchart TD
   - 落点：section + 锚点（page-line 改稿后回填，与 rebuttal 的 Changes 对得上）
   - 改动类型：re-frame / section重写 / 局部改 / 补图表 / 补实验项
   - 具体要求：…
-  - 关闭判据：…（必填；来源：继承自 review / 讨论起草 / 用户确认型）
+  - 关闭判据：…（与用户讨论确认的验收条件）
 - 回复文本：…（rebuttal / 说明，按 tone preset）
 - 要不要补实验：是 → 补的核心目的 / 否
 - 冲突记录：与意见 M 的冲突 + 裁决结果（无则略）

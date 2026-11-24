@@ -76,7 +76,7 @@
 
 ### novelty concern（创新质疑）
 
-- **判断依据**：reviewer 说和某工作一样 / incremental。先看 reviewer 引的对照工作是不是真的最接近（Step 1 已有实验证据 / problem-list 的 location 有没有引原文）。
+- **判断依据**：reviewer 说和某工作一样 / incremental。先看 reviewer 引的对照工作是不是真的最接近（Step 1 已有实验证据 / 问题清单的 evidence 是否定位到相关材料）。
 - **处理方法**：**依据证据说明与已有工作的区别**。补跟最相近工作的 differentiation——对比段或对比表，差异写具体：机制（做法上差在哪一步）/ 设定（问题设定、假设）/ 结果维度（他们在 X 上好，我们在 Y 上好）。related work 漏引的补引（进清单）。差异说不清时老实走 ④：把 contribution 从「新机制」降为「新组合 + 实证收益」，实证收益就是证据问题（转 missing evidence 处理方法）。
 - **常见错误**：用「我们很不一样」式形容词辩护，不给具体差异；回避 reviewer 点名的那篇，只选与本论文差异较大的工作比较。
 
@@ -110,13 +110,12 @@ rebuttal letter 的 Changes 要能和改稿对上——所以**逐条讨论时�
 
 ## 如何使用 problem-list.json 的字段
 
-输入是 `writing-paper-review` **最新一轮**的 `problem-list.json`（round-N 取最大 N；problem-清单.md 是供用户阅读的生成版本，读取时以 JSON 为准）时，每条已带机读字段（完整 schema 见 `writing-paper-review/references/problem-list-schema.md`）：
+读交接中指定的 `problem-list.json`。记录路径、`run_id`、`mode` 与稿件校验值。用 `shasum -a 256 "$reviewed_paper"` 核实际被审文件是否与 `paper.sha256` 一致。若正在编辑另一版，保留被审稿件和当前稿件的各自身份，先对照实际修改，再定位意见。找不到被审版本时，标明哪些意见暂无法核对。字段详见[问题清单说明](../../writing-paper-review/references/problem-list-schema.md)。
 
-- **`severity=致命`** → 处理范围通常归入 **substance**：必须正面改 + 正面回应（rebuttal 里最能决定录用的条目，详答）。
-- **`severity=改进`** → 多为 **polish / misread-risk**：可权衡，rebuttal 里一句带过或合并。
-- **`type=合规`** → **不走六类策略讨论**：照 authorkit / venue 硬性要求改（页数 / 匿名 / 版式），没有策略空间，直接进清单（局部改）。
-- **`type=指控成立`** → **按致命处理**——对重大缺陷审稿人提出并经 AC 核实成立的质疑，须直接回应质疑并给出证据。
-- 标签是输入先验不是铁律——逐条讨论时用户可推翻。
+- `completion=partial` 时，检查未完成项，按已核范围处理。`synthesis_status=pending` 时，查原意见并保留尚待综合的问题。`synthesis_status=not_planned` 表示本轮计划直接交付审稿意见，按这些意见的证据逐项判断。
+- 用 `finding_status`、`evidence`、`target_claim`、`impact` 和 `severity` 复核问题。用 `open_questions`、`disputes` 和适用的 `rechecks` 确定还需查什么。
+- 鉴别稿件缺少说明、已有数据未呈现、以及研究本身缺证据。已核的表达或具体补证需求进入修改讨论，核心科学判断仍未决时交 `code-idea-iterate`。
+- 结合当前稿件和实际证据提出方案，与用户一起确定关闭判据。可保留待核问题的原 ID 和证据引用，供后续复查。
 
 ## 常见错误与处理方法
 

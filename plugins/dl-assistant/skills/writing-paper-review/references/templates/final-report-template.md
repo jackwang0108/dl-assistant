@@ -1,56 +1,9 @@
-# 审稿总报告（<venue> · <subjectArea> · round-<N>）
+# 本轮审查结果
 
-> 本报告是**供用户阅读的总报告**：结论汇总 + 导航。内容全部渲染自本轮已保存到文件的结构化产物（reviews 评分 / meta-review / problem-list.json / 合规报告），**不产生新判断**——细节一律跟文件索引走。
+论文/材料版本、模式、实际完成范围与缺失任务。明确这是预审，不是官方结果或录用预测。
 
-- **论文**：<PDF 文件名 / 标题>
-- **日期**：<YYYY-MM-DD>
-- **评审配置**：<N> 个 reviewer（逐个列出 专业侧重点与评审取向）+ 重大缺陷审稿人（开 / 关）+ 合规审稿人（有 / 无）+ AC/AE
+先说明理解的研究问题、实际新增知识与证据范围，再概括主要优点、影响核心判断的问题、分歧和待核实项。严重程度与证据状态分别显示，不能把所有疑问都写成已成立缺陷。
 
-## 录用倾向
+复查时列已解决、部分解决、未解决、未检查及新问题；引用具体旧问题与本轮依据。不默认最新轮可复用，不把作者回应当已解决。
 
-**<venue 真实刻度>**——<一句话结论（引自 meta-review）>
-
-## 评分一览
-
-| Reviewer | 偏向 × 哲学 | overall | confidence | 一句话立场 |
-|---|---|---|---|---|
-
-## 共识与分歧
-
-- **共识**：<reviewer 一致认可的点 / 一致批评的点>
-- **分歧**：<分歧点，以及 AC 核查后采纳的意见（裁决过程见 meta-review.md）>
-
-## 致命问题（severity=致命，共 <N> 条）
-
-> 最该先看的一节。每条只给一句话 + location + source；依据与建议修法见 problem-清单.md。
-
-1. **<问题一句话>**（location：…；source：reviewer-N / 魔鬼代言人 / 合规审稿人）
-
-## 改进建议概览（severity=改进，共 <N> 条）
-
-> 按类别归并（如「实验补强 3 条、写作 2 条、引用规范 1 条」），一句话概括每类；完整清单见 problem-清单.md。
-
-## 已排除的质疑及回应依据
-
-> 重大缺陷审稿人提出、AC 裁决**不成立**的质疑——正式投稿时遇到同类质疑，可依据原文和检索证据回应。
-
-1. <指控一句话 → 为何不成立>
-
-## 合规问题
-
-> 本轮未启用合规审稿人则写「未启用」；启用了则：致命 / 改进各几条 + 各一句话，详见 compliance-review.md。
-
-## 文件索引
-
-| 文件 | 内容 |
-|---|---|
-| `meta-review.md` | AC 裁决全文（误读纠正 / 分歧处理 / 指控裁决 / rationale / major/minor points） |
-| `problem-list.json` / `problem-清单.md` | 行动清单——供 writing-paper-response 读取的 JSON+ 供用户阅读的版本 |
-| `reviews/reviewer-N.md` | 各审稿人完整意见（评分依据 / 检索结论） |
-| `devil-advocate.md` | 重大缺陷审稿人指控清单原文 |
-| `compliance-review.md` | 合规对照表（如启用） |
-
-## 交接
-
-- 消化意见（改稿 / rebuttal / 补实验）→ `writing-paper-response`（自己的论文，吃最新一轮 problem-list.json）；外部 PDF 场景无论文根——把本报告 + problem-清单 交用户转达即可
-- 补实验 → response 定目的 → writing-paper backlog → design-experiment → code-paper-experiment
+列实际文件入口、检查范围和退出状态；结构完整不等于科学判断正确。交response指定problem-list路径和论文版本，核心未决建议iterate，合规疑问交submission核实际要求。不自动传给他人或改稿。

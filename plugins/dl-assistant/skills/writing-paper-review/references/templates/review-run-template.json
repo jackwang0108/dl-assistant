@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "run_id": "edge-vision-round-1",
+  "mode": "independent",
+  "paper": {
+    "path": "materials/paper.pdf",
+    "sha256": "<稿件文件的实际 SHA-256>"
+  },
+  "materials": [
+    {
+      "id": "paper-pdf",
+      "path": "materials/paper.pdf",
+      "sha256": "<稿件文件的实际 SHA-256>",
+      "role": "paper"
+    }
+  ],
+  "venue": {
+    "name": null,
+    "year": null,
+    "track": null,
+    "stage": null,
+    "form_status": "not_requested",
+    "sources": [],
+    "dimensions": []
+  },
+  "isolation": {
+    "status": "shared",
+    "limitations": ["在当前会话检查材料。"]
+  },
+  "tasks": [
+    {
+      "id": "reviewer-experiments",
+      "role": "reviewer",
+      "focus": "复述全文贡献，重点核查表 2 的比较是否在同等训练预算下完成。"
+    },
+    {
+      "id": "summary",
+      "role": "synthesis",
+      "focus": "回查表 2、表注和实验设置，区分稿件缺说明与实际设置未知。"
+    }
+  ],
+  "preparation_check": {
+    "status": "limited",
+    "basis": "按指定的 PDF 做内容预审。",
+    "unknowns": ["尚无训练日志或完整配置。"],
+    "effect": "可核稿件有无说明训练预算，实际训练预算需另查。"
+  }
+}

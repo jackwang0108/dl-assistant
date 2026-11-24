@@ -1,55 +1,69 @@
-# problem-list.json Schema（review → response 交接契约）
+# 问题清单与证据结构（schema_version=2）
 
-`writing-paper-review` Step 4 汇总产出、`writing-paper-response` 消费的核心交接物。**机读契约是 `problem-list.json`**（唯一真相源）；人读的 `problem-清单.md` 从 json 渲染，是派生物不是第二真相源。每条一组机读字段——response 靠字段机械分流，不解析自由文本。
+输出绑定run_id、mode、paper路径/sha256、材料快照、run_sha256、completion、task_statuses、venue、isolation与实际生成来源。problems保留结构化意见，disputes保留争议，dispositions保留原意见如何处理，rechecks保留复查。它是本轮意见记录，不是独立科学事实来源。
 
-## 文件结构
+- `completion` 记录计划内任务是否按要求完成，值为 `complete` 或 `partial`。
+- `synthesis_status` 记录综合状态，值为 `not_planned`、`pending` 或 `completed`。计划直接交付审稿意见时可以是 `complete` 和 `not_planned`。安排了综合但尚未完成或核对时为 `partial` 和 `pending`，对应的原始问题标记 `needs_synthesis: true`。
+- `input_refs`、`paper`、`materials`、`prior_round` 和已核任务文件的路径及摘要指向本次固定副本。原始记录中保留的相对路径以 `review_dir` 为原始基准。回查证据时按清单中的材料 ID 取固定副本。
+
+## 每条issue/problem
+
+- id：任务内唯一issue ID或最终稳定问题ID。
+- description、target_claim、impact：具体问题、影响的主张及影响理由。问题未核清时明确未知。
+- finding_status：confirmed/partially_supported/unsupported/unverified，与严重程度分开。
+- severity：critical/major/minor/suggestion/undetermined，按实际影响说明，不由类型自动定。
+- evidence：证据数组，每项{kind,material_id,location,observation,excerpt?}。kind可为text/figure/table/equation/cross_reference/absence/external/author_response；excerpt可省，不因无逐字原句丢意见。
+- text注明实际原文位置；图/表/公式注明可定位对象与观察；跨处矛盾列多项对应位置；absence注明查过的材料/范围及没找到什么（不是证明全项目不存在）；external引用初始声明材料或任务external_sources中的实际来源快照及阅读位置；新取得来源作为本轮审查输出保存，不事后改写初始输入。只有摘要或元数据时明确范围，不能伪称全文已核。
+- open_questions：未决数组；clarification_needed：需要澄清什么；suggested_actions：可选办法数组，可空。不强制唯一修复实验，也不强制reviewer制定作者的最终关闭判据。
+- self_check：{status,basis,unknowns,effect}，重要问题形成前的依据/影响核查，不只勾选。
+- 综合problem另有source_refs：[{task_id,issue_id}]，保留全部原意见来源。综合者新增问题用自己的issues作为来源，不制造原审稿人说过的话。
+
+问题依据暂不足可以unverified并说明，不直接删除；有明确反证才记unsupported。无任何可定位依据的疑问不能称confirmed，应补核查范围或列未验证问题。所有证据项只是声明，脚本不能确认图像、引用真实性或缺失事实。
+
+## 综合与复查
+
+dispositions每条{task_id,issue_id,outcome,problem_id,reason,evidence}；outcome=included/merged/not_supported/needs_check。每条原issue覆盖一次，纳入/合并/待核查对应problem；不支持也保留原问题和核查理由。
+
+disputes每条{topic,source_refs,judgment,basis,evidence,remaining_unknowns,next_actions}，judgment同finding_status。不存在分歧可空，不强迫制造分歧，也不把同源多数当独立证实。
+
+rechecks每条{prior_problem_id,status,reason,evidence,new_problem_ids}，status=resolved/partially_resolved/unresolved/not_checked。指定范围全部覆盖，缺资料用not_checked；范围外保留未检查，不能悄悄消失。
+
+## 下游接收
+
+response必须用具体路径和论文版本，不取最大round。结合证据、finding_status、severity和impact重判；不能把待核实问题自动当事实、自动决定补实验或把合规疑问直接批准为修改。核心研究未决转iterate；仅表达/已明确补充工作走writing-paper。
+
+旧severity=致命/改进、type=指控成立、verbatim_quote与close_criterion仅历史字段；不自动映射为当前已核实结论。可以保留旧意见重新分析，但不能伪填新证据或复制成新版通过记录。
+
+## 示例：同预算比较
+
+表 2 与实验设置均未交代两组训练预算。可以确认稿件少了必要说明，同时保留实际预算是否一致的疑问。下面是综合清单中的一条，原审稿任务用同样字段记录证据，`source_refs` 由综合者添加。
 
 ```json
 {
-  "_notes": {
-    "是什么": "审稿问题清单——review → response 的机读交接契约。Step 4 从 {reviews, meta, accusations, compliance} 汇总去重编号产出；人读 problem-清单.md 从本文件渲染。",
-    "severity 判定": "对照 fairness-firewall.md（七类=改进）+ calibration.md（致命类）；合规问题按 desk-reject 级别判（页数超/匿名泄露=致命，版式小瑕疵=改进）。"
+  "id": "training-budget-disclosure",
+  "description": "主表和实验设置均未报告两组对应的训练预算。",
+  "target_claim": "相同训练预算下，本方法的准确率更高。",
+  "finding_status": "confirmed",
+  "severity": "major",
+  "impact": "读者无法从稿件判断主结果是否支持同预算比较。",
+  "evidence": [
+    {
+      "kind": "absence",
+      "material_id": "paper-pdf",
+      "location": "第 6 页表 2 及表注、第 7 页第 4.2 节实验设置",
+      "observation": "这几处报告了准确率和数据集，但没有给出两组的更新步数、样本量或预算口径。",
+      "excerpt": null
+    }
+  ],
+  "open_questions": ["实际训练配置中的更新步数和样本量是否一致？"],
+  "clarification_needed": "核对表 2 两组对应的配置和训练日志。",
+  "suggested_actions": [],
+  "self_check": {
+    "status": "clear",
+    "basis": "对照表 2、表注和实验设置。",
+    "unknowns": ["未取得实际训练配置。"],
+    "effect": "确认稿件少了说明，实际预算尚待核实。"
   },
-  "venue": "<目标 venue>",
-  "subjectArea": "<投稿领域/track>",
-  "meta": {
-    "recommendation": "<AC 录用倾向/决定>",
-    "一句话结论": "<meta-review 的一句话结论>"
-  },
-  "problems": [ "<problem 对象，见下>" ]
+  "source_refs": [{"task_id": "reviewer-experiments", "issue_id": "budget-disclosure"}]
 }
 ```
-
-## problem 字段
-
-| 字段 | 取值 | 说明 |
-|---|---|---|
-| `id` | `P1` / `P2` / … | 去重后连续编号（跨 reviewer 同一问题合并为一条） |
-| `severity` | `致命` / `改进` | 对照 `fairness-firewall.md`（七类=改进）+ `calibration.md`（致命类）；response 据此排优先级 |
-| `type` | `内容` / `合规` / `指控成立` | 来源类别：reviewer/AC 的内容问题、合规审稿人的 desk-reject 项、重大缺陷审稿人经 AC 裁决成立的指控 |
-| `location` | section + page-line | 问题锚点（如 `Experiments §4.2, p6 L188`） |
-| `verbatim_quote` | 逐字原文引用 | **必填**——问题指的原文逐字引用（含页码）。引不出原文 = reviewer 没读，该条在 Step 4 汇总时直接丢弃并计数汇报，不进清单 |
-| `问题描述` | 自由文本 | reviewer 的 weakness/question 摘要（忠实，不润色掉锋芒） |
-| `依据` | 评审标准条目 | 命中的评审表单 / firewall / calibration / authorkit 哪条判据（如 `calibration·过度声称`） |
-| `close_criterion` | 可验收条件 | **必填**——「改成什么样这条就算关闭」（如「Table 2 增加与 X 在 Y 设定下的对比」）。reviewer/AC 建档时给初版；response 逐条讨论时用户可修订。给不出可验收条件的空泛批评（「实验不够充分」式）在打回 reviewer 补写和直接丢弃之间由 AC 裁 |
-| `建议修法` | 自由文本 | AC/meta 层给的修法提示（response 可推翻——最终方案由 response 与用户定） |
-| `source` | `reviewer-N` / `AC` / `魔鬼代言人` / `合规审稿人` | 哪份报告提的；多条同类合并时列全（如 `reviewer-1, reviewer-3`） |
-
-## 示例（problems 里的一条）
-
-```json
-{
-  "id": "P2",
-  "severity": "致命",
-  "type": "内容",
-  "location": "Experiments §4.2, p6 L188",
-  "verbatim_quote": "「We compare against XXX and YYY on the ZZZ benchmark.」（p6 L188）",
-  "问题描述": "主表 baseline 缺 2024 年后的 SOTA（缺 XXX / YYY），无法判断当前真实位置",
-  "依据": "calibration·baseline 公平性（致命类）",
-  "close_criterion": "主表或补充实验中加入至少 2 个 2024 年后的该任务 SOTA 对比；或在 limitations/实验节显式说明选取理由并获用户认可",
-  "建议修法": "补最新 SOTA baseline 对比，或诚实说明选取理由",
-  "source": "reviewer-2, reviewer-4"
-}
-```
-
-> response 消费约定：`severity=致命` 对应 response 侧的 substance 类（必直接修改并据证回应），`改进` 对应可权衡类——标签是先验，逐条讨论时用户可推翻（见 `writing-paper-response/references/fix-strategy.md`）。`close_criterion` 是初版判据，response 逐条讨论时可与用户修订（外部来源的意见没有判据，由 response 讨论起草）；定稿后的判据随 `revision-brief.json` 的 `关闭判据` 字段交 writing-paper，改稿按判据锁范围、按判据验收勾单。
