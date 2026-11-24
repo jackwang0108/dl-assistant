@@ -41,7 +41,10 @@ def normalize_ref(value: str) -> str:
     if scheme in ("doi", "s2"):
         ident = unquote(ident).lower()
     if scheme == "arxiv":
-        ident = re.sub(r"v\d+$", "", unquote(ident))
+        ident = unquote(ident)
+        if re.search(r"v0\d*$", ident):
+            raise ValueError("Invalid arXiv revision")
+        ident = re.sub(r"v\d+$", "", ident)
         if not re.fullmatch(r"(?:\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?/\d{7})", ident, re.I):
             raise ValueError("Invalid arXiv identifier")
     if scheme == "doi" and not re.fullmatch(r"10\.\d{4,9}/\S+", ident):
@@ -60,13 +63,14 @@ def normalize_ref(value: str) -> str:
 
 
 def version_from_ref(value: str) -> str | None:
+    value = value.strip()
     try:
         if not normalize_ref(value).startswith("arxiv:"):
             return None
     except ValueError:
         return None
     path = urlparse(value).path if value.startswith(("http://", "https://")) else value
-    match = re.search(r"(v[1-9]\d*)(?:\.pdf)?/?$", path)
+    match = re.search(r"(v[1-9]\d*)(?:\.pdf)?/?$", unquote(path))
     return match.group(1) if match else None
 
 

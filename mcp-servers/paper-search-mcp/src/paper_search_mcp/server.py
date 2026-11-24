@@ -6,7 +6,15 @@ from typing import Literal
 from fastmcp import FastMCP
 
 from . import assets
-from .models import Budget, CachePolicy, PaperFilters, PaperLookup, PaperQuery, Source
+from .models import (
+    Budget,
+    CachePolicy,
+    PaperFilters,
+    PaperLookup,
+    PaperQuery,
+    PublicationYearRange,
+    Source,
+)
 from .service import Service
 
 mcp = FastMCP("paper-search")
@@ -67,9 +75,12 @@ def get_paper_citations(
     filters: PaperFilters | None = None,
     budget: Budget | None = None,
     cache: CachePolicy = "prefer",
+    publication_year_range: PublicationYearRange | None = None,
 ) -> dict:
-    """Find papers citing this exact paper; inspect source reports and use extend_query for more."""
-    return service().relation(paper_ref, "citations", sources, filters, budget, cache)
+    """Find citing papers; optionally post-filter retrieved candidates by publication year."""
+    return service().relation(
+        paper_ref, "citations", sources, filters, budget, cache, publication_year_range
+    )
 
 
 @mcp.tool()
@@ -132,10 +143,14 @@ def get_entity_papers(
 
 @mcp.tool()
 def get_query_results(
-    query_id: str, cursor: str | None = None, page_size: int = 20, fields: list[str] | None = None
+    query_id: str | None = None,
+    cursor: str | None = None,
+    page_size: int = 20,
+    fields: list[str] | None = None,
+    snapshot_id: str | None = None,
 ) -> dict:
-    """Read existing snapshot pages without upstream requests. A cursor stays bound to its snapshot."""
-    return service().get_query_results(query_id, cursor, page_size, fields)
+    """Read local pages. Supply a snapshot_id for an exact snapshot, or a query_id for a query."""
+    return service().get_query_results(query_id, cursor, page_size, fields, snapshot_id)
 
 
 @mcp.tool()
@@ -180,6 +195,7 @@ def export_records(
     paper_refs: list[str] | None = None,
     format: Literal["json", "bibtex", "markdown"] = "json",
     fields: list[str] | None = None,
+    snapshot_id: str | None = None,
 ) -> dict:
-    """Export a snapshot or explicit papers with provenance/coverage; never invent bibliographic fields."""
-    return service().export_records(query_id, paper_refs, format, fields)
+    """Export records in an exact snapshot, a query's latest snapshot, or explicit paper refs."""
+    return service().export_records(query_id, paper_refs, format, fields, snapshot_id)

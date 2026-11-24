@@ -14,7 +14,7 @@ MCP 客户端配置中的 directory 应指向本目录，入口为 `python -m pa
 
 环境变量及本目录 `.env` 可提供 `SEMANTIC_SCHOLAR_API_KEY`、`SERPAPI_KEY`、`OPENALEX_API_KEY`。Scholar 需要 SerpAPI 密钥；其他来源的认证状态和实际错误由工具报告，不保证匿名访问可用。配置模板见 `.env.example`，不要提交真实密钥。
 
-`PAPER_SEARCH_CACHE_DIR` 默认 `~/.cache/paper-search-mcp`，v2 使用 `records-v2.sqlite3` 和 `assets/`。旧缓存不迁移也不读取；旧 `PAPER_SEARCH_DB_PATH` 已取消。重建缓存会使查询 ID/游标失效，长期交接使用论文稳定标识及导出记录。
+`PAPER_SEARCH_CACHE_DIR` 默认 `~/.cache/paper-search-mcp`，v2 使用 `records-v2.sqlite3` 和 `assets/`。升级到包含检索历史的版本时使用空缓存目录。重建缓存后，以前的查询 ID、快照 ID 和游标失效，长期交接使用论文稳定标识及已保存的导出。
 
 ## 工具
 
@@ -44,7 +44,9 @@ MCP 客户端配置中的 directory 应指向本目录，入口为 `python -m pa
 - `store.py` 独立保存各来源原始观测，合并视图保留字段出处和冲突；不将合并信息写回成各来源数据。
 - `providers.py` 使用明确 REST 请求及真实上游分页，不依赖旧 arxiv/pyalex 包的隐含重试与分页。
 - `transport.py` 控制请求/耗时预算、限流和有限重试；错误返回不含认证请求 URL 或密钥。来源按任务顺序执行，组合结果不是全局相关性排名。
-- `service.py` 保存不可变检索快照，`extend_query` 创建新快照；旧游标仍读取旧内容。查询状态、来源失败、预算停止及覆盖限制分别报告。
+- `service.py` 保存不可变检索快照，按 `task_id` 保存历次获取记录。传 `snapshot_id` 可精确读取或导出。快照导出覆盖全部本地匹配条目，并保留上游续页状态。
+- 引用和参考文献任务可用已核 DOI 补查 OpenAlex W ID，补查与引用请求共用预算。引用者支持按发表年份后筛已获取的候选，另列日期未知或冲突的论文。
+- 显式指定 arXiv 修订时，元数据缓存有效期和导出都按该修订处理。
 - `assets.py` 仅下载该论文已发现资源，流式限制大小、处理有限重定向、验证可解析文件，完成后原子替换。PDF 格式验证不等于论文身份独立认证；源码只验证 tar、不解压。
 - `server.py` 仅注册上述 15 项工具，业务逻辑可脱离 MCP 协议测试。
 

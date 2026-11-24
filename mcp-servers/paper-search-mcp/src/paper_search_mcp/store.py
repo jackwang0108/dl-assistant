@@ -68,7 +68,7 @@ class Store:
             )
         return record
 
-    def records(self, ref):
+    def records(self, ref, version=None):
         # Follow explicit provider-supplied identifiers, not title similarity.
         refs, records = {normalize_ref(ref)}, {}
         while True:
@@ -89,12 +89,18 @@ class Store:
                 refs.update(r["identifiers"])
             if len(refs) == before:
                 break
-        return sorted(records.values(), key=lambda r: r["fetched_at"])
+        observations = records.values()
+        if version is not None:
+            exact_ref = normalize_ref(ref)
+            observations = [
+                r
+                for r in observations
+                if r.get("version") == version and exact_ref in r["identifiers"]
+            ]
+        return sorted(observations, key=lambda r: r["fetched_at"])
 
     def paper(self, ref, view="normalized", version=None):
-        observations = self.records(ref)
-        if version:
-            observations = [o for o in observations if o.get("version") == version]
+        observations = self.records(ref, version)
         if not observations:
             return None
         refs = sorted({r for o in observations for r in o["identifiers"]})
@@ -182,13 +188,18 @@ class Store:
             )
         return result
 
-    def get_snapshot(self, snapshot_or_query):
+    def get_snapshot(self, snapshot_or_query, *, exact=False):
         with self.connect() as db:
-            row = db.execute(
-                "SELECT payload FROM snapshots WHERE id=? OR query_id=? "
-                "ORDER BY created_at DESC LIMIT 1",
-                (snapshot_or_query, snapshot_or_query),
-            ).fetchone()
+            if exact:
+                row = db.execute(
+                    "SELECT payload FROM snapshots WHERE id=?", (snapshot_or_query,)
+                ).fetchone()
+            else:
+                row = db.execute(
+                    "SELECT payload FROM snapshots WHERE id=? OR query_id=? "
+                    "ORDER BY created_at DESC, rowid DESC LIMIT 1",
+                    (snapshot_or_query, snapshot_or_query),
+                ).fetchone()
         if not row:
             raise ValueError("Unknown query/snapshot; query IDs are local to this cache")
         return json.loads(row["payload"])
@@ -196,7 +207,8 @@ class Store:
     def cached_snapshot(self, spec, max_age_seconds=86400):
         with self.connect() as db:
             row = db.execute(
-                "SELECT payload FROM snapshots WHERE spec_hash=? ORDER BY created_at DESC LIMIT 1",
+                "SELECT payload FROM snapshots WHERE spec_hash=? "
+                "ORDER BY created_at DESC, rowid DESC LIMIT 1",
                 (digest(spec),),
             ).fetchone()
         if row:
@@ -204,6 +216,6 @@ class Store:
             age = (
                 datetime.now(timezone.utc) - datetime.fromisoformat(obj["created_at"])
             ).total_seconds()
-            if age < max_age_seconds:
+            if max_age_seconds is None or age < max_age_seconds:
                 return obj
         return None

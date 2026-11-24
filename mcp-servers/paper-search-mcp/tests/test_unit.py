@@ -191,6 +191,18 @@ def test_generic_paper_url_and_version_discrimination():
     )
     assert version_from_ref("doi:10.1234/methodv1") is None
     assert version_from_ref("https://arxiv.org/pdf/1706.03762v2.pdf?download=1") == "v2"
+    assert version_from_ref(" https://arxiv.org/pdf/1706.03762%76%32.pdf ") == "v2"
+    with pytest.raises(ValueError, match="revision"):
+        normalize_ref("arxiv:1706.03762v0")
+
+
+@pytest.mark.parametrize("bounds", [{}, {"start": 2025, "end": 2024}, {"start": "2024"}])
+def test_publication_year_range_checks(bounds):
+    from paper_search_mcp.models import PublicationYearRange
+
+    with pytest.raises(ValueError):
+        PublicationYearRange.model_validate(bounds)
+    assert PublicationYearRange(start=2025).end is None
 
 
 def test_recommendations_request_uses_verified_endpoint(make_service):

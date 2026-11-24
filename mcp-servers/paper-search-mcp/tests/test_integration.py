@@ -9,9 +9,9 @@ import pytest
 
 from paper_search_mcp import assets
 from paper_search_mcp.models import Budget, PaperLookup, PaperQuery
-from paper_search_mcp.providers import arxiv_records, scholar_record, ss_record
+from paper_search_mcp.providers import arxiv_records, oa_record, scholar_record, ss_record
 from paper_search_mcp.service import Service
-from conftest import ATOM, SCHOLAR_PAPER, SS_PAPER
+from conftest import ATOM, OA_PAPER, SCHOLAR_PAPER, SS_PAPER
 
 
 def query(source="semantic_scholar"):
@@ -64,7 +64,23 @@ def test_pages_continue_upstream_and_cursor_is_frozen(make_service):
     old = s.get_query_results(first["query_id"], cursor=page["next_cursor"], page_size=1)
     assert old["snapshot_id"] == first["snapshot_id"]
     assert old["items"][0]["paper_ref"] == first["items"][1]["paper_ref"]
+    assert (
+        s.get_query_results(
+            snapshot_id=first["snapshot_id"], cursor=page["next_cursor"], page_size=1
+        )
+        == old
+    )
     assert len(s.get_query_results(first["snapshot_id"])["items"]) == 2
+    original = s.get_query_results(snapshot_id=first["snapshot_id"])
+    assert [r["offset_before"] for r in original["retrieval_history"][0]["attempts"]] == [None]
+    history = extended["retrieval_history"][0]
+    assert history["task_id"] == original["source_reports"][0]["task_id"]
+    assert [r["offset_before"] for r in history["attempts"]] == [None, 2]
+    with pytest.raises(ValueError, match="cursor"):
+        s.get_query_results(snapshot_id=extended["snapshot_id"], cursor=page["next_cursor"])
+    with pytest.raises(ValueError, match="Unknown"):
+        s.get_query_results(snapshot_id=first["query_id"])
+    assert calls == [0, 2]
 
 
 def test_partial_failure_retries_only_failed_source(make_service):
@@ -87,6 +103,8 @@ def test_partial_failure_retries_only_failed_source(make_service):
         r["status"] == "ok" for r in second["source_reports"]
     )
     assert s.get_query_results(first["snapshot_id"])["source_reports"][1]["status"] == "failed"
+    assert [r["status"] for r in second["retrieval_history"][1]["attempts"]] == ["failed", "ok"]
+    assert len(second["retrieval_history"][0]["attempts"]) == 1
 
 
 def test_add_queries_and_refresh_preserve_old_snapshot(make_service):
@@ -107,8 +125,23 @@ def test_add_queries_and_refresh_preserve_old_snapshot(make_service):
         queries=[PaperQuery(text="other", sources=["semantic_scholar"])],
     )
     assert len(added["items"]) == 2 and len(added["changes"]["newly_matched"]) == 1
-    assert len(s.extend_query(added["query_id"], "refresh")["items"]) == 2
+    refreshed = s.extend_query(added["query_id"], "refresh")
+    assert len(refreshed["items"]) == 2
+    assert [h["task_id"] for h in refreshed["retrieval_history"]] == ["task-1", "task-2"]
+    assert [len(h["attempts"]) for h in refreshed["retrieval_history"]] == [2, 2]
     assert s.get_query_results(first["snapshot_id"])["items"] == first["items"]
+
+
+def test_refresh_cache_policy_keeps_existing_query_history(make_service):
+    s = make_service(lambda req: httpx.Response(200, json={"data": [SS_PAPER]}))
+    first = s.search_papers(query())
+    refreshed = s.search_papers(query(), cache="refresh")
+    assert refreshed["query_id"] == first["query_id"]
+    assert refreshed["snapshot_id"] != first["snapshot_id"]
+    assert [a["action"] for a in refreshed["retrieval_history"][0]["attempts"]] == [
+        "initial",
+        "refresh",
+    ]
 
 
 def test_title_candidate_not_bound_as_exact_identity(make_service):
@@ -277,6 +310,31 @@ def test_old_version_never_returns_new_one(make_service):
     assert listed["assets"] and all(a["version"] == "v1" for a in listed["assets"])
 
 
+def test_export_and_refresh_use_exact_arxiv_revision(make_service):
+    def handler(req):
+        assert req.url.params["id_list"] == "1706.03762v1"
+        return httpx.Response(200, text=ATOM)
+
+    s = make_service(handler)
+    old, _ = arxiv_records(ATOM)
+    old[0]["fetched_at"] = "2000-01-01T00:00:00+00:00"
+    new, _ = arxiv_records(ATOM.replace("v1</id>", "v2</id>").replace("arXiv full abstract", "v2"))
+    s.store.save_record(old[0])
+    s.store.save_record(new[0])
+    refs = ["https://arxiv.org/pdf/1706.03762v1.pdf", "arxiv:1706.03762v2", "arxiv:1706.03762v3"]
+    data = json.loads(s.export_records(paper_refs=refs, fields=["abstract"])["content"])
+    assert [(p["version"], p["abstract"]) for p in data["records"]] == [
+        ("v1", "arXiv full abstract"),
+        ("v2", "v2"),
+    ]
+    assert data["missing"] == [{"paper_ref": refs[2], "reason": "version_not_in_cache"}]
+    refreshed = s.get_papers([refs[0]], view="versions")
+    assert refreshed["usage"]["requests"] == 1
+    assert refreshed["results"][0]["requested_ref"] == "arxiv:1706.03762v1"
+    assert {v["version"] for v in refreshed["results"][0]["paper"]["versions"]} == {"v1"}
+    assert s.get_papers([refs[0]])["usage"]["requests"] == 0
+
+
 @pytest.mark.parametrize("page_size", [0, -1, 201])
 def test_invalid_page_size_before_io(make_service, page_size):
     s = make_service(lambda req: httpx.Response(200, json={"data": []}))
@@ -366,6 +424,136 @@ def test_not_indexed_and_unknown_citation_endpoints_are_distinct(make_service):
     result = other.relation("s2:s1", "references", sources=["semantic_scholar"])
     assert result["source_reports"][0]["status"] == "partial"
     assert "unavailable" in result["source_reports"][0]["limitations"][0]
+
+
+@pytest.mark.parametrize(
+    ("response", "status", "resolution"),
+    [
+        (404, "not_found", "not_indexed"),
+        (403, "failed", "failed"),
+        (200, "failed", "failed"),  # returned a different DOI
+    ],
+)
+def test_openalex_doi_lookup_failure_never_fetches_relationship(
+    make_service, response, status, resolution
+):
+    def handler(req):
+        assert req.url.path.startswith("/works/https://doi.org/")
+        return httpx.Response(response, json=OA_PAPER)
+
+    s = make_service(handler)
+    result = s.relation("doi:10.1234/other", "citations", sources=["openalex"])
+    report = result["source_reports"][0]
+    assert (report["status"], report["identifier_resolution"]["status"]) == (status, resolution)
+    assert result["usage"]["requests"] == 1 and not result["items"]
+    unsupported = s.relation("arxiv:1706.03762", "citations", sources=["openalex"])
+    assert (
+        unsupported["source_reports"][0]["identifier_resolution"]["status"] == "missing_identifier"
+    )
+    assert unsupported["usage"]["requests"] == 0
+
+
+def test_openalex_doi_lookup_shares_budget_and_reuses_verified_id(make_service):
+    def handler(req):
+        if req.url.path == "/works":
+            assert req.url.params["filter"] == "cited_by:W1"
+            return httpx.Response(200, json={"results": []})
+        assert req.url.path == "/works/https://doi.org/10.1234/attention"
+        return httpx.Response(200, json=OA_PAPER)
+
+    s = make_service(handler)
+    first = s.relation(
+        "doi:10.1234/attention", "references", sources=["openalex"], budget=Budget(max_requests=1)
+    )
+    report = first["source_reports"][0]
+    assert report["error"]["kind"] == "budget"
+    assert report["identifier_resolution"] == {
+        "status": "resolved",
+        "lookup_ref": "doi:10.1234/attention",
+        "identifier": "openalex:W1",
+    }
+    resumed = s.extend_query(first["query_id"], "retry_failed", budget=Budget(max_requests=1))
+    assert resumed["source_reports"][0]["status"] == "ok"
+    assert [r["requests"] for r in resumed["retrieval_history"][0]["attempts"]] == [1, 1]
+    assert resumed["coverage"]["upstream_has_more"] is False
+    cached = s.relation("doi:10.1234/attention", "references", sources=["openalex"], cache="only")
+    assert cached["snapshot_id"] == resumed["snapshot_id"]
+
+
+def test_citation_year_postfilter_freezes_evidence_and_upstream_coverage(make_service):
+    def citing(n, year):
+        return {
+            "citingPaper": {
+                "paperId": f"c{n}",
+                "externalIds": {"DOI": f"10.1234/c{n}"},
+                "year": year,
+            }
+        }
+
+    def handler(req):
+        assert "year" not in req.url.params
+        assert req.url.path.endswith("/citations")
+        if req.url.params["offset"] == "0":
+            return httpx.Response(
+                200,
+                json={
+                    "data": [citing(1, 2025), citing(2, 2023), citing(3, None), citing(4, 2025)],
+                    "next": 4,
+                },
+            )
+        return httpx.Response(200, json={"data": [citing(5, 2026)]})
+
+    s = make_service(handler)
+    s.store.save_record(
+        oa_record({**OA_PAPER, "doi": "https://doi.org/10.1234/c4", "publication_year": 2024})
+    )
+    first = s.relation(
+        "s2:seed",
+        "citations",
+        sources=["semantic_scholar"],
+        publication_year_range={"start": 2025, "end": 2026},
+    )
+    counts = first["year_filter"]
+    assert (counts["retrieved_count"], counts["matched_count"], counts["outside_count"]) == (
+        4,
+        1,
+        1,
+    )
+    assert [(u["paper_ref"], u["reason"]) for u in counts["unknown_items"]] == [
+        ("doi:10.1234/c3", "missing_publication_year"),
+        ("doi:10.1234/c4", "conflicting_publication_years"),
+    ]
+    assert first["items"][0]["publication_year_evidence"]["year"] == 2025
+    assert first["coverage"]["upstream_has_more"] is True
+    more = s.extend_query(first["query_id"], "fetch_more")
+    assert more["year_filter"]["matched_count"] == 2
+    assert more["coverage"]["upstream_has_more"] is False
+    exported = json.loads(s.export_records(snapshot_id=first["snapshot_id"])["content"])
+    assert exported["year_filter"] == counts
+    assert exported["coverage"]["upstream_has_more"] is True
+
+
+def test_snapshot_export_includes_all_local_pages(make_service):
+    def handler(req):
+        start = int(req.url.params.get("offset", 0))
+        return httpx.Response(
+            200,
+            json={
+                "data": [{"paperId": f"record-{i}"} for i in range(start, start + 20)],
+                "next": start + 20,
+            },
+        )
+
+    s = make_service(handler)
+    first = s.search_papers(query())
+    second = s.extend_query(first["query_id"], "fetch_more")
+    assert len(second["items"]) == 20 and second["next_cursor"]
+    current = s.export_records(query_id=first["query_id"])
+    assert current["count"] == 40 and current["snapshot_id"] == second["snapshot_id"]
+    assert current["coverage"]["export_scope"] == "all_local_matching_records"
+    assert not current["coverage"]["local_has_more"] and current["coverage"]["upstream_has_more"]
+    frozen = s.export_records(snapshot_id=first["snapshot_id"])
+    assert frozen["count"] == 20
 
 
 def test_source_archive_validated_without_extraction(make_service):

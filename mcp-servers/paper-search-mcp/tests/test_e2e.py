@@ -1,5 +1,7 @@
 """Protocol E2E: all public tools, validated inputs and multi-call workflows."""
 
+import json
+
 import httpx
 import pymupdf
 import pytest
@@ -160,6 +162,26 @@ async def test_relationship_tools(e2e, tool):
     async with Client(e2e) as client:
         result = await call(client, tool, paper_ref="s2:s1", sources=["semantic_scholar"])
         assert result["items"][0]["relation_evidence"][0]["source"] == "semantic_scholar"
+
+
+async def test_citation_postfilter_and_exact_export_over_mcp(e2e):
+    async with Client(e2e) as client:
+        found = await call(
+            client,
+            "get_paper_citations",
+            paper_ref="doi:10.1234/attention",
+            sources=["openalex"],
+            publication_year_range={"start": 2017, "end": 2017},
+        )
+        assert found["year_filter"]["matched_count"] == 1
+        assert found["source_reports"][0]["identifier_resolution"]["status"] == "resolved"
+        page = await call(client, "get_query_results", snapshot_id=found["snapshot_id"])
+        assert page["items"] == found["items"]
+        exported = await call(client, "export_records", snapshot_id=found["snapshot_id"])
+        payload = json.loads(exported["content"])
+        assert payload["records"] == found["items"]
+        assert payload["retrieval_history"] == found["retrieval_history"]
+        assert payload["query_id"] == found["query_id"]
 
 
 @pytest.mark.parametrize(

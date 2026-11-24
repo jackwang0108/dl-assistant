@@ -44,6 +44,19 @@ class PaperFilters(Input):
     unsupported: Literal["error", "report"] = "error"
 
 
+class PublicationYearRange(Input):
+    start: int | None = Field(default=None, strict=True, ge=1000, le=2200)
+    end: int | None = Field(default=None, strict=True, ge=1000, le=2200)
+
+    @model_validator(mode="after")
+    def ordered(self):
+        if self.start is None and self.end is None:
+            raise ValueError("A publication year bound is required")
+        if self.start is not None and self.end is not None and self.start > self.end:
+            raise ValueError("Publication year start must not exceed end")
+        return self
+
+
 class PaperQuery(Input):
     text: str = Field(min_length=1, max_length=4000)
     sources: list[Source] | None = Field(default=None, min_length=1)

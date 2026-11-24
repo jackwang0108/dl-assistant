@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from .config import Config
 from .identity import canonical_ref, normalize_ref, title_key, version_from_ref
-from .models import PaperLookup, PaperQuery
+from .models import PaperLookup, PaperQuery, PublicationYearRange
 from .providers import Providers
 from .store import Store, digest
 from .transport import Operation, SourceError, Transport
@@ -22,6 +22,8 @@ CORE = {
     "entity_ref",
     "entity_type",
     "source",
+    "version",
+    "publication_year_evidence",
 }
 
 
@@ -65,6 +67,7 @@ class Service:
             "sources": self.providers.capabilities(),
             "cache_policies": ["prefer", "refresh", "only"],
             "query_ids": "Local cache identifiers; use stable paper refs across machines.",
+            "citation_post_filters": ["publication_year_range"],
             "related_methods": [
                 "shared_references",
                 "shared_citations",
@@ -257,7 +260,7 @@ class Service:
                 and cache == "prefer"
                 and (
                     datetime.now(timezone.utc)
-                    - datetime.fromisoformat(max(r["fetched_at"] for r in self.store.records(ref)))
+                    - datetime.fromisoformat(self.store.records(ref, version)[-1]["fetched_at"])
                 ).total_seconds()
                 < 86400
             )
@@ -271,19 +274,26 @@ class Service:
                     try:
                         if op.items >= op.budget.max_items:
                             raise SourceError("budget", "Item budget reached")
-                        for record in self.providers.resolve(
-                            source, ref, op, version_from_ref(value)
-                        ):
+                        matched = False
+                        for record in self.providers.resolve(source, ref, op, version):
                             op.items += 1
-                            if ref in record["identifiers"]:
+                            if ref in record["identifiers"] and (
+                                version is None or record.get("version") == version
+                            ):
                                 self.store.save_record(record)
+                                matched = True
+                        if not matched:
+                            raise SourceError(
+                                "not_found", "Requested identifier/version not returned"
+                            )
                         reports.append({"source": source, "status": "ok"})
                     except SourceError as exc:
                         reports.append(error_report(source, exc))
                 current = self.store.paper(ref, view, version)
             results.append(
                 {
-                    "requested_ref": ref,
+                    "requested_ref": ref + (version or ""),
+                    "requested_version": version,
                     "status": ("partial" if any(r["status"] == "failed" for r in reports) else "ok")
                     if current
                     else ("cache_miss" if cache == "only" else self._absence(reports)),
@@ -333,33 +343,92 @@ class Service:
 
     def _relation_tasks(self, paper_ref, kind, sources):
         ref = normalize_ref(paper_ref)
-        observed = self.store.paper(ref)
-        aliases = observed["identifiers"] if observed else [ref]
-        tasks = []
-        for source in self._sources(sources or ["semantic_scholar", "openalex", "scholar"]):
-            schemes = {
-                "semantic_scholar": ["s2", "doi", "arxiv"],
-                "openalex": ["openalex"],
-                "scholar": ["scholar_cites"],
-                "arxiv": [],
-            }[source]
-            resolved = next(
-                (a for scheme in schemes for a in aliases if a.startswith(scheme + ":")), ref
-            )
-            tasks.append(
-                {"kind": kind, "source": source, "paper_ref": ref, "resolved_ref": resolved}
-            )
-        return tasks
+        return [
+            {"kind": kind, "source": source, "paper_ref": ref}
+            for source in self._sources(sources or ["semantic_scholar", "openalex", "scholar"])
+        ]
 
-    def relation(self, paper_ref, kind, sources=None, filters=None, budget=None, cache="prefer"):
-        tasks = self._relation_tasks(paper_ref, kind, sources)
-        # Filtering a citation endpoint is different from filtering a search endpoint.
-        # Explicit local filtering is not a promise of exhaustive filtered retrieval.
-        if filters and filters.model_dump(exclude_defaults=True):
-            raise ValueError(
-                "Citation filters are not supported yet; inspect/export candidates instead"
+    def _relation_identifier(self, task, op):
+        source, ref = task["source"], task["paper_ref"]
+        if task.get("resolved_ref"):
+            return
+        observed = self.store.paper(ref)
+        aliases = [ref, *(observed["identifiers"] if observed else [])]
+        schemes = {
+            "semantic_scholar": ("s2", "doi", "arxiv"),
+            "openalex": ("openalex",),
+            "scholar": ("scholar_cites",) if task["kind"] == "citations" else (),
+            "arxiv": (),
+        }[source]
+        for scheme in schemes:
+            candidates = {a for a in aliases if a.startswith(scheme + ":")}
+            candidate = (
+                ref
+                if ref in candidates
+                else next(iter(candidates))
+                if len(candidates) == 1
+                else None
             )
-        return self._query({"kind": kind, "tasks": tasks}, budget, cache)
+            if candidate:
+                task["resolved_ref"] = candidate
+                task["identifier_resolution"] = {
+                    "status": "provided" if candidate == ref else "cached_alias",
+                    "identifier": candidate,
+                }
+                return
+        # OpenAlex supplies exact work lookup by DOI. An unambiguous DOI is required.
+        dois = sorted({a for a in aliases if a.startswith("doi:")})
+        lookup = ref if ref.startswith("doi:") else dois[0] if len(dois) == 1 else None
+        if source != "openalex" or not lookup:
+            task["identifier_resolution"] = {"status": "missing_identifier"}
+            raise SourceError("unsupported", "No confirmed identifier for this citation source")
+        try:
+            for record in self.providers.resolve("openalex", lookup, op):
+                ids = record["identifiers"]
+                native = [a for a in ids if a.startswith("openalex:")]
+                if lookup not in ids or len(native) != 1:
+                    raise SourceError(
+                        "parse", "OpenAlex response did not verify the DOI and work ID"
+                    )
+                self.store.save_record(record)
+                task["resolved_ref"] = native[0]
+                task["identifier_resolution"] = {
+                    "status": "resolved",
+                    "lookup_ref": lookup,
+                    "identifier": native[0],
+                }
+                return
+            raise SourceError("not_found", "OpenAlex returned no record for the DOI")
+        except (ValueError, KeyError, TypeError):
+            task["identifier_resolution"] = {"status": "failed", "lookup_ref": lookup}
+            raise SourceError("parse", "Malformed OpenAlex identifier response") from None
+        except SourceError as exc:
+            task["identifier_resolution"] = {
+                "status": "not_indexed" if exc.kind == "not_found" else "failed",
+                "lookup_ref": lookup,
+            }
+            raise
+
+    def relation(
+        self,
+        paper_ref,
+        kind,
+        sources=None,
+        filters=None,
+        budget=None,
+        cache="prefer",
+        publication_year_range=None,
+    ):
+        tasks = self._relation_tasks(paper_ref, kind, sources)
+        if filters and filters.model_dump(exclude_defaults=True):
+            raise ValueError("Use publication_year_range for local filtering of citing papers")
+        spec = {"kind": kind, "tasks": tasks}
+        if publication_year_range is not None:
+            if kind != "citations":
+                raise ValueError("publication_year_range is only available for citing papers")
+            year_range = PublicationYearRange.model_validate(publication_year_range)
+            spec["publication_year_range"] = year_range.model_dump()
+        return self._query(spec, budget, cache)
 
     def search_entities(
         self, name, entity, sources=None, affiliation=None, topic=None, country=None, budget=None
@@ -421,7 +490,9 @@ class Service:
 
     def _query(self, spec, budget, cache):
         spec = {**spec, "source_capabilities": self.providers.capabilities()}
-        cached = self.store.cached_snapshot(spec)
+        cached = self.store.cached_snapshot(spec, None if cache == "refresh" else 86400)
+        if cached and cache == "refresh":
+            return self.extend_query(cached["snapshot_id"], "refresh", budget=budget)
         if cache != "refresh" and cached:
             result = self._page(cached, 0, 20)
             result["cache_state"] = "hit"
@@ -438,31 +509,34 @@ class Service:
         snapshot = self._execute(spec, copy.deepcopy(spec["tasks"]), [], Operation(budget))
         return self._page(snapshot, 0, 20)
 
-    def _execute(self, spec, tasks, items, op, query_id=None, selection=None):
+    def _execute(self, spec, tasks, items, op, query_id=None, selection=None, action="initial"):
         items = copy.deepcopy(items)
         for index, task in enumerate(tasks):
             if selection is not None and index not in selection:
                 continue
             source = task["source"]
-            if not self.providers.enabled(source):
-                task["report"] = {
-                    "source": source,
-                    "status": "disabled",
-                    "fetched_count": 0,
-                    "upstream_has_more": None,
-                    "missing_config": ["SERPAPI_KEY"],
-                }
-                continue
-            remaining = op.budget.max_items - op.items
-            if remaining <= 0:
-                task["report"] = error_report(source, SourceError("budget", "Item budget reached"))
-                continue
-            size = min(20, remaining, max(1, op.budget.max_items // max(1, len(tasks))))
+            task_id = task["task_id"] = f"task-{index + 1}"
+            offset_before = task.get("offset")
+            requests_before = op.requests
             try:
+                if not self.providers.enabled(source):
+                    task["report"] = {
+                        "source": source,
+                        "status": "disabled",
+                        "fetched_count": 0,
+                        "upstream_has_more": None,
+                        "missing_config": ["SERPAPI_KEY"],
+                    }
+                    continue
+                remaining = op.budget.max_items - op.items
+                if remaining <= 0:
+                    raise SourceError("budget", "Item budget reached")
+                size = min(20, remaining, max(1, op.budget.max_items // max(1, len(tasks))))
                 kind = task["kind"]
                 if kind == "search":
                     records, offset, more, limits, actual = self.providers.search(task, size, op)
                 elif kind in ("citations", "references"):
+                    self._relation_identifier(task, op)
                     records, offset, more, limits, actual = self.providers.relation(task, size, op)
                 elif kind == "entity_search":
                     records, offset, more, limits, actual = self.providers.entity_search(
@@ -523,6 +597,20 @@ class Service:
                 task["report"] = error_report(
                     source, SourceError("parse", "Malformed upstream record")
                 )
+            finally:
+                if "report" in task:
+                    report = task["report"]
+                    report.update(
+                        task_id=task_id,
+                        action=action,
+                        offset_before=offset_before,
+                        offset_after=task.get("offset"),
+                        recorded_at=datetime.now(timezone.utc).isoformat(),
+                        requests=op.requests - requests_before,
+                    )
+                    if "identifier_resolution" in task:
+                        report["identifier_resolution"] = task["identifier_resolution"]
+                    task.setdefault("history", []).append(report)
         all_items = items
         if spec["kind"] == "related" and spec["match"] == "all":
             items = [
@@ -531,16 +619,62 @@ class Service:
                 if set(spec["paper_refs"])
                 <= {e["seed_ref"] for e in item.get("relation_evidence", [])}
             ]
+        year_filter = None
+        if bounds := spec.get("publication_year_range"):
+            items, year_filter = self._filter_publication_years(items, bounds)
         return self.store.snapshot(
             {
                 "spec": spec,
                 "tasks": tasks,
                 "items": items,
                 "all_items": all_items,
+                "year_filter": year_filter,
                 "usage": op.usage(),
             },
             query_id,
         )
+
+    def _filter_publication_years(self, items, bounds):
+        matched, unknown = [], []
+        start, end = bounds["start"], bounds["end"]
+        for item in items:
+            by_source = {}
+            for observation in self.store.records(item["paper_ref"]):
+                source, year = observation["source"], observation.get("year")
+                # arXiv's year is first submission. Scholar's year is extracted from a snippet.
+                if source in ("semantic_scholar", "openalex") and type(year) is int:
+                    by_source[source] = {
+                        "source": source,
+                        "year": year,
+                        "fetched_at": observation["fetched_at"],
+                    }
+            years = {entry["year"] for entry in by_source.values()}
+            evidence = list(by_source.values())
+            if len(years) != 1:
+                unknown.append(
+                    {
+                        "paper_ref": item["paper_ref"],
+                        "reason": "conflicting_publication_years"
+                        if years
+                        else "missing_publication_year",
+                        "evidence": evidence,
+                    }
+                )
+                continue
+            year = next(iter(years))
+            if (start is None or start <= year) and (end is None or year <= end):
+                matched.append(
+                    {**item, "publication_year_evidence": {"year": year, "sources": evidence}}
+                )
+        return matched, {
+            "applies_to": "retrieved_candidates",
+            "range": bounds,
+            "retrieved_count": len(items),
+            "matched_count": len(matched),
+            "outside_count": len(items) - len(matched) - len(unknown),
+            "unknown_count": len(unknown),
+            "unknown_items": unknown,
+        }
 
     @staticmethod
     def _cursor(snapshot, index):
@@ -549,12 +683,7 @@ class Service:
         ).decode()
 
     def _page(self, snapshot, offset, page_size, fields=None):
-        reports = [
-            task.get(
-                "report", {"source": task["source"], "status": "not_run", "upstream_has_more": None}
-            )
-            for task in snapshot["tasks"]
-        ]
+        reports = [task["report"] for task in snapshot["tasks"]]
         more = [r.get("upstream_has_more") for r in reports]
         upstream = True if True in more else (None if None in more else False)
         items = snapshot["items"][offset : offset + page_size]
@@ -578,6 +707,15 @@ class Service:
             if next_offset < len(snapshot["items"])
             else None,
             "source_reports": reports,
+            "retrieval_history": [
+                {
+                    "task_id": task["task_id"],
+                    "task": spec,
+                    "attempts": task["history"],
+                }
+                for spec, task in zip(snapshot["spec"]["tasks"], snapshot["tasks"], strict=True)
+            ],
+            **({"year_filter": snapshot["year_filter"]} if snapshot["year_filter"] else {}),
             "coverage": {
                 "local_has_more": next_offset < len(snapshot["items"]),
                 "upstream_has_more": upstream,
@@ -588,10 +726,14 @@ class Service:
             "ordering": "Provider/task order; not a globally comparable relevance score.",
         }
 
-    def get_query_results(self, query_id, cursor=None, page_size=20, fields=None):
+    def get_query_results(
+        self, query_id=None, cursor=None, page_size=20, fields=None, snapshot_id=None
+    ):
+        if bool(query_id) == bool(snapshot_id):
+            raise ValueError("Provide exactly one of query_id and snapshot_id")
         if not 1 <= page_size <= 200:
             raise ValueError("page_size must be between 1 and 200")
-        snapshot = self.store.get_snapshot(query_id)
+        snapshot = self.store.get_snapshot(snapshot_id or query_id, exact=bool(snapshot_id))
         offset = 0
         if cursor:
             try:
@@ -603,12 +745,16 @@ class Service:
                     or offset < 0
                 ):
                     raise ValueError()
-                frozen = self.store.get_snapshot(sid)
-                if frozen["query_id"] != snapshot["query_id"]:
+                frozen = self.store.get_snapshot(sid, exact=True)
+                if frozen["query_id"] != snapshot["query_id"] or (
+                    snapshot_id and sid != snapshot_id
+                ):
                     raise ValueError()
                 snapshot = frozen
             except (ValueError, TypeError, UnicodeError, json.JSONDecodeError):
-                raise ValueError("Invalid cursor or cursor belongs to another query") from None
+                raise ValueError(
+                    "Invalid cursor or cursor belongs to another query/snapshot"
+                ) from None
         return self._page(snapshot, offset, page_size, fields)
 
     def extend_query(self, query_id, action, queries=None, sources=None, budget=None):
@@ -645,6 +791,8 @@ class Service:
             spec["tasks"] += additions
         elif action == "refresh":
             tasks = copy.deepcopy(spec["tasks"])
+            for task, previous in zip(tasks, old["tasks"], strict=True):
+                task["history"] = copy.deepcopy(previous["history"])
             selection = list(range(len(tasks)))
         else:
             raise ValueError("Unknown extension action")
@@ -656,10 +804,11 @@ class Service:
         snapshot = self._execute(
             spec,
             tasks,
-            [] if action == "refresh" else old.get("all_items", old["items"]),
+            [] if action == "refresh" else old["all_items"],
             Operation(budget),
             old["query_id"],
             selection,
+            action,
         )
         oldmap = {i.get("paper_ref", i.get("entity_ref")): i for i in old["items"]}
         newmap = {i.get("paper_ref", i.get("entity_ref")): i for i in snapshot["items"]}
@@ -715,34 +864,58 @@ class Service:
         )
         return result
 
-    def export_records(self, query_id=None, paper_refs=None, format="json", fields=None):
-        if bool(query_id) == bool(paper_refs):
-            raise ValueError("Provide query_id or nonempty paper_refs, not both")
-        snapshot = self.store.get_snapshot(query_id) if query_id else None
+    def export_records(
+        self, query_id=None, paper_refs=None, format="json", fields=None, snapshot_id=None
+    ):
+        if sum(map(bool, (query_id, paper_refs, snapshot_id))) != 1:
+            raise ValueError("Provide exactly one of query_id, snapshot_id or nonempty paper_refs")
+        snapshot = (
+            self.store.get_snapshot(snapshot_id or query_id, exact=bool(snapshot_id))
+            if snapshot_id or query_id
+            else None
+        )
         missing = []
         if snapshot:
             records = snapshot["items"]
         else:
             records = []
             for ref in paper_refs:
-                record = self.store.paper(normalize_ref(ref))
+                version = version_from_ref(ref)
+                record = self.store.paper(normalize_ref(ref), version=version)
                 if record:
                     records.append(record)
                 else:
-                    missing.append({"paper_ref": ref, "reason": "not_in_cache"})
+                    missing.append(
+                        {
+                            "paper_ref": ref,
+                            "reason": "version_not_in_cache" if version else "not_in_cache",
+                        }
+                    )
         records = [selected_fields(r, fields) for r in records]
-        coverage = self._page(snapshot, 0, 20)["coverage"] if snapshot else None
+        metadata = {"snapshot_id": None, "coverage": None}
+        if snapshot:
+            page = self._page(snapshot, 0, 20)
+            metadata = {
+                key: page[key]
+                for key in ("query_id", "snapshot_id", "created_at", "coverage", "year_filter")
+                if key in page
+            }
+            metadata["coverage"] = {
+                **metadata["coverage"],
+                "local_has_more": False,
+                "export_scope": "all_local_matching_records",
+                "local_matching_count": len(records),
+            }
+        count = len(records)
         if format == "json":
             content = json.dumps(
                 {
                     "records": records,
                     "missing": missing,
                     "spec": snapshot["spec"] if snapshot else None,
-                    "source_reports": [t.get("report") for t in snapshot["tasks"]]
-                    if snapshot
-                    else [],
-                    "snapshot_id": snapshot["snapshot_id"] if snapshot else None,
-                    "coverage": coverage,
+                    "source_reports": page["source_reports"] if snapshot else [],
+                    "retrieval_history": page["retrieval_history"] if snapshot else [],
+                    **metadata,
                 },
                 ensure_ascii=False,
                 indent=2,
@@ -751,6 +924,7 @@ class Service:
             content = "\n".join(
                 f"- {r.get('title') or r.get('name') or 'Unknown title'} "
                 f"[{r.get('paper_ref') or r.get('entity_ref')}]"
+                + (f" ({r['version']})" if r.get("version") else "")
                 for r in records
             )
         elif format == "bibtex":
@@ -781,7 +955,8 @@ class Service:
                 absent = [k for k in ("title", "year", "author") if not values[k]]
                 if absent:
                     missing.append({"paper_ref": r["paper_ref"], "missing_fields": absent})
-                key = "paper" + digest(r["paper_ref"])[:12]
+                identity = r["paper_ref"] + (r.get("version") or "")
+                key = "paper" + digest(identity)[:12]
                 entries.append(
                     "@misc{"
                     + key
@@ -792,13 +967,13 @@ class Service:
                     + "\n}"
                 )
             content = "\n\n".join(entries)
+            count = len(entries)
         else:
             raise ValueError("Unsupported export format")
         return {
             "format": format,
             "content": content,
-            "count": len(records),
+            "count": count,
             "missing": missing,
-            "snapshot_id": snapshot["snapshot_id"] if snapshot else None,
-            "coverage": coverage,
+            **metadata,
         }
