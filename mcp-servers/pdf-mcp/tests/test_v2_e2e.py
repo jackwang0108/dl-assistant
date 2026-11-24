@@ -53,6 +53,10 @@ async def test_protocol_tools_and_full_workflow(mcp, text_pdf, table_pdf):
         assert (await call(client, "pdf_outline", document_id=doc))["items"]
         assert (await call(client, "pdf_read", document_id=doc, section="Experiments"))["items"]
         matches = await call(client, "pdf_search", document_id=doc, query="experiments")
+        match = next(i for i in matches["items"] if i["kind"] == "match")
+        local = await call(client, "pdf_read", document_id=doc, match_ref=match["match_ref"])
+        assert local["items"][0]["scope"] == "match"
+        assert any(i["kind"] == "original_page_crop" for i in local["items"])
         assert matches["items"][0]["pages_with_matches"] == [2]
         rendered = await call(
             client, "pdf_render", document_id=doc, pages="2", bbox=[0, 0, 200, 200]

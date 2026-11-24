@@ -45,7 +45,7 @@ def page_records(doc, pages, bbox=None):
             try:
                 data = page.get_text(
                     "dict",
-                    clip=rect,
+                    clip=rect * page.derotation_matrix,
                     sort=False,
                     flags=pymupdf.TEXTFLAGS_DICT & ~pymupdf.TEXT_PRESERVE_IMAGES,
                 )
@@ -79,7 +79,7 @@ def page_records(doc, pages, bbox=None):
                         "block_id": ident,
                         "kind": "text",
                         "page": number,
-                        "bbox": list(block["bbox"]),
+                        "bbox": list(pymupdf.Rect(block["bbox"]) * page.rotation_matrix),
                         "text": text,
                         "provenance": "pdf_text_layer",
                         "section_ids": [],
@@ -92,7 +92,7 @@ def page_records(doc, pages, bbox=None):
                             {
                                 "size": span["size"],
                                 "font": span["font"],
-                                "bbox": span["bbox"],
+                                "bbox": list(pymupdf.Rect(span["bbox"]) * page.rotation_matrix),
                                 "text": span["text"],
                             }
                         )
@@ -151,7 +151,7 @@ def native_objects(doc, pages, kind=None):
                                 "object_id": f"image:{number}:{index}:{occurrence}",
                                 "kind": "image",
                                 "page": number,
-                                "bbox": list(rect),
+                                "bbox": list(rect * page.rotation_matrix),
                                 "xref": xref,
                                 "width": image[2],
                                 "height": image[3],
@@ -164,7 +164,13 @@ def native_objects(doc, pages, kind=None):
                             }
                         )
             if kind in (None, "table"):
+                rotation = page.rotation
+                visual_coordinates = page.rotation_matrix
                 try:
+                    # Table detection on a rotated, cropped page may use the detector's
+                    # transformed media box. Work in the crop-relative unrotated frame.
+                    if rotation:
+                        page.set_rotation(0)
                     tables = page.find_tables()
                     for index, table in enumerate(tables.tables):
                         try:
@@ -184,7 +190,7 @@ def native_objects(doc, pages, kind=None):
                                 "object_id": f"table:{number}:{index}",
                                 "kind": "table",
                                 "page": number,
-                                "bbox": list(table.bbox),
+                                "bbox": list(pymupdf.Rect(table.bbox) * visual_coordinates),
                                 "cells": cells,
                                 "rows": table.row_count,
                                 "columns": table.col_count,
@@ -205,6 +211,9 @@ def native_objects(doc, pages, kind=None):
                             "reason": type(error).__name__,
                         }
                     )
+                finally:
+                    if rotation:
+                        page.set_rotation(rotation)
     return objects, diagnostics
 
 
@@ -238,6 +247,10 @@ def render(store, doc, page_number, bbox=None, dpi=150):
             "sha256": checksum(path),
             "provenance": "original_pdf_render",
         }
+
+
+def padded_bbox(bbox, padding):
+    return [bbox[0] - padding, bbox[1] - padding, bbox[2] + padding, bbox[3] + padding]
 
 
 def extract_bitmap(store, doc, obj):

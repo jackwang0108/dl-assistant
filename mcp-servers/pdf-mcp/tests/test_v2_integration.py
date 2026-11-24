@@ -82,6 +82,154 @@ def test_shared_page_bookmarks_do_not_make_first_section_empty(service, tmp_path
     assert result["items"][0]["coverage"] == "candidate_pages_including_shared_boundary_pages"
 
 
+def test_rotated_cropbox_aligns_search_read_and_original_image(service, tmp_path):
+    path = tmp_path / "rotation.pdf"
+    with pymupdf.open() as pdf:
+        page = pdf.new_page(width=600, height=400)
+        page.insert_text((475, 150), "rotated-evidence")
+        for x in (150, 220, 290):
+            page.draw_line((x, 100), (x, 180))
+        for y in (100, 140, 180):
+            page.draw_line((150, y), (290, y))
+        for x, y, label in ((155, 120, "A1"), (225, 120, "B1"), (155, 155, "A2"), (225, 155, "B2")):
+            page.insert_text((x, y), label)
+        page.set_cropbox(pymupdf.Rect(25, 40, 575, 350))
+        page.set_rotation(90)
+        pdf.save(path)
+    doc = service.open(str(path))["document_id"]
+    match = service.search(doc, "rotated-evidence")["items"][1]
+    assert match["bbox"][1] == pytest.approx(450)
+    cropped = service.read(doc, match_ref=match["match_ref"], padding_points=10)["items"]
+    crop = next(item for item in cropped if item["kind"] == "original_page_crop")
+    assert any(item.get("text") == "rotated-evidence" for item in cropped)
+    manual_crop = service.render(doc, "1", bbox=crop["bbox"])["items"][0]
+    assert manual_crop["sha256"] == crop["sha256"]
+    assert min(pymupdf.Pixmap(crop["image_path"]).samples) < 100
+    region = service.read(doc, "1", bbox=crop["bbox"])["items"]
+    assert any(item.get("text") == "rotated-evidence" for item in region)
+    table = next(item for item in service.objects(doc, "table")["items"] if item["kind"] == "table")
+    assert table["bbox"] == pytest.approx([170, 125, 250, 265])
+    assert any(
+        "A1" in item.get("text", "") for item in service.read(doc, "1", bbox=table["bbox"])["items"]
+    )
+
+
+def test_bookmark_and_pages_are_intersected_for_read_and_search(service, text_pdf):
+    doc = service.open(text_pdf)["document_id"]
+    selected = service.read(doc, pages="1", section="Introduction")["items"]
+    assert selected[0]["selected_pages"] == [1]
+    assert {item["page"] for item in selected if "page" in item} == {1}
+    empty = service.read(doc, pages="3", section="Introduction")["items"]
+    assert empty[0]["selected_pages"] == []
+    assert not any(item["kind"] == "text" for item in empty)
+    summary = service.search(doc, "experiments", pages="1", section="Introduction")["items"][0]
+    assert summary["total_matches"] == 0 and summary["selected_pages"] == [1]
+
+
+def test_search_coverage_keeps_blank_and_failed_pages(service, tmp_path, monkeypatch):
+    path = tmp_path / "coverage.pdf"
+    with pymupdf.open() as pdf:
+        pdf.new_page().insert_text((30, 30), "evidence")
+        pdf.new_page()
+        pdf.new_page()
+        pdf.save(path)
+    doc = service.open(str(path))["document_id"]
+    get_text = pymupdf.Page.get_text
+
+    def extract(page, *args, **kwargs):
+        if page.number == 2:
+            raise RuntimeError("test extraction failure")
+        return get_text(page, *args, **kwargs)
+
+    monkeypatch.setattr(pymupdf.Page, "get_text", extract)
+    summary = service.search(doc, "missing")["items"][0]
+    assert summary["total_matches"] == 0 and summary["searched_pages"] == 3
+    assert summary["selected_pages"] == [1, 2, 3]
+    assert summary["pages_with_searchable_text"] == [1]
+    assert summary["pages_without_searchable_text"] == [2]
+    assert summary["pages_extraction_failed"] == [3]
+
+
+def test_parsed_section_can_be_read_inside_page_filter_and_match_keeps_parse_id(service, text_pdf):
+    doc = service.open(text_pdf)["document_id"]
+    method = {"id": "sec:m", "title": "Method", "level": 1, "page": 1}
+    raw_match = service.search(doc, "experiments", pages="2")["items"][1]
+    payload = {
+        "sections": [method],
+        "pages_processed": [1, 2],
+        "coverage": "partial",
+        "diagnostics": [{"code": "PAGES_NOT_PROCESSED", "pages": [3]}],
+        "blocks": [
+            {"block_id": "heading", "page": 1, "text": "Method", "section_id": "sec:m"},
+            {
+                "block_id": "result",
+                "kind": "text",
+                "page": 2,
+                "text": "Model experiment",
+                "bbox": raw_match["bbox"],
+                "provenance": "docling_inferred_structure",
+            },
+        ],
+    }
+    parse_id = service.store.save_parse(doc, {"test": "partial"}, payload)["parse_id"]
+    items = service.read(doc, pages="2", section="Method", parse_id=parse_id)["items"]
+    assert items[0]["selected_pages"] == [2]
+    assert items[-1]["block_id"] == "result"
+    summary, match = service.search(doc, "experiment", parse_id=parse_id)["items"]
+    assert summary["pages_not_processed"] == [3]
+    items = service.read(doc, match_ref=match["match_ref"])["items"]
+    assert items[0]["parse_id"] == parse_id
+    assert any(i["kind"] == "original_page_crop" for i in items)
+    assert any(i.get("provenance") == "docling_inferred_structure" for i in items[1:])
+
+
+@pytest.mark.parametrize("format_", ["html", "xml"])
+def test_structured_match_uses_source_neighbors_links_and_snapshot(service, tmp_path, format_):
+    source = tmp_path / f"source.{format_}"
+    if format_ == "html":
+        text = """<article><section id="method"><h2>Method</h2><p id="context">Before</p>
+        <p id="passage">Latency <a href="#figure">Figure</a> <a href="#bib">[1]</a></p></section>
+        <section id="other"><h2>Other</h2><p>Unrelated</p>
+        <figure id="figure"><figcaption>Chart</figcaption></figure></section>
+        <li class="ltx_bibitem" id="bib">Reference</li></article>"""
+    else:
+        text = """<?xml version="1.0"?><article><body><sec id="method"><title>Method</title>
+        <p id="context">Before</p><p id="passage">Latency <xref rid="figure">Figure</xref>
+        <xref rid="bib">[1]</xref></p></sec><sec id="other"><title>Other</title>
+        <p>Unrelated</p><fig id="figure"><caption>Chart</caption></fig></sec></body>
+        <back><ref-list><ref id="bib"><mixed-citation>Reference</mixed-citation></ref></ref-list>
+        </back></article>"""
+    source.write_text(text)
+    doc = service.open(str(source))["document_id"]
+    for operation in (
+        lambda: service.search(doc, "Latency", pages="99"),
+        lambda: service.read(doc, pages="99"),
+    ):
+        with pytest.raises(PdfError) as invalid:
+            operation()
+        assert invalid.value.code == "NO_PAGE_MAPPING"
+    match = service.search(doc, "Latency", section="method")["items"][1]
+    assert match["source_id"] == "passage" and match["section_ids"] == ["method"]
+    opts = {"match_ref": match["match_ref"], "context_blocks": 3, "max_chars": 2000}
+    first = service.read(doc, **opts)
+    assert first["next_cursor"]
+    items = all_items(first, lambda cursor: service.read(doc, **opts, cursor=cursor))
+    assert any(i.get("source_id") == "context" for i in items)
+    assert {i["kind"] for i in items if i.get("relationship") == "directly_referenced"} == {
+        "figure",
+        "reference",
+    }
+    assert all(i.get("text") != "Unrelated" for i in items)
+    with pytest.raises(PdfError) as cursor_error:
+        service.read(doc, **{**opts, "context_blocks": 1}, cursor=first["next_cursor"])
+    assert cursor_error.value.code == "INVALID_CURSOR"
+    source.write_text(text.replace("Latency", "Throughput"))
+    revised = service.open(str(source))["document_id"]
+    with pytest.raises(PdfError) as snapshot_error:
+        service.read(revised, **opts)
+    assert snapshot_error.value.code == "INVALID_MATCH_REF"
+
+
 def test_page_limits_are_reported_not_silently_truncated(service, tmp_path):
     path = tmp_path / "many.pdf"
     with pymupdf.open() as pdf:

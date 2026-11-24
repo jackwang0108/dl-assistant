@@ -30,6 +30,28 @@ pdf_cache_clear(expired_only=True, ttl_hours=24)
 
 图片源对象 view=image 可以下载其明确引用的源图；不访问任意正文链接。失败逐项报告。PDF 中 figure/table/equation 的原页裁剪与 embedded bitmap 提取不同，后者可能没有图注、矢量线条和子图关系。
 
+## 从搜索命中核对局部证据
+
+先在指定快照里搜索。根据 `excerpt`、来源和位置选出要核查的命中，再读它的 `match_ref`。例如，搜推理延迟的实验设置并核数字与图注。
+
+```python
+result = pdf_search(document_id=doc, query="inference latency", pages="3-6")
+# 从真实返回的 items 中选中 kind="match" 的 matched_item。
+params = {"document_id": doc, "match_ref": matched_item["match_ref"],
+          "padding_points": 30}
+local = pdf_read(**params)
+items = list(local["items"])
+while local["next_cursor"]:
+    local = pdf_read(**params, cursor=local["next_cursor"])
+    items.extend(local["items"])
+```
+
+- PDF 局部读取返回命中文字、附近可提取文字和 `original_page_crop`。用 `padding_points` 扩大文字块周围区域，默认 20 点，范围 0–144 点。坐标对应旋转、裁切后的可见原页。结果中的命中范围是块内字符位置，裁图以文字块区域为依据。模型命中保留 `parse_id` 和原来的推断依据，裁图仍来自原 PDF。
+- HTML/JATS 搜索使用章节选择，局部读取用 `context_blocks` 控制命中前后各取多少块，默认 1，范围 0–5。保留块的来源 ID、章节和可解析的显式对象或书目链接。需要抑制显式引用附件时设置 `include_referenced=False`。
+- 局部读取沿用命中所属快照和解析记录。传入 `match_ref` 时省略 `pages`、`section`、`parse_id` 和 `bbox`。续页沿用同一组参数。
+
+PDF 的 `search_summary` 中，`selected_pages` 列出此次搜索选定的页面。`pages_with_searchable_text`、`pages_without_searchable_text` 和 `pages_extraction_failed` 分别列出有可搜索文本、无可搜索文本及提取失败的页面。零命中时先看这几项。遇到无可搜索文字的页，查看原页或按需解析 OCR，再判断查询覆盖。
+
 ## 按需解析
 
 ```python

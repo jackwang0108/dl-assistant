@@ -28,16 +28,23 @@ def test_real_fixed_revision_html_and_pdf(tmp_path):
     pdf = service.open("https://arxiv.org/pdf/2404.14219v1")
     assert pdf["format"] == "pdf" and pdf["identity_status"] == "unverified"
     assert service.render(pdf["document_id"], "1")["items"][0]["image_path"]
+    for opened in (source, pdf):
+        ident = opened["document_id"]
+        search = service.search(ident, "Phi-3", pages="1" if opened["format"] == "pdf" else None)
+        match = next(i for i in search["items"] if i["kind"] == "match")
+        local = service.read(ident, match_ref=match["match_ref"])
+        assert local["items"][0]["scope"] == "match"
+        assert any("Phi-3" in i.get("text", "") for i in local["items"])
+        if opened["format"] == "pdf":
+            crop = next(i for i in local["items"] if i["kind"] == "original_page_crop")
+            assert Path(crop["image_path"]).is_file()
 
 
 @pytest.mark.skipif(
     not os.getenv("PDF_MCP_STRUCTURE_PYTHON"), reason="Requires prepared Docling environment"
 )
 def test_real_docling_worker_and_cache(tmp_path):
-    source = (
-        Path(os.getenv("PDF_MCP_BENCH_DATA", "benchmark-data"))
-        / "1706.03762v7.pdf"
-    )
+    source = Path(os.getenv("PDF_MCP_BENCH_DATA", "benchmark-data")) / "1706.03762v7.pdf"
     if not source.is_file():
         pytest.skip("Download benchmark PDF first")
     service = Service(tmp_path / "cache")
@@ -59,10 +66,7 @@ def test_real_docling_worker_and_cache(tmp_path):
     not os.getenv("PDF_MCP_STRUCTURE_PYTHON"), reason="Requires prepared Docling environment"
 )
 def test_real_formula_missing_text_is_explicit(tmp_path):
-    source = (
-        Path(os.getenv("PDF_MCP_BENCH_DATA", "benchmark-data"))
-        / "1512.03385v1.pdf"
-    )
+    source = Path(os.getenv("PDF_MCP_BENCH_DATA", "benchmark-data")) / "1512.03385v1.pdf"
     if not source.is_file():
         pytest.skip("Download benchmark PDF first")
     service = Service(tmp_path / "cache")
@@ -113,10 +117,7 @@ def test_real_scanned_page_ocr_without_network(tmp_path):
     reason="Explicit prepared OCR/formula models required",
 )
 def test_real_formula_recognition_requires_visual_check(tmp_path):
-    source = (
-        Path(os.getenv("PDF_MCP_BENCH_DATA", "benchmark-data"))
-        / "1512.03385v1.pdf"
-    )
+    source = Path(os.getenv("PDF_MCP_BENCH_DATA", "benchmark-data")) / "1512.03385v1.pdf"
     if not source.is_file():
         pytest.skip("Download benchmark PDF first")
     service = Service(tmp_path / "cache")

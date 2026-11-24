@@ -101,10 +101,28 @@ def pdf_read(
     include_referenced: bool = True,
     max_chars: int = 24000,
     cursor: str | None = None,
+    match_ref: str | None = None,
+    padding_points: float | None = None,
+    context_blocks: int | None = None,
 ) -> dict:
-    """Read pages, source sections or a PDF region. bbox is [x0,y0,x1,y1] PDF points. Read all continuations. Source links can attach referenced objects; PDF reference completeness is not guaranteed."""
+    """Read pages, sections, a PDF region or a local window from pdf_search match_ref.
+
+    A PDF match includes an original-page crop (padding_points, default 20).
+    HTML and JATS matches include adjacent blocks (context_blocks, default 1) and explicit links.
+    Read all continuations. PDF coordinates refer to the visible, rotated page.
+    """
     return service().read(
-        document_id, pages, section, parse_id, bbox, include_referenced, max_chars, cursor
+        document_id,
+        pages,
+        section,
+        parse_id,
+        bbox,
+        include_referenced,
+        max_chars,
+        cursor,
+        match_ref=match_ref,
+        padding_points=padding_points,
+        context_blocks=context_blocks,
     )
 
 
@@ -120,7 +138,10 @@ def pdf_search(
     max_chars: int = 24000,
     cursor: str | None = None,
 ) -> dict:
-    """Bounded regex/literal search with block and page locations. AND is page-level for PDF and section-level for HTML/XML. Zero matches do not prove absence."""
+    """Search text with block locations, page coverage and match_ref for local reading.
+
+    AND is page-level for PDF and section-level for HTML/JATS. Zero matches do not prove absence.
+    """
     return service().search(document_id, query, mode, pages, section, parse_id, max_chars, cursor)
 
 

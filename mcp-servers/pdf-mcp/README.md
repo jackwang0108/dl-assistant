@@ -33,8 +33,8 @@ uv run python -m pdf_mcp
 | pdf_info | 来源、元数据、校验值、页数 |
 | pdf_page_info | 页面几何、标签、文字层与可读性提示 |
 | pdf_outline | 原始书签、源码或模型章节及边界依据 |
-| pdf_read | 按页、章节、区域或 parse_id 读取，支持续读 |
-| pdf_search | 有限制的搜索及块/页/区域位置 |
+| pdf_read | 按页、章节、区域、解析记录或搜索命中读取，支持续读 |
+| pdf_search | 搜索文字块，报告页面覆盖和用于局部查证的 match_ref |
 | pdf_objects | 图、表、公式或原生位图与检测状态 |
 | pdf_get_object | 对象内容、图注及可选图像 |
 | pdf_render | 原始 PDF 整页/区域渲染 |
