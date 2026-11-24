@@ -16,7 +16,7 @@ SERVERS = (
     ("paper-search-mcp", "paper-search", "get_capabilities", "PAPER_SEARCH_CACHE_DIR", 15),
     ("tex-mcp", "tex-mcp", "tex_capabilities", "TEX_MCP_CACHE_DIR", 14),
     ("pdf-mcp", "pdf-mcp", "pdf_capabilities", "PDF_MCP_CACHE_DIR", 17),
-    ("overleaf-mcp", "overleaf", "overleaf_capabilities", "OVERLEAF_MCP_HOME", 25),
+    ("overleaf-mcp", "overleaf", "overleaf_capabilities", "OVERLEAF_MCP_HOME", 26),
 )
 
 
