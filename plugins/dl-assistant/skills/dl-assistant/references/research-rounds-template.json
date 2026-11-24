@@ -1,0 +1,29 @@
+{
+  "rounds": [],
+  "_notes": {
+    "用途": "初始化 docs/research/research-rounds.json 时保留 rounds 空数组，成品可省略 _notes。已确认开立的研究轮次按建立顺序追加。",
+    "字段": "id 是轮次目录的名称。purpose 是本轮用途的一句话说明。directory 和 approval_ref 使用项目根相对路径，approval_ref 可以指定决定 ID。首轮 previous_round 为 null。start_commit 记录本轮实际代码起点。handoff_commit 与 handoff_tag 在整轮收尾时按实际填写，无值留 null。",
+    "示例": [
+      {
+        "id": "v1-edge-vision",
+        "purpose": "核计时和轨迹条件，比较裁剪与融合的配置收益",
+        "directory": "docs/research/v1-edge-vision",
+        "previous_round": null,
+        "start_commit": "c91b7e4",
+        "approval_ref": "docs/idea-find/2026-11-24-edge-vision/spec.json#approve-baseline-timing",
+        "handoff_commit": "8d34a2f",
+        "handoff_tag": "research-round/v1-edge-vision"
+      },
+      {
+        "id": "v2-edge-vision",
+        "purpose": "核目标输入下能否固定实际算子分派",
+        "directory": "docs/research/v2-edge-vision",
+        "previous_round": "v1-edge-vision",
+        "start_commit": "8d34a2f",
+        "approval_ref": "docs/research/v1-edge-vision/decisions/approve-fixed-dispatch-check/next-step-decision.md",
+        "handoff_commit": null,
+        "handoff_tag": null
+      }
+    ]
+  }
+}

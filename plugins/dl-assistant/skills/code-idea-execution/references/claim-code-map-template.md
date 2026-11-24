@@ -40,7 +40,7 @@
 # v1-edge-vision · 论点、代码与测量映射
 
 - 研究和批准 | research-spec.md 的 Q2/H2，research-plan.md 的 baseline-timing/configuration-comparison，claims.json 的 C1。approve-baseline-timing 批准 baseline-timing。随后仅批准 configuration-comparison 实现与局部检查，正式开跑待确认。
-- 代码与配置 | /srv/research/edge-vision，idea/v1-edge-vision。baseline-timing 在 c91b7e4 取得，configuration-comparison 审阅拟用 8d34a2f，关键差异为 c91b7e4..8d34a2f。
+- 代码与配置 | /srv/research/edge-vision，main。baseline-timing 在 c91b7e4 取得，configuration-comparison 审阅拟用 8d34a2f，关键差异为 c91b7e4..8d34a2f。
 - 范围 | 本轮记录计时准备和 C1 的机制对照。其他命题可复用共用路径，其各自对照需单独说明。
 
 ## 共用入口和测量

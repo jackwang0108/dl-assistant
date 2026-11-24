@@ -32,7 +32,7 @@ description: 当调用 dl-assistant 科研助手中的任意一个 skill 时触�
 
 **人在回路。** Agent 主动搜集证据、分析、筛选并给出有理由的推荐，**放大人的信息处理带宽**，把问题**推进到人可以下判断的临界点**。研究方向、投入和最终主张由人决定。各 skill 在需要用户决定的地方设确认点，并保留供用户核对的报告和可供下游读取的记录。
 
-**产物即真相。** 判断「进行到哪一步」的唯一依据是磁盘上的真实产物——它们不会过期、不会和实现脱节。一切关键结论必须落盘：**可审计**（数字来自真实 run，能追回命令与配置）、**可回溯**（git tag + 版本树锚定每个成功节点）、**可追踪**（产物交接靠显式契约，不靠记忆）。会话可以断、机器可以换，只要产物在，上下文就能重建。
+**产物即真相。** 判断「进行到哪一步」的唯一依据是磁盘上的真实产物——它们不会过期、不会和实现脱节。一切关键结论必须落盘：**可审计**（数字来自真实 run，能追回命令与配置）、**可回溯**（轮次索引、实际 run 的 commit 和收尾 tag 能定位代码）、**可追踪**（产物交接靠显式契约，不靠记忆）。会话可以断、机器可以换，只要产物在，上下文就能重建。
 
 ## 所有技能共用的规则
 
@@ -168,9 +168,9 @@ flowchart LR
 这套 skill 把机器分成**两类**（各自数量不限、不关心具体几台、什么拓扑）：
 
 - **本地机器**：干**文档类**的活——文献调研、读论文、想 idea、写论文、审稿回应，不需要 GPU。目录放 `docs/`（前期产出）+ `papers/`（后期产出：每篇论文一个 Overleaf git clone，见下）。
-- **GPU 机器**：**跑实验**——搭环境、复现、idea 实现 / 迭代、跑论文实验、抽 release。装 baseline repo（源码结构随 baseline），我们在里面**新建** `docs/`（前期 docs + 中期报告）和 `ideas/`（版本树、runs/、conclusion），再加 release 新仓库。
+- **GPU 机器**：**跑实验**——搭环境、复现、idea 实现 / 迭代、跑论文实验、抽 release。在 baseline 仓库中保存 `docs/` 下的前期交接、工程准备报告和 `docs/research/` 下的中期研究轮次。代码发布使用独立仓库。
 
-> **运行位置假设**：这套 skill 假设 agent 在**项目根目录**下被启动——本地机器站在本地项目根（= 方向工作目录根）、GPU 机器站在 GPU 项目根（即下面树里的 `<项目>/`），所有 `docs/`、`ideas/`、`papers/` 都相对这个根。**如果 agent 发现当前目录不像项目根（没有 `docs/` 之类），别猜，先问用户项目根在哪。**
+> **运行位置假设**：这套 skill 假设 agent 在**项目根目录**下被启动——本地机器站在本地项目根（= 方向工作目录根）、GPU 机器站在 GPU 项目根（即下面树里的 `<项目>/`），所有 `docs/`、`papers/` 都相对这个根。**如果 agent 发现当前目录不像项目根（没有 `docs/` 之类），别猜，先问用户项目根在哪。**
 
 两类机器上的标准目录布局：
 
@@ -199,11 +199,21 @@ flowchart LR
 GPU 机器：
 <项目>/           # = baseline repo（baseline 自己的源码结构，不动）
 ├── docs/        # 新建：前期 docs（拿过来）+ 中期报告
+│   ├── idea-find/                 # 从前期项目整体复制过来的研究资料
 │   ├── code-project-setup/        # setup 报告（setup.json + setup-report.md）
 │   ├── code-paper-reproduction/   # reproduction 报告（reproduction.json + report.md）
 │   ├── code-idea-prepare/         # cleanup 报告（cleanup.json + cleanup-report.md + coverage/）
-│   └── code-reading/              # 诊断脚本 + 阅读笔记（主线必经，含接入点地图）
-├── ideas/       # 新建：execution 版本树 —— idea_tree.json、各版本目录（spec/plan/conclusion）、runs/
+│   ├── code-reading/             # 诊断脚本 + 阅读笔记
+│   └── research/                 # 中期研究记录
+│       ├── PROJECT_CONTEXT.md    # 项目背景及资料指针
+│       ├── research-rounds.json  # 按顺序登记已建立的轮次
+│       ├── v<N>-<slug>/          # research-spec.md、research-plan.md、claims.json
+│       │   ├── experiments/     # 实验台账、单实验报告和运行
+│       │   ├── executions/      # 各执行批次的独立核查
+│       │   ├── decisions/       # 基于本轮证据作出的决定
+│       │   ├── conclusion.md
+│       │   └── conclusion.json
+│       └── paper-package.md     # 用户决定进入写作时生成
 └── [baseline 自己的源码 …]
 
 <独立位置>/       # code-paper-release 产出：独立新仓库（history 归零）
@@ -219,8 +229,8 @@ flowchart LR
     subgraph GPU["GPU 机器（跑实验）"]
         direction TB
         GREPO["baseline repo — 源码随 baseline（idea 实现 / 实验在这跑）"]
-        GDOCS["docs/（新建）— 前期 docs + 中期报告"]
-        GIDEAS["ideas/（新建）— 版本树、runs/、conclusion"]
+        GDOCS["docs/ — 前期交接和工程准备报告"]
+        GRESEARCH["docs/research/ — 研究轮次、实验和决定"]
         GREL["release 新仓库（独立）"]
     end
 
@@ -229,10 +239,10 @@ flowchart LR
     LOCAL -->|"补实验 spec（实验线跑）"| GPU
 ```
 
-GPU 机器上的 `docs/` 和 `ideas/` 是在 **baseline repo 里新建**的目录——baseline 自己的源码结构（叫 `src/` 还是别的）不动，我们只在它上面加这俩目录装自己的产物。
+在 baseline 仓库的 `docs/research/` 中，execution 和 iterate 共用轮次目录。一轮可有多批执行和多个决定。首轮由 execution 登记，后续由 iterate 在确认建轮时追加。研究代码默认沿 `main` 推进，实际起点和收尾代码按[研究轮次登记与 Git 交接](references/research-rounds.md)记录。
 
 **跨机器文件交接**：两类机器之间要来回交接文件（前期 docs → GPU、中期报告 / 实验数据 / 结论 → 本地、补实验 spec → GPU）。原则是——**skill 只声明「需要哪个文件」，不规定怎么传**：到了需要跨机器文件的节点，skill 直接找用户要（"给我 setup report"、"把补实验 spec 弄到 GPU 机器上"），用户爱用 scp、FileZilla、手动拷都行，skill 只认文件到位。所以图里的箭头只标「什么文件、谁要用」，不标传输工具。
 
-> **没有状态文件这回事。** 判断"进行到哪一步"靠的是**按需扫描真实的产物文件**（idea 树、各种报告、论文 manifest）——产物即真相（见「核心设计哲学」），不维护任何 `PROJECT_STATE` 之类的中枢。跨机器也无需带状态文件：每个 skill 都读自己的产物自恢复上下文，靠本节定义的协作机制把产物送到该在的机器上。
+> **没有状态文件这回事。** 判断"进行到哪一步"靠的是**按需扫描真实的产物文件**（轮次索引、实验记录、各种报告、论文 manifest）——产物即真相（见「核心设计哲学」），不维护任何 `PROJECT_STATE` 之类的中枢。跨机器也无需带状态文件：每个 skill 都读自己的产物自恢复上下文，靠本节定义的协作机制把产物送到该在的机器上。
 
-> **归位判据（产物放哪个目录）**：人会回看的交接文档 → `docs/`；只给下游 skill 按需取的高频底料（版本树、runs/）→ `ideas/`；后期成品（论文 / 发行版）→ 各自独立地盘（`papers/<slug>/` Overleaf clone、release 新仓库）。`ideas/` 是中期 execution / iterate 自治维护的版本树——前期产物、setup/reproduction/cleanup 报告、论文产物都**不进 `ideas/`**（各进 `docs/`、`papers/` 等自己的地盘）。
+> **归位判据（产物放哪个目录）**：前期交接和工程准备材料按 skill 保存在 `docs/` 下。中期取证、判断及轮次索引统一在 `docs/research/`。论文与发布成果分别在 `papers/<slug>/` 和独立发布仓库。

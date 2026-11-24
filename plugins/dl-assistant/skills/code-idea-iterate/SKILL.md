@@ -37,7 +37,7 @@ flowchart LR
 | 本轮 `research-plan.md` | 同轮补证获批后保存新修订，保留原批准版本，注明对应决定及任务 |
 | `docs/research/v<N>-<slug>/` | 下一轮实验版本获确认后创建。各文件用途见下 |
 | `docs/research/paper-package.md` | 用户决定准备写作时保存。写科学问题、主要发现和证据、替代解释、适用边界、相对已有工作的新增与剩余缺口 |
-| `docs/research/research-rounds.json` | 建立下一轮后按顺序追加轮次、上一轮、实际代码起点、分支和决定引用 |
+| `docs/research/research-rounds.json` | 建立下一轮后按顺序追加轮次、上一轮、实际代码起点和决定引用 |
 | `docs/research/PROJECT_CONTEXT.md` | 研究方向、长期目标或所采用基准确实变化时，按实际决定更新稳定背景和资料指针 |
 
 ```text

@@ -118,30 +118,13 @@ Agent 主动提出推荐，写清它能减少的未知、最强反对理由、�
 
 ## Step 5 准备并交接取证任务
 
-先区分三种去向。用已有记录复算或核配置时，由 iterate 完成，在本轮决定目录保存结果。需要重新运行或取得新读数时，由 iterate 写取证设计，execution 执行。如果仍在回答本轮的问题，例如补采缺失组或继续查同一个疑点，把获批任务加入本轮 plan 的新修订并交 execution 执行新批次。用户确认建立新研究轮次时，再创建新轮目录和分支。
+先区分三种去向。用已有记录复算或核配置时，由 iterate 完成，在本轮决定目录保存结果。需要重新运行或取得新读数时，由 iterate 写取证设计，execution 执行。如果仍在回答本轮的问题，例如补采缺失组或继续查同一个疑点，把获批任务加入本轮 plan 的新修订并交 execution 执行新批次。用户确认建立新研究轮次时，再创建新轮目录并登记轮次。
 
 1. **先写草案供审阅。** 用 [研究说明模板](../../dl-assistant/references/spec-template.md)写研究什么、为什么值得、成功后能主张什么。用[取证方案模板](../../dl-assistant/references/plan-template.md)及[编写原则](../../dl-assistant/references/plan-writing-principles.md)写这轮要弄清什么、怎样取证和不同结果怎么解释。对照、读数、条件、投入和停止点写到能审阅。内容尚待确认时可放入决定目录的 `drafts/`。
 2. **一起交用户看决定。** 说明相对上轮的改变、依据和关键对照。一次审阅可确认两份文件，记录实际批准版本与范围。仅批准准备时，在研究说明里写清能确认的准备条件及科学判断还缺什么，在取证方案里写任务、验收、资源和停止点，标明待确认的正式工作及其启动条件。
 3. **核对命题快照。** 按[共享论点模板](../../dl-assistant/references/claims-template.json)保留历史证据、适用范围和改判依据。命题语义不变沿用 ID，发生实质变化时新分配 ID 并写来源。核 spec 的研究重点、plan 的实际获批任务及快照中的相关命题是否对齐。只核准备条件时，写明它限制哪些后续推断。
-4. **选择同轮补证或新轮交接。** 同轮沿用研究轮次及分支，保留原批准 plan 和实际运行记录，保存获批修订与对应决定。用户确认开新轮时，核工作区和实际起点，再建对应目录和分支。研究上的上一轮与代码起点可能不同。选较早提交时，核当前索引与决定文件能否从新分支取得，保留相关文档提交或明确记录可读的版本和路径。示例的版本与 commit 换成方案记录的值。
-
-```bash
-verified_start=8d34a2f
-branch=idea/v2-edge-vision
-git status --short --branch
-git rev-parse --verify "${verified_start}^{commit}"
-git branch --list "$branch"
-```
-
-本轮新建时，在核对同名分支和用户已有改动后执行：
-
-```bash
-git switch -c "$branch" "$verified_start"
-git branch --show-current
-git log -1 --oneline
-```
-
-5. **保存本次交付。** 新轮将获批的 `research-spec.md`、`research-plan.md` 和 `claims.json` 直接放进相应轮次目录，在 `docs/research/research-rounds.json` 追加条目。按[首轮索引示例](../../code-idea-execution/references/workflow.md#step-1-恢复现场核对输入与批准范围)记录轮次 ID、用途、目录、上一研究轮次、实际起点 commit、分支和批准决定路径。决定留在提供证据的轮次，链接本次获批方案和任务。无论同轮还是新轮，plan 都引用实际决定与批准修订，交给 execution 时指出第一项可执行任务和停止点。提交及远端操作按项目约定和已有授权。
+4. **选择同轮补证或新轮交接。** 同轮补证沿用原目录，保留原批准 plan 和实际运行记录。用户确认开新轮时，按[研究轮次登记与 Git 交接](../../dl-assistant/references/research-rounds.md)核 `main` 上的实际起点并建立对应目录。研究上的上一轮依据证据来源记录。
+5. **保存本次交付。** 新轮将获批的 `research-spec.md`、`research-plan.md` 和 `claims.json` 直接放进相应轮次目录，在 `docs/research/research-rounds.json` 追加条目。按[轮次索引模板](../../dl-assistant/references/research-rounds-template.json)记录轮次 ID、用途、目录、上一研究轮次、实际起点 commit 和批准决定路径。决定留在提供证据的轮次，链接本次获批方案和任务。无论同轮还是新轮，plan 都引用实际决定与批准修订，交给 execution 时指出第一项可执行任务和停止点。提交及远端操作按项目约定和已有授权。
 
 ## Step 6 保存写作、暂停、停止或新起点的决定
 

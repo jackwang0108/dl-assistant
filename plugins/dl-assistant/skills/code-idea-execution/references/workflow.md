@@ -38,23 +38,7 @@ git diff --cached --stat
 
 首轮将已确认内容保存为 `research-spec.md` 和 `research-plan.md` 的版本快照，写明来源及批准记录。根据[共享论点模板](../../dl-assistant/references/claims-template.json)保存 `claims.json` 的版本信息和初始论点 ID。后续沿用 iterate 放在正式轮次目录的快照。设计变化按批准记录保留修订，原方案可回查。
 
-首轮在 `docs/research/` 缺少初始化文件时，按已核事实补项目背景和空索引 `{"rounds": []}`。首轮获批开立后，在 `rounds` 追加本轮 ID、用途、目录、上一研究轮次（首轮为空）、实际代码起点、分支和批准决定路径。已存在的轮次直接核对并沿用。每轮按已核起点建本地分支，例如 `idea/v1-edge-vision`。一轮内的后续批次沿用该分支，一批也可以有多次提交。
-
-索引条目示例。路径相对项目根，`approval_ref` 可包含具体决定的标识。整轮收尾时再填写实际的交接 commit 和 tag。
-
-```json
-{
-  "id": "v1-edge-vision",
-  "purpose": "核计时和轨迹条件，再比较裁剪与融合的配置收益",
-  "directory": "docs/research/v1-edge-vision",
-  "previous_round": null,
-  "start_commit": "c91b7e4",
-  "branch": "idea/v1-edge-vision",
-  "approval_ref": "docs/idea-find/<日期>-edge-vision/spec.json#approve-baseline-timing",
-  "handoff_commit": null,
-  "handoff_tag": null
-}
-```
+首轮按[研究轮次登记与 Git 交接](../../dl-assistant/references/research-rounds.md)补建缺少的项目背景和索引，核实 `main` 上的实际起点并登记轮次。已有轮次先核对并沿用。
 
 ## Step 2 核对方案能否落地
 
@@ -82,25 +66,7 @@ git diff --cached --stat
 
 ## Step 3 准备实现并审阅开跑条件
 
-需要修改项目代码时，在实施前从已核的改前 commit 新建本轮本地分支。首次可以使用 `idea/v1-<slug>` 形式。示例变量换为实际确认的起点和版本名。
-
-```bash
-verified_start=c91b7e4
-branch=idea/v1-edge-vision
-git status --short --branch
-git rev-parse --verify "${verified_start}^{commit}"
-git branch --list "$branch"
-```
-
-首次新建时执行：
-
-```bash
-git switch -c "$branch" "$verified_start"
-git branch --show-current
-git log -1 --oneline
-```
-
-续做核该分支属于当前轮次、实际版本和已完成任务后切回。用户已有未提交 diff 时，确认其是否属于已核起点；切换会冲突或混入无关改动时，先保留现场并分离。已有 iterate 建好的本轮分支可直接续用。只读分析保留实际版本与数据身份。
+需要改代码时，按[研究轮次的 Git 约定](../../dl-assistant/references/research-rounds.md#3-沿-main-推进用-tag-标记交接代码)核 `main` 上的代码起点及工作区。确认已选用的基线和准备结果可在当前实现中核对，保留用户已有改动。续做时核对本轮获批任务、已有提交和实际运行。只读分析记录所用代码与数据身份。
 
 实现按最小可验证路径推进。在现有正式入口上选能触发改动的输入，记录实际维度、数据覆盖、对照分支、更新或已知结果。运行技术排查时用[组件检查](../../code-paper-reproduction/references/trust-traps.md)或[训练诊断](training-dynamics-debug.md)。局部试跑如果改变配置，要记实际条件及覆盖范围。若查到设计与实现无法对应，写清缺的证据和可行备选，按影响回 Step 2 或 Step 1。
 
@@ -182,7 +148,7 @@ bash "$execution_skill_dir/scripts/check-exp-artifacts.sh" --all "$experiments_d
 
 1. 按[共享论点记录](../../dl-assistant/references/claims-template.json)更新实际检验的子论点。写 `evidence_assessment`、来源、证据指针、对照质量、支持范围和仍未知的解释。保留原命题和历史证据。研究状态、总论点与科学贡献由 iterate 和用户结合本轮结果判断。
 2. 每批交回时，按[结论模板](conclusion-template.md)更新本轮 `conclusion.md` 和 `conclusion.json`。保留早前批次的观察出处和核查，标明本次更新所覆盖的批次，引用各项 `report.md` 和已完成的批次核查。从用户最需要知道的观察写起，给出实际比较值与条件，分别写执行、测量和证据判断。注明本轮版本、实际基准、全部相关尝试、偏差与缺项，并标明哪些运行可以复查或续做。
-3. 交接前回查实际代码与配置、原始结果、命题引用、批准范围及未解决问题。向用户说明观察如何影响本轮假设、最强替代解释是什么、建议下一步补什么。把本轮结论和记录交 iterate。每次运行引用实际 commit，有未提交改动时保留对应 diff。整轮收尾且有代码要交接时，核收尾 commit 后在已有授权内打 annotated tag，例如 `git tag -a research-round/v1-edge-vision <收尾-commit> -m "Hand off v1-edge-vision"`，在轮次索引记录实际 commit 和标签。纯分析且无新代码交接时，索引记录实际使用的 commit 即可。只交回一批结果时继续沿用本轮分支。提交或同步按实际授权。
+3. 交接前回查实际代码与配置、原始结果、命题引用、批准范围及未解决问题。向用户说明观察如何影响本轮假设、最强替代解释是什么、建议下一步补什么。把本轮结论和记录交 iterate。每次运行引用实际 commit，有未提交改动时保留对应 diff。整轮收尾时按[研究轮次交接](../../dl-assistant/references/research-rounds.md#3-沿-main-推进用-tag-标记交接代码)核交接 commit，按授权登记 tag。只交回一批结果时更新本轮产物。提交或同步按实际授权。
 
 交接前逐条核对：
 
