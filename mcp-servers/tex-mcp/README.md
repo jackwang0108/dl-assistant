@@ -22,7 +22,7 @@ uv run python -m tex_mcp
 | tex_open | arXiv/本地源码导入，固定版本和入口 |
 | tex_outline | 结构目录与原始位置 |
 | tex_read | 章节正文＋本节/直接引用的图表、公式、文献 |
-| tex_search | 有超时的搜索与来源定位 |
+| tex_search | 有超时的搜索、来源定位与可交给 tex_read 的 match_ref |
 | tex_objects | 按类型或定义所在节列对象 |
 | tex_get_object | 按唯一 label/object_id 取对象及图像 |
 | tex_references | 版本内书目、引用键、引用位置和缺失项 |
@@ -42,13 +42,15 @@ uv run python -m tex_mcp
 - syntax.py：以 pylatexenc 节点处理注释、原样区域、文件展开和有顺序/作用范围的有限宏展开。保留来源片段，未知条件和定义明确诊断，不执行 TeX。
 - document.py：构建章节、对象、标签和引用边。章节可附定义在其他文件/章节的对象；结构编号不认证 PDF 编号。缺失或歧义不自动选择第一项。
 - bibliography.py：使用 pybtex 解析 bib，bbl/inline 按缺失键补充。原文引用存在、字段解析成功、外部论文身份确认是不同状态。
-- service.py：固定文档读取、对象附件、整体 JSON 预算、续读、诊断与比较。过大记录明确分片，不隐藏超预算表格或文献。
+- service.py：固定文档读取、正文位置、对象附件、整体 JSON 预算、续读、诊断与比较。比较图像资源时纳入文件校验值。过大记录明确分片。
 - images.py：来源图像、按 DPI 绑定的缓存、显式原始 PDF 裁剪。TeX 编译只走配置的无网络 Docker，不调用宿主 pdflatex。
 - server.py：14 个薄接口与结构化错误。
 
 ## 阅读与图像
 
-先 tex_open，再 tex_outline，然后 tex_read(document_id=..., section="3.3")。默认 items 中包括 object 附件、reference 和 body；如果 truncated=true，跟随 next_cursor 获取后续内容。source 模式查看处理范围对应的原文件片段，tex_read_file 获取精确原始行。
+先 tex_open，再 tex_outline，然后 tex_read(document_id=..., section="3.3")。默认 items 中包括 object 附件、reference 和 body。如果 truncated=true，跟随 next_cursor 获取后续内容。正文块附原文位置。关闭 include_referenced 时，仍保留本节的直接引文。source 模式查看处理范围对应的原文件片段，tex_read_file 获取精确原始行。
+
+查证某个局部说法时，用 tex_search 找到相关命中，再将 match_ref 交给同一 document_id 的 tex_read。context_chars 控制命中前后各取的字符数。局部阅读沿用分页和附件选项。
 
 figure 资源可能缺失、歧义或无法栅格化；可解析路径不等于已取得图片。source_asset 也不等于含子图标注、旋转裁剪和覆盖文字的完整排版图。自动生成图像可通过对应 PDF 的明确 page/bbox 核查；不按图号猜 PDF 页码。
 

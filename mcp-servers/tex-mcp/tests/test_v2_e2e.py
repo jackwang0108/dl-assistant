@@ -76,10 +76,24 @@ async def test_all_tools_and_cross_file_section_workflow(mcp, source, tmp_path):
         figure = next(i for i in section["items"] if i["kind"] == "object")
         assert figure["labels"] == ["fig:arch"] and figure["relationship"] == "directly_referenced"
         assert Path(figure["assets"][0]["image_path"]).exists()
+        body = next(i for i in section["items"] if i["kind"] == "body")
+        assert body["source_locations"][0]["file"] == "main.tex"
+        local = await call(
+            client, "tex_read", document_id=doc, section="3.3", include_referenced=False
+        )
+        assert any(
+            item["kind"] == "reference" and item["key"] == "refkey" for item in local["items"]
+        )
+        assert not any(item["kind"] == "object" for item in local["items"])
         assert (await call(client, "tex_objects", document_id=doc))["items"]
         obj = await call(client, "tex_get_object", document_id=doc, object_ref="fig:arch")
         assert obj["items"][0]["caption"] == "Architecture"
-        assert (await call(client, "tex_search", document_id=doc, query="See"))["matches"]
+        match = (await call(client, "tex_search", document_id=doc, query="See"))["matches"][0]
+        passage = await call(
+            client, "tex_read", document_id=doc, match_ref=match["match_ref"], context_chars=0
+        )
+        assert passage["items"][0]["scope"] == "match"
+        assert passage["items"][-1]["text"] == "See"
         refs = await call(client, "tex_references", document_id=doc, section="3.3")
         assert refs["items"][0]["key"] == "refkey"
         lookups = await call(client, "tex_reference_lookups", document_id=doc)

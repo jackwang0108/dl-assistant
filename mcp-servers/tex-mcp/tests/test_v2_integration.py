@@ -61,6 +61,162 @@ def test_user_section_33_returns_outside_picture_and_equation(tmp_path):
     assert next(i for i in items if i["kind"] == "reference")["key"] == "needed"
 
 
+def test_read_body_provenance_and_local_citations_without_external_objects(tmp_path):
+    source = write_project(tmp_path / "source")
+    main = source / "main.tex"
+    main.write_text(main.read_text().replace(r"\cite{needed}", r"\input{passage.tex}"))
+    (source / "passage.tex").write_text("Evidence from a second file.\n" + r"\cite{needed,absent}")
+    s = Service(tmp_path / "cache", interval=0)
+    doc = s.open(str(source))["document_id"]
+    items = all_pages(s, doc, section="3.3", include_referenced=False)
+    assert not any(item["kind"] == "object" for item in items)
+    assert {item["key"]: item["status"] for item in items if item["kind"] == "reference"} == {
+        "needed": "parsed",
+        "absent": "missing",
+    }
+    body = [item for item in items if item["kind"] == "body"]
+    origins = [loc for item in body for loc in item["source_locations"]]
+    assert {loc["file"] for loc in origins} == {"main.tex", "passage.tex"}
+    assert any(loc["file"] == "main.tex" and loc["expanded"] for loc in origins)
+    assert any(loc["file"] == "passage.tex" and loc["line"] == 1 for loc in origins)
+
+
+def test_compare_detects_replaced_figure_data(tmp_path):
+    source = write_project(tmp_path / "source")
+    s = Service(tmp_path / "cache", interval=0)
+    first = s.open(str(source))["document_id"]
+    with pymupdf.open() as pdf:
+        pdf.new_page(width=140, height=100)
+        pdf.save(source / "picture.pdf")
+    second = s.open(str(source))["document_id"]
+    items = s.compare(first, second)["items"]
+    assert len(items) == 1
+    difference = items[0]
+    assert difference["key"] == "fig:arch"
+    assert difference["changed_fields"] == ["assets"]
+    old, new = (difference[side] for side in ("left", "right"))
+    assert old["source_locations"][0]["file"] == new["source_locations"][0]["file"] == "objects.tex"
+    assert old["assets"][0]["files"][0]["sha256"] != new["assets"][0]["files"][0]["sha256"]
+
+
+def test_compare_matches_reordered_labels_and_reports_ambiguous_titles(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    main = source / "main.tex"
+    a = r"\section{First}\label{sec:first} First passage."
+    b = r"\section{Second}\label{sec:second} Second passage."
+    repeated = r"\section{Repeat}A\section{Repeat}B"
+
+    def write(body):
+        main.write_text(r"\documentclass{article}\begin{document}" + body + r"\end{document}")
+
+    s = Service(tmp_path / "cache", interval=0)
+    write(a + b + repeated)
+    first = s.open(str(source))["document_id"]
+    write(b + a + repeated)
+    second = s.open(str(source))["document_id"]
+    changes = {d["key"]: d for d in s.compare(first, second)["items"]}
+    assert changes["sec:first"]["status"] == changes["sec:second"]["status"] == "moved"
+    assert changes["sec:first"]["match_basis"] == "label"
+    assert changes["Repeat"]["status"] == "ambiguous"
+
+
+def test_match_read_returns_only_local_evidence_across_pages(tmp_path):
+    source = write_project(tmp_path / "source")
+    main = source / "main.tex"
+    main.write_text(
+        main.read_text().replace(
+            r"\subsection{Three}See",
+            r"\subsection{Three} Unrelated \cite{excluded} " + " filler" * 100 + " See",
+        )
+    )
+    s = Service(tmp_path / "cache", interval=0)
+    doc = s.open(str(source))["document_id"]
+    match = s.search(doc, "See", section="3.3")["matches"][0]
+    args = {
+        "match_ref": match["match_ref"],
+        "context_chars": 120,
+        "max_chars": 2000,
+        "asset_mode": "metadata",
+    }
+    first = s.read(doc, **args)
+    assert first["truncated"]
+    assert first["items"][0]["match_range"] == [match["start"], match["end"]]
+    items, fragments = [], {}
+    for record in all_pages(s, doc, **args):
+        if record["kind"] != "record_fragment":
+            items.append(record)
+            continue
+        parts = fragments.setdefault(record["record_index"], [])
+        assert record["part"] == len(parts)
+        parts.append(record["text"])
+        if record["final"]:
+            items.append(json.loads("".join(parts)))
+            del fragments[record["record_index"]]
+    assert not fragments
+    body = "".join(record["text"] for record in items if record["kind"] == "body")
+    assert "See" in body and "Unrelated" not in body
+    assert {item["object_id"] for item in items if item["kind"] == "object"} == {
+        "figure:1",
+        "equation:1",
+    }
+    assert {item["key"] for item in items if item["kind"] == "reference"} == {"needed"}
+
+    with pytest.raises(TexError) as bad_cursor:
+        s.read(doc, cursor=first["next_cursor"], **{**args, "context_chars": 90})
+    assert bad_cursor.value.code == "INVALID_CURSOR"
+    main.write_text(main.read_text().replace("Unrelated", "Revised"))
+    revised = s.open(str(source))["document_id"]
+    with pytest.raises(TexError) as wrong_snapshot:
+        s.read(revised, **args)
+    assert wrong_snapshot.value.code == "INVALID_MATCH_REF"
+
+
+def test_match_context_clips_to_search_scope_and_source_view(tmp_path):
+    source = write_project(tmp_path / "source")
+    s = Service(tmp_path / "cache", interval=0)
+    doc = s.open(str(source))["document_id"]
+    match = s.search(doc, "Two", section="3.2")["matches"][-1]
+    exact = s.read(doc, match_ref=match["match_ref"], context_chars=0, view="source")
+    assert [r["text"] for r in exact["items"] if r["kind"] == "source_fragment"] == ["Two"]
+    wide = s.read(doc, match_ref=match["match_ref"], context_chars=4000)
+    body = "".join(r["text"] for r in wide["items"] if r["kind"] == "body")
+    assert "Two" in body and "Three" not in body
+    for args, code in [
+        ({"match_ref": "garbled"}, "INVALID_MATCH_REF"),
+        ({"match_ref": match["match_ref"], "section": "3.2"}, "INVALID_INPUT"),
+        ({"match_ref": match["match_ref"], "context_chars": 4001}, "INVALID_INPUT"),
+        ({"context_chars": 10}, "INVALID_INPUT"),
+    ]:
+        with pytest.raises(TexError) as invalid:
+            s.read(doc, **args)
+        assert invalid.value.code == code
+
+
+def test_match_inside_figure_preserves_text_and_returns_attachment(tmp_path):
+    source = write_project(tmp_path / "source")
+    s = Service(tmp_path / "cache", interval=0)
+    doc = s.open(str(source))["document_id"]
+    match = s.search(doc, "Architecture")["matches"][0]
+    items = all_pages(s, doc, match_ref=match["match_ref"], context_chars=0, asset_mode="metadata")
+    assert any(item.get("text") == "Architecture" for item in items)
+    assert any(item.get("object_id") == "figure:1" for item in items)
+
+
+def test_regex_match_preview_and_local_read_are_bounded(tmp_path):
+    source = write_project(tmp_path / "source")
+    main = source / "main.tex"
+    main.write_text(main.read_text().replace("Start", "Z" * 9000))
+    s = Service(tmp_path / "cache", interval=0)
+    doc = s.open(str(source))["document_id"]
+    match = s.search(doc, "Z+", mode="regex")["matches"][0]
+    assert match["end"] - match["start"] == 9000
+    assert len(match["snippet"]) <= 500
+    with pytest.raises(TexError) as wide:
+        s.read(doc, match_ref=match["match_ref"])
+    assert wide.value.code == "MATCH_TOO_WIDE"
+
+
 def test_snapshot_changes_by_content_not_maximum_mtime(tmp_path):
     source = write_project(tmp_path / "source")
     s = Service(tmp_path / "cache", interval=0)

@@ -1,6 +1,7 @@
 """TeX-aware nodes and order/scoped conservative expansion with source provenance."""
 
 import re
+from bisect import bisect_right
 from functools import lru_cache
 from pathlib import Path
 
@@ -476,12 +477,24 @@ class Processor:
         return "".join(self.parts), self.segments, self.diagnostics
 
 
-def locations(segments, start, end):
+def locations(segments, start, end, text=None):
     origins = []
-    for segment in segments:
-        if segment["end"] <= start or segment["start"] >= end:
-            continue
+    first_segment = bisect_right(segments, start, key=lambda segment: segment["end"])
+    for index in range(first_segment, len(segments)):
+        segment = segments[index]
+        if segment["start"] >= end:
+            break
         origin = dict(segment["origin"])
+        if (
+            text is not None
+            and not segment["expanded"]
+            and origin["end"] - origin["start"] == segment["end"] - segment["start"]
+        ):
+            first, last = max(start, segment["start"]), min(end, segment["end"])
+            origin["line"] += text.count("\n", segment["start"], first)
+            origin["end_line"] = origin["line"] + text.count("\n", first, last)
+            origin["start"] += first - segment["start"]
+            origin["end"] -= segment["end"] - last
         origin["expanded"] = segment["expanded"]
         origin["uncertain"] = segment["uncertain"]
         if origin not in origins:

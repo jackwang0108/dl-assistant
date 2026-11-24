@@ -29,7 +29,36 @@ tex_diagnostics(document_id=doc)
 
 section=None 顺序读正文，不重复遍历父子节；include_nested=false 只读所选节到首个子节前。默认附件只沿直接关系取得，不递归读取其他章节或下载所有外部论文。附件图注中的引用文献也可一并取得，但不因此展开无限引用链。
 
+每条 `body` 记录含 `source_locations`，列出贡献这块正文的文件和行范围。`expanded_range` 是处理后正文的字符范围。原文复查用每条位置的 `file`、`line`、`end_line` 调 `tex_read_file`。宏展开位置保留宏调用范围和 `expanded` 标记。位置标有 `uncertain` 时，需要核对应条件。
+
 游标绑定文档、范围、视图、图像模式和预算。续读时保持其他参数一致。大条目使用 record_fragment，需要按 record_index/part 顺序连接 text 后按 JSON 解码；不要丢弃非 body 类型内容。
+
+### 从方法段核对公式、图表和文献
+
+1. 用 `tex_open` 固定版本。以 `tex_outline` 确认方法节的标签、标题或结构编号。
+2. 用 `tex_read` 读方法节并取得默认附件。沿 `next_cursor` 读到结束。用正文块位置定位具体说法，按对象标签对照公式、表格和图。核公式推导时，用 `tex_read_file` 读取公式和附近定义的原始行。
+3. 只需本节材料时传 `include_referenced=False`。本节直接引用的书目仍保留，`status="missing"` 表示源码包内缺对应条目。需要跟踪本节指向的跨节对象及其图注引文时保留默认值。核对外部论文身份时用 [参考文献交接](references.md)。
+4. 图像无法取得或需要核实际排版时，核查对应版本 PDF 的页码和区域。
+
+### 从搜索命中读局部证据
+
+例如，核对附录中推理延迟的测量条件。用 `tex_search` 找术语，根据片段和位置选中相关命中，再取上下文与直接证据。
+
+```python
+hits = tex_search(document_id=doc, query="inference latency", section=appendix_section)
+# 根据 hits["matches"] 的片段和位置选定 matched_item。
+params = {"document_id": doc, "match_ref": matched_item["match_ref"],
+          "context_chars": 600}
+window = tex_read(**params)
+items = list(window["items"])
+while window["next_cursor"]:
+    window = tex_read(**params, cursor=window["next_cursor"])
+    items.extend(window["items"])
+```
+
+`context_chars` 是命中前后各取的处理后字符数，默认 600，范围 0–4000。窗口限制在原搜索范围内。调用 `tex_read` 时把 `match_ref` 用在原 `document_id` 上，省略 `section`。翻页时保持参数一致。遇到 `MATCH_TOO_WIDE`，缩小正则或搜索词命中范围后重搜。
+
+检查正文片段、覆盖窗口的对象、窗口内直接指向的图表或公式，以及可用书目。正文证据扩展到窗口以外时，增大窗口或按章节读。需要核原始文件时用 `view="source"`，也可从正文的原文位置调用 `tex_read_file`。
 
 ## 对象与实际图像
 
@@ -62,4 +91,8 @@ isolated_tex 需要可用 Docker 与已在本地的、带 sha256 digest 的 TEX_
 tex_compare(left_document_id=old_doc, right_document_id=new_doc)
 ```
 
-按结构 ID、对象标签/顺序和引用键比较，返回实际差异并分页。章节重排、标签变更可能表现为新增、删除或改变，不据此直接判断论文贡献变化。需要时回到两侧原始位置和 PDF 核查。
+分别用 `tex_open` 打开两个明确修订并核对实际版本。用 `tex_compare` 比较并读完续页。
+
+- 看 `match_basis` 确认依据。章节优先用两侧共有且唯一的标签，缺少共同标签时按标题。重复标签或无法唯一匹配的标题显示为 `ambiguous`，结合原文核查。没有标签的对象按源码顺序对照。
+- 检查 `changed_fields`，区分正文、结构编号和图像资源。仅替换同名图片也会产生资源差异，可以核对两侧 `assets.files` 的路径和校验值。
+- 对有影响的差异，用两侧 `source_locations` 回原文或核对应 PDF。文献比较保留正文引用位置等书目信息变化。证据变化是否影响论文结论，还需结合两版的论证和实验。

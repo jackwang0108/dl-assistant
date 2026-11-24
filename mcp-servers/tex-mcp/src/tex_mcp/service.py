@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import tempfile
+from collections import defaultdict
 from pathlib import Path
 
 import regex
@@ -14,6 +15,10 @@ from .document import parse_document
 from .models import WARNING, TexError
 from .storage import Storage, digest
 from .syntax import locations
+
+DEFAULT_MATCH_CONTEXT = 600
+MAX_MATCH_CONTEXT = 4000
+MAX_MATCH_LENGTH = 8000
 
 
 class Service:
@@ -280,11 +285,38 @@ class Service:
         dpi=160,
         max_chars=24000,
         cursor=None,
+        match_ref=None,
+        context_chars=None,
     ):
         doc = self.document(document_id)
-        start, end, selected = self.section(doc, section, include_nested)
-        edges = [e for e in doc["edges"] if start <= e["start"] < end]
-        owned = [o for o in doc["objects"] if start <= o["start"] < end]
+        anchor = None
+        if match_ref is not None:
+            if section is not None:
+                raise TexError("INVALID_INPUT", "Provide either section or match_ref")
+            context_chars = DEFAULT_MATCH_CONTEXT if context_chars is None else context_chars
+            if type(context_chars) is not int or not 0 <= context_chars <= MAX_MATCH_CONTEXT:
+                raise TexError("INVALID_INPUT", f"context_chars must be 0..{MAX_MATCH_CONTEXT}")
+            low, high, first, last = self._match_range(doc, match_ref)
+            start, end = max(low, first - context_chars), min(high, last + context_chars)
+            selected = None
+            anchor = {
+                "scope": "match",
+                "match_range": [first, last],
+                "search_range": [low, high],
+                "context_chars": context_chars,
+            }
+            edges = [
+                e for e in doc["edges"] if start < end and e["start"] < end and e["end"] > start
+            ]
+            owned = [
+                o for o in doc["objects"] if start < end and o["start"] < end and o["end"] > start
+            ]
+        else:
+            if context_chars is not None:
+                raise TexError("INVALID_INPUT", "context_chars requires match_ref")
+            start, end, selected = self.section(doc, section, include_nested)
+            edges = [e for e in doc["edges"] if start <= e["start"] < end]
+            owned = [o for o in doc["objects"] if start <= o["start"] < end]
         referenced_ids = (
             {e.get("target") for e in edges if e["kind"] == "object_reference"}
             if include_referenced
@@ -294,8 +326,12 @@ class Service:
         records = [
             {
                 "kind": "section",
-                "id": selected["id"] if selected else "document",
-                "title": selected["title"] if selected else "Document",
+                "id": "match" if anchor else selected["id"] if selected else "document",
+                "title": "Search match"
+                if anchor
+                else selected["title"]
+                if selected
+                else "Document",
                 "view": view,
                 "source_range": [start, end],
                 "diagnostic_count": len(doc["diagnostics"]),
@@ -305,6 +341,7 @@ class Service:
                     for e in edges
                     if e["kind"] == "object_reference" and e["status"] != "resolved"
                 ],
+                **(anchor or {}),
             }
         ]
         for obj in objects:
@@ -329,37 +366,30 @@ class Service:
                     o["start"] <= e["start"] < o["end"] for o in objects
                 ):
                     cited.add(e["key"])
-            records += [
-                {"kind": "reference", **doc["references"][key]}
-                for key in sorted(cited)
-                if key in doc["references"]
-            ]
+        records += [
+            {"kind": "reference", **doc["references"][key]}
+            for key in sorted(cited)
+            if key in doc["references"]
+        ]
         if view == "expanded":
-            text = doc["text"][start:end]
-            replacements = [o for o in owned if o["kind"] in ("figure", "table")]
-            for obj in sorted(replacements, key=lambda o: o["start"], reverse=True):
-                text = (
-                    text[: obj["start"] - start]
-                    + "[Object "
-                    + obj["object_id"]
-                    + "]"
-                    + text[obj["end"] - start :]
-                )
             width = max(200, min(4000, max_chars // 3))
-            records += [
-                {"kind": "body", "chunk": i // width, "text": text[i : i + width]}
-                for i in range(0, len(text), width)
-            ]
+            records.extend(self._body_records(doc, start, end, [] if anchor else owned, width))
         elif view == "source":
             root = self.storage.source_root(document_id)
-            origins = locations(doc["segments"], start, end)
+            origins = (
+                locations(doc["segments"], start, end, text=doc["text"] if anchor else None)
+                if start < end
+                else []
+            )
             spans = []
             for origin in origins:
                 if (
                     spans
                     and spans[-1]["file"] == origin["file"]
                     and origin["start"] <= spans[-1]["end"]
+                    and origin["end"] >= spans[-1]["start"]
                 ):
+                    spans[-1]["start"] = min(spans[-1]["start"], origin["start"])
                     spans[-1]["end"] = max(spans[-1]["end"], origin["end"])
                 else:
                     spans.append(dict(origin))
@@ -388,7 +418,72 @@ class Service:
             dpi,
             max_chars,
         ]
+        if anchor:
+            operation.extend([match_ref, context_chars])
         return self.page(document_id, operation, records, max_chars, cursor)
+
+    @staticmethod
+    def _match_range(doc, match_ref):
+        try:
+            if not isinstance(match_ref, str) or len(match_ref) > 256:
+                raise ValueError()
+            tag, snapshot, low, high, first, last = json.loads(
+                base64.b64decode(match_ref, altchars=b"-_", validate=True)
+            )
+            if (
+                tag != "tex-match-v1"
+                or snapshot != doc["document_id"]
+                or any(type(value) is not int for value in (low, high, first, last))
+                or not 0 <= low <= first <= last <= high <= len(doc["text"])
+            ):
+                raise ValueError()
+        except (ValueError, TypeError):
+            raise TexError(
+                "INVALID_MATCH_REF", "Use a match_ref from this document snapshot"
+            ) from None
+        if last - first > MAX_MATCH_LENGTH:
+            raise TexError("MATCH_TOO_WIDE", "Narrow the search expression to read a local match")
+        return low, high, first, last
+
+    @staticmethod
+    def _body_records(doc, start, end, owned, width):
+        text = doc["text"]
+        spans = []
+        position = start
+        for obj in sorted(owned, key=lambda value: (value["start"], -value["end"])):
+            if obj["kind"] not in ("figure", "table") or not position <= obj["start"] < end:
+                continue
+            spans.append((position, obj["start"], None))
+            position = min(end, obj["end"])
+            spans.append((obj["start"], position, obj["object_id"]))
+        spans.append((position, end, None))
+        chunk = 0
+        for first, last, object_id in spans:
+            offsets = range(first, last, width) if object_id is None else (first,)
+            for offset in offsets:
+                stop = min(last, offset + width) if object_id is None else last
+                origin = locations(doc["segments"], offset, stop, text=text)
+                merged = []
+                for loc in origin:
+                    if (
+                        merged
+                        and merged[-1]["end"] == loc["start"]
+                        and all(
+                            merged[-1][key] == loc[key] for key in ("file", "expanded", "uncertain")
+                        )
+                    ):
+                        merged[-1]["end"] = loc["end"]
+                        merged[-1]["end_line"] = loc["end_line"]
+                    else:
+                        merged.append(loc)
+                yield {
+                    "kind": "body",
+                    "chunk": chunk,
+                    "text": text[offset:stop] if object_id is None else f"[Object {object_id}]",
+                    "expanded_range": [offset, stop],
+                    "source_locations": merged,
+                }
+                chunk += 1
 
     def objects(self, document_id, kind=None, section=None, max_chars=24000, cursor=None):
         doc = self.document(document_id)
@@ -543,14 +638,24 @@ class Service:
                     truncated = True
                     break
                 position = start + hit.start()
+                last = start + hit.end()
                 matches.append(
                     {
                         "start": position,
-                        "end": start + hit.end(),
-                        "snippet": text[max(0, hit.start() - 100) : hit.end() + 100],
-                        "source_locations": locations(doc["segments"], position, start + hit.end())[
-                            :4
+                        "end": last,
+                        "match_ref": base64.urlsafe_b64encode(
+                            json.dumps(
+                                ["tex-match-v1", document_id, start, end, position, last]
+                            ).encode()
+                        ).decode(),
+                        "snippet": text[
+                            max(0, hit.start() - 100) : min(hit.end() + 100, hit.start() + 400)
                         ],
+                        "source_locations": (
+                            locations(doc["segments"], position, last, text=doc["text"])[:4]
+                            if position < last
+                            else []
+                        ),
                     }
                 )
         except TimeoutError:
@@ -567,39 +672,121 @@ class Service:
     def compare(self, left, right, max_chars=24000, cursor=None):
         a, b = self.document(left), self.document(right)
         records = []
-        for tag in ("sections", "objects", "references"):
-            if tag == "references":
-                x, y = a[tag], b[tag]
-            elif tag == "sections":
-                x = {s["id"]: a["text"][s["start"] : s["end"]] for s in a[tag]}
-                y = {s["id"]: b["text"][s["start"] : s["end"]] for s in b[tag]}
-            else:
-                x = {
-                    o["labels"][0] if o["labels"] else o["object_id"]: a["text"][
-                        o["start"] : o["end"]
-                    ]
-                    for o in a[tag]
-                }
-                y = {
-                    o["labels"][0] if o["labels"] else o["object_id"]: b["text"][
-                        o["start"] : o["end"]
-                    ]
-                    for o in b[tag]
-                }
+        shared_labels = a["labels"].keys() & b["labels"].keys()
+        for tag, build in (
+            ("sections", self._comparison_sections),
+            ("objects", self._comparison_objects),
+        ):
+            x, y = build(a, shared_labels), build(b, shared_labels)
             for key in sorted(set(x) | set(y)):
-                if x.get(key) != y.get(key):
+                lhs, rhs = x.get(key, []), y.get(key, [])
+                duplicate_label = key[0] == "label" and any(
+                    len(doc["labels"].get(key[1], [])) > 1 for doc in (a, b)
+                )
+                if len(lhs) > 1 or len(rhs) > 1 or duplicate_label:
                     records.append(
                         {
                             "kind": "difference",
                             "category": tag,
-                            "key": key,
-                            "status": "added"
-                            if key not in x
-                            else "removed"
-                            if key not in y
-                            else "changed",
-                            "left": x.get(key),
-                            "right": y.get(key),
+                            "key": key[1],
+                            "match_basis": key[0],
+                            "status": "ambiguous",
+                            "left_candidates": lhs,
+                            "right_candidates": rhs,
                         }
                     )
+                    continue
+                old, new = (lhs[0] if lhs else None), (rhs[0] if rhs else None)
+                if old and new:
+                    changes = [f for f in ("text", "assets", "id") if old.get(f) != new.get(f)]
+                    if not changes:
+                        continue
+                    status = "moved" if changes == ["id"] else "changed"
+                else:
+                    changes, status = [], "added" if new else "removed"
+                records.append(
+                    {
+                        "kind": "difference",
+                        "category": tag,
+                        "key": key[1],
+                        "match_basis": key[0],
+                        "status": status,
+                        "changed_fields": changes,
+                        "left": old,
+                        "right": new,
+                    }
+                )
+        for key in sorted(a["references"].keys() | b["references"].keys()):
+            old, new = a["references"].get(key), b["references"].get(key)
+            if old != new:
+                records.append(
+                    {
+                        "kind": "difference",
+                        "category": "references",
+                        "key": key,
+                        "status": "added"
+                        if old is None
+                        else "removed"
+                        if new is None
+                        else "changed",
+                        "left": old,
+                        "right": new,
+                    }
+                )
         return self.page(left, ["compare", right, max_chars], records, max_chars, cursor)
+
+    @staticmethod
+    def _comparison_sections(doc, shared_labels):
+        by_key = defaultdict(list)
+        section_labels = defaultdict(list)
+        for key, targets in doc["labels"].items():
+            for target in targets:
+                if target["target"] is not None:
+                    continue
+                position = target["position"]
+                enclosing = [s for s in doc["sections"] if s["start"] <= position < s["end"]]
+                if enclosing:
+                    section_labels[max(enclosing, key=lambda s: s["level"])["start"]].append(key)
+        for index, section in enumerate(doc["sections"]):
+            start, end = section["start"], section["end"]
+            if index + 1 < len(doc["sections"]):
+                following = doc["sections"][index + 1]
+                end = min(end, following["start"])
+            # A label duplicated anywhere in the document cannot establish a match.
+            labels = section_labels[start]
+            common = sorted(label for label in labels if label in shared_labels)
+            title = " ".join(section["title"].split())
+            key = ("label", common[0]) if common else ("title", title)
+            by_key[key].append(
+                {
+                    "id": section["id"],
+                    "text": doc["text"][start:end].strip(),
+                    "source_locations": section["source_locations"],
+                }
+            )
+        return by_key
+
+    @staticmethod
+    def _comparison_objects(doc, shared_labels):
+        by_key = defaultdict(list)
+        manifest = {record["path"]: record["sha256"] for record in doc["manifest"]}
+        for obj in doc["objects"]:
+            labels = sorted(obj["labels"])
+            common = [label for label in labels if label in shared_labels]
+            key = ("label", (common or labels)[0]) if labels else ("source_order", obj["object_id"])
+            by_key[key].append(
+                {
+                    "id": obj["object_id"],
+                    "text": doc["text"][obj["start"] : obj["end"]],
+                    "source_locations": obj["source_locations"],
+                    "assets": [
+                        {
+                            "reference": asset["reference"],
+                            "status": asset["status"],
+                            "files": [{"path": p, "sha256": manifest[p]} for p in asset["paths"]],
+                        }
+                        for asset in obj["assets"]
+                    ],
+                }
+            )
+        return by_key

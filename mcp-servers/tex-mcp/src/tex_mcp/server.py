@@ -79,12 +79,18 @@ def tex_read(
     dpi: int = 160,
     max_chars: int = 24000,
     cursor: str | None = None,
+    match_ref: str | None = None,
+    context_chars: int | None = None,
 ) -> dict:
     """Read a section plus owned/directly referenced figures, tables, equations and citations.
 
     Includes cross-file/out-of-section objects. items carry objects/images before body chunks;
     follow next_cursor until truncated=false. Total serialized output respects max_chars.
+    Body chunks report source locations. Local citations are included even when external
+    attachments are disabled.
     Source view preserves underlying file fragments; tex_read_file gives exact original lines.
+    Supply match_ref from tex_search instead of section to read a local window. context_chars
+    controls characters on each side of the match (default 600, range 0..4000).
     """
     return service().read(
         document_id,
@@ -96,6 +102,8 @@ def tex_read(
         dpi,
         max_chars,
         cursor,
+        match_ref=match_ref,
+        context_chars=context_chars,
     )
 
 
@@ -108,7 +116,7 @@ def tex_search(
     section: str | None = None,
     max_results: int = 20,
 ) -> dict:
-    """Search processed source with bounded regex evaluation and original source locations."""
+    """Search processed source and return match_ref values for local reading with tex_read."""
     return service().search(document_id, query, mode, section, max_results)
 
 
@@ -193,7 +201,7 @@ def tex_diagnostics(document_id: str, max_chars: int = 24000, cursor: str | None
 def tex_compare(
     left_document_id: str, right_document_id: str, max_chars: int = 24000, cursor: str | None = None
 ) -> dict:
-    """Compare fixed source snapshots by sections, objects and bibliography; not a scientific judgment."""
+    """Compare sections, objects (including graphic file hashes) and bibliography in fixed snapshots."""
     return service().compare(left_document_id, right_document_id, max_chars, cursor)
 
 

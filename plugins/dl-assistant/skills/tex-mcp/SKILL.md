@@ -5,11 +5,47 @@ description: tex-mcp v2 使用说明：读取固定版本的论文源码，按�
 
 # TeX MCP
 
+读取固定版本的论文源码，把正文、图表、公式和引文对应到可核查的原始位置。
+
+## SKILL 交接关系
+
+```mermaid
+flowchart LR
+    Reader["paper-reading 或其他论文任务"] -->|"arXiv 标识或本地源码目录"| TeX["tex-mcp"]
+    TeX -->|"正文、对象、书目和原文位置"| Reader
+    TeX -->|"引文查找输入"| Search["paper-search"]
+    TeX -->|"按对应版本核查图像或排版"| PDF["pdf-mcp"]
+```
+
+## 产出与保存
+
+需要持续阅读时记录论文标识、实际版本、入口和 `document_id`。交接阅读证据时保存原文件及行范围，按需附引用键、对象标签和图像获取依据。跨机器复查依赖稳定论文标识、版本和源码文件清单，本地 `document_id` 和游标用于当前缓存。
+
+## 运行流程图
+
+```mermaid
+flowchart TD
+    A["核对能力，打开固定源码版本"] --> B{"本轮任务"}
+    B -->|"精读或查证"| C["定位章节或搜索命中，读正文和直接证据"]
+    C --> D["跟进续页，核查来源位置和缺失附件"]
+    B -->|"比较修订"| E["打开第二个版本并比较两个快照"]
+    E --> F["检查匹配依据、变更和歧义"]
+    D --> G["按需核原始源码、PDF 或外部书目"]
+    F --> G
+```
+
+## 参考资料列表
+
+- [读取、续读、对象核查与版本比较](references/reading.md)
+- [参考文献与 paper-search 交接](references/references.md)
+
 ## 使用顺序
 
 先 `tex_capabilities` 查看当前能力，再 `tex_open` 打开 arXiv ID/URL 或本地源码目录。保存返回的 `document_id`、实际版本、入口和诊断；后续工具使用这个固定快照，不反复以无版本 ID 打开最新论文。正文、图表、引用和 PDF 必须对应已核版本。
 
 `tex_outline` 返回结构目录；选择具体节后 `tex_read` 读取。编号是源码结构编号，不保证等于经过模板/计数器修改后的 PDF 编号；可用明确标题或章节 label 选择，歧义时核候选，不能随便取第一节。
+
+查找某个术语、实验设置或结论时，可以用 `tex_search` 定位，选择相关命中的 `match_ref` 交给同一快照的 `tex_read`。局部阅读会带回该段直接相关的对象与书目，便于核对具体说法。
 
 v2 不兼容旧工具：不再调用 tex_fetch、tex_toc、tex_list_figures/tex_get_figure、tex_list_tables/tex_get_table，也不将 source 填进后续读取工具。若运行进程仍暴露旧接口，需要重启/切换进程；不能声称已执行新接口。
 
@@ -18,6 +54,8 @@ v2 不兼容旧工具：不再调用 tex_fetch、tex_toc、tex_list_figures/tex_
 `tex_read(document_id=..., section="3.3")` 默认返回：本节正文、本节定义的图表/公式、正文直接引用但定义在其他节或文件中的对象，以及对应引用文献。图片默认尝试给出可查看路径；同一对象多次引用只附一份，并列引用位置。父节包含子节时连续读取一次，不重复输出子节正文。
 
 结果位于 `items`：section 为本次范围说明，object 为附件（object_kind 区分 figure/table/equation），reference 为版本内文献，body 为正文块。图表附件在正文块之前，避免正文很长时把图片完全漏掉。必须继续 next_cursor，直到 truncated=false，才表示本次选择范围已返回；这仍不表示全部 TeX 语义都被认证。
+
+正文块的 `source_locations` 给出原文件和行范围，同一块可能来自多个文件。带 `expanded` 的位置对应宏展开的原文依据。关闭 `include_referenced` 时，仍返回阅读范围内直接引用的书目和在该范围内定义的对象。缺少书目时查看对应记录的 `status="missing"`。
 
 `max_chars` 约束整个 JSON 返回，包括附件源码和参考文献。过大的单条记录会以 record_fragment 分块，encoding=json、part/final 明确说明重组方式。不要只读第一页或只读第一个 body 块，就声称取得完整章节。
 
@@ -31,7 +69,7 @@ v2 不兼容旧工具：不再调用 tex_fetch、tex_toc、tex_list_figures/tex_
 | tex_open | 有限额获取源码，确认实际版本，生成固定快照 |
 | tex_outline | 章节结构及位置 |
 | tex_read | 正文＋本节和直接引用的对象/文献，支持续读 |
-| tex_search | 有超时的搜索及原始位置 |
+| tex_search | 有超时的搜索、原始位置和局部阅读引用 |
 | tex_objects / tex_get_object | 列出对象或按精确 label/object_id 取得图、表、公式 |
 | tex_references | 引用键、书目、正文引用位置、缺失与冲突 |
 | tex_reference_lookups | 生成 paper-search.resolve_papers 输入，不自动查询外部 API |

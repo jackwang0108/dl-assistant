@@ -8,6 +8,7 @@ import pytest
 from tex_mcp.acquire import Acquisition, arxiv_ref
 from tex_mcp.document import parse_document
 from tex_mcp.models import Limits, TexError
+from tex_mcp.syntax import locations
 
 
 def project(tmp_path, body, preamble=""):
@@ -19,6 +20,33 @@ def project(tmp_path, body, preamble=""):
         + "\n\\end{document}"
     )
     return tmp_path
+
+
+def test_locations_clip_literal_but_keep_macro_invocation():
+    segments = [
+        {
+            "start": 0,
+            "end": 6,
+            "expanded": False,
+            "uncertain": False,
+            "origin": {"file": "main.tex", "start": 10, "end": 16, "line": 5, "end_line": 6},
+        },
+        {
+            "start": 6,
+            "end": 10,
+            "expanded": True,
+            "uncertain": False,
+            "origin": {"file": "extra.tex", "start": 1, "end": 12, "line": 2, "end_line": 2},
+        },
+    ]
+    literal, macro = locations(segments, 3, 8, text="AB\nCDEWXYZ")
+    assert (literal["start"], literal["end"], literal["line"], literal["end_line"]) == (
+        13,
+        16,
+        6,
+        6,
+    )
+    assert (macro["start"], macro["end"], macro["expanded"]) == (1, 12, True)
 
 
 def test_section_reference_resolves_later_cross_file_figure(tmp_path):
