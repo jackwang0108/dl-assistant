@@ -33,6 +33,7 @@
 | PDF 与结构化全文 | [PDF MCP](mcp-servers/pdf-mcp/README.md) 默认支持原页与文字读取。需要 Docling 时，安装命令加 `--docling`，模型按 PDF MCP 文档准备。 |
 | Overleaf | [Overleaf MCP](mcp-servers/overleaf-mcp/README.md) 按需在本地终端运行 `mcp-servers/overleaf-mcp/.venv/bin/python -m overleaf_mcp.auth_setup`。需要代理时给命令传 `--proxy`。使用新机器上的有效登录会话，凭证默认存在用户目录。 |
 | W&B | 按 [接入说明](plugins/dl-assistant/skills/wandb/references/deployment.md) 配置自己的实例、SDK、MCP 和凭证。 |
+| Python 调试 | 按 [Debugger MCP 接入说明](docs/debugger-mcp.md) 单独安装上游 MCP 和同版本 skill。 |
 | 汇报幻灯片 | 用 Node.js ≥ 22.12，按 [汇报工程说明](plugins/dl-assistant/skills/research-presentation/references/engineering.md) 安装依赖和准备浏览器。 |
 
 科研项目、实验数据和结果放在自己的研究仓库里。插件仓库只保留可复用的 skills、MCP 源码、测试和示例。详见 [维护与发布](docs/maintaining.md)。
