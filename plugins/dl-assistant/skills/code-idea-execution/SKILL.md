@@ -112,7 +112,7 @@ flowchart TD
 | [研究交接](../idea-find/references/research-handoff.md)、[会话恢复](../dl-assistant/references/session-recovery.md) | 接收首轮研究文件和批准记录，或恢复已有运行时 |
 | [论点、代码与测量映射指引](references/claim-code-map-guide.md) | 实现前追实际入口、对照和读数，准备代码审阅 |
 | [论点与代码映射模板](references/claim-code-map-template.md) | 填写映射，记录检查和用户审阅时 |
-| [组件与差距排查](../code-paper-reproduction/references/trust-traps.md)、[训练诊断](references/training-dynamics-debug.md) | 需要局部核交接行为或排查训练异常时 |
+| [组件与差距排查](../code-paper-reproduction/references/trust-traps.md)、[训练与测量诊断](references/training-dynamics-debug.md) | 局部检查或阶段运行出现偏差，需要从日志、诊断脚本或可选的 mcp-debugger 定位运行时状态时 |
 | [实验元记录](references/experiment-meta-template.json)、[实验台账](references/experiment-index-template.json)、[单实验报告](references/exp-report-template.md) | 登记和回填实际运行时 |
 | [实验设计记录](references/experiment-design-template.json)、[单次运行记录](references/run-meta-template.json) | 锁定获批设计和每次尝试实际使用的代码、配置与产物时 |
 | [长任务托管](../dl-assistant/references/long-run-ops.md)、[W&B 共同记录](../wandb/references/experiment-records.md) | 启动、恢复和追溯运行时。实验使用 W&B 时核其运行身份及同步证据 |
