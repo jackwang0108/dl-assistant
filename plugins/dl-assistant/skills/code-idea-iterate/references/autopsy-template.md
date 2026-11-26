@@ -2,6 +2,8 @@
 
 本文件提供可复制的 `autopsy.md` 和完整示例。按[证据复核与原因调查指引](autopsy-guide.md)查已有材料、比较解释，再在 `next-step-decision.md` 引用查到的结果。需要展开调查时，将本记录保存在实际研究决定目录，默认 `docs/research/v<N>-<slug>/decisions/<决定-slug>/autopsy.md`。
 
+引用断点诊断时，在逐项检查表里关联原 run 和诊断记录，写明触发条件、实测分支或变量、覆盖范围，以及诊断如何影响解释或后续测量。
+
 ## 可复制模板
 
 ```markdown
